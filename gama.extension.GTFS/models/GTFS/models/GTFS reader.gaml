@@ -14,7 +14,7 @@ global {
 //	geometry shape <- envelope(hanoi_gtfs);
 	
 	init {
-		write hanoi_gtfs.contents;
+		write hanoi_gtfs.contents from: hanoi_gtfs;
 		
 //		create bus_stops;
 	}
