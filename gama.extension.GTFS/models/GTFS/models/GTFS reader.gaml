@@ -16,7 +16,7 @@ global {
 	init {
 		write hanoi_gtfs.contents from: hanoi_gtfs;
 		
-//		create bus_stops;
+//		create bus_stops from: hanoi_gtfs;
 	}
 }
 
