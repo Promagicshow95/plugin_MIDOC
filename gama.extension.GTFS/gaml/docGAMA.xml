@@ -150,7 +150,53 @@
     <operatorsCategories>
         <category id="Iterator operators"/>
     </operatorsCategories>
-    <operators/>
+    <operators>
+        <operator alphabetOrder="im" id="is_gtfs" name="is_gtfs">
+            <operatorCategories>
+                <category id="Files-related operators"/>
+            </operatorCategories>
+            <concepts>
+                <concept id="file"/>
+            </concepts>
+            <combinaisonIO>
+                <operands class="gama.extension.GTFS.GTFS_reader" contentType="" returnType="bool" type="">
+                    <operand name="val" position="0" type="any"/>
+                </operands>
+            </combinaisonIO>
+            <documentation>
+                <result>Tests whether the operand is a gtfs file.</result>
+                <seeAlso>
+                    <see id="gtfs_file"/>
+                </seeAlso>
+            </documentation>
+        </operator>
+        <operator HAS_TEST="true" alphabetOrder="dh" id="gtfs_file" name="gtfs_file">
+            <operatorCategories>
+                <category id="Files-related operators"/>
+            </operatorCategories>
+            <concepts>
+                <concept id="file"/>
+            </concepts>
+            <combinaisonIO>
+                <operands class="gama.extension.GTFS.GTFS_reader" contentType="" returnType="file" type="">
+                    <operand name="pathName" position="0" type="string"/>
+                </operands>
+            </combinaisonIO>
+            <documentation>
+                <result>Constructs a file of type gtfs. Allowed extensions are limited to txt</result>
+                <usages>
+                    <usage descUsageElt="gtfs_file(string): Ce constructeur permet de charger les fichiers GTFS à partir d'un répertoire spécifié.">
+                        <examples>
+                            <example code="GTFS_reader gtfs &lt;- GTFS_reader(scope, &quot;path_to_gtfs_directory&quot;);" isExecutable="true" isTestOnly="false" test="true" type="void"/>
+                        </examples>
+                    </usage>
+                </usages>
+                <seeAlso>
+                    <see id="is_gtfs"/>
+                </seeAlso>
+            </documentation>
+        </operator>
+    </operators>
     <skills/>
     <architectures/>
     <speciess/>
@@ -158,6 +204,13 @@
     <insideStatementSymbols/>
     <statementsKinds/>
     <statements/>
-    <files/>
+    <files>
+        <file buffer_content="4" buffer_index="1" buffer_type="5" name="gtfs">
+            <extensions>
+                <extension name="txt"/>
+            </extensions>
+            <concepts/>
+        </file>
+    </files>
     <types/>
 </doc>
