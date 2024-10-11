@@ -1,2 +1,7 @@
 /gama.extension.GTFS/bin/
 *.class
+gama.extension.GTFS/.DS_Store
+gama.extension.GTFS/bin/docGAMA.xml
+gama.extension.GTFS/bin/gama/extension/GTFS/GTFS_reader.class
+*.class
+/gama.extension.GTFS/bin
