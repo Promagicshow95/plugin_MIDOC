@@ -64,6 +64,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             examples = { @example (value = "GTFS_reader gtfs <- GTFS_reader(scope, \"path_to_gtfs_directory\");")})
     public GTFS_reader(final IScope scope, final String pathName) throws GamaRuntimeException {
         super(scope, pathName);
+        checkValidity(scope);
         loadGtfsFiles(scope, pathName);
         createTransportObjects(scope);
     }
@@ -193,6 +194,17 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         return null;
     }
 
+	@Override
+	protected void checkValidity(final IScope scope) throws GamaRuntimeException {
+		final File file = getFile(scope);
+		if (file == null || !file.exists()) throw GamaRuntimeException.error(
+				"The folder " + getFile(scope).getAbsolutePath() + " does not exist. Please use 'new_folder' instead",
+				scope);
+		if (!getFile(scope).isDirectory())
+			throw GamaRuntimeException.error(getFile(scope).getAbsolutePath() + "is not a folder", scope);
+	}
+    
+    
     // Ajout d'une méthode pour accéder à une route spécifique
     public TransportRoute getRoute(String routeId) {
         return routesMap.get(routeId);
