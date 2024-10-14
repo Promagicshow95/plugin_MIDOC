@@ -4,6 +4,7 @@ import gama.core.common.geometry.Envelope3D;
 import gama.core.runtime.IScope;
 import gama.core.runtime.exceptions.GamaRuntimeException;
 import gama.core.util.GamaListFactory;
+import gama.core.util.GamaMapFactory;
 import gama.core.util.IList;
 import gama.core.util.file.GamaFile;
 import gama.gaml.types.IType;
@@ -18,7 +19,6 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -48,9 +48,9 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     private Map<String, IList<String>> gtfsData;
 
     // Collections pour les objets créés à partir des fichiers GTFS
-    private Map<String, TransportRoute> routesMap; // Map pour les routes
-    private Map<String, TransportStop> stopsMap;   // Map pour les arrêts
-    private Map<Integer, TransportTrip> tripsMap;  // Map pour les trajets
+    private Map<String, TransportRoute> routesMap;
+    private Map<String, TransportStop> stopsMap;
+    private Map<Integer, TransportTrip> tripsMap;
 
     /**
      * Constructeur pour la lecture des fichiers GTFS.
@@ -64,23 +64,52 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             examples = { @example (value = "GTFS_reader gtfs <- GTFS_reader(scope, \"path_to_gtfs_directory\");")})
     public GTFS_reader(final IScope scope, final String pathName) throws GamaRuntimeException {
         super(scope, pathName);
+        checkValidity(scope, pathName);  // Vérifier si le dossier est valide
         loadGtfsFiles(scope, pathName);
         createTransportObjects(scope);
+    }
+
+    /**
+     * Méthode pour vérifier la validité du dossier
+     *
+     * @param scope    Le contexte de simulation dans GAMA.
+     * @param pathName Le chemin du répertoire contenant les fichiers GTFS.
+     * @throws GamaRuntimeException Si le dossier n'est pas valide ou ne contient pas les fichiers nécessaires.
+     */
+    private void checkValidity(final IScope scope, final String pathName) throws GamaRuntimeException {
+        File folder = new File(pathName);
+
+        // Vérifier si le chemin est valide
+        if (!folder.exists() || !folder.isDirectory()) {
+            throw GamaRuntimeException.error("Le chemin fourni pour les fichiers GTFS est invalide.", scope);
+        }
+
+        // Vérifier si les fichiers requis sont présents
+        Set<String> requiredFilesSet = new HashSet<>(Set.of(REQUIRED_FILES));
+        File[] files = folder.listFiles();
+        if (files != null) {
+            for (File file : files) {
+                String fileName = file.getName();
+                if (fileName.endsWith(".txt")) {
+                    requiredFilesSet.remove(fileName);
+                }
+            }
+        }
+
+        // Si des fichiers requis manquent, déclencher une exception
+        if (!requiredFilesSet.isEmpty()) {
+            throw GamaRuntimeException.error("Fichiers GTFS manquants : " + requiredFilesSet, scope);
+        }
     }
 
     /**
      * Charge les fichiers GTFS et vérifie si tous les fichiers requis sont présents.
      */
     private void loadGtfsFiles(final IScope scope, final String pathName) throws GamaRuntimeException {
-        File folder = new File(pathName);
-        if (!folder.exists() || !folder.isDirectory()) {
-            throw GamaRuntimeException.error("Le chemin fourni pour les fichiers GTFS est invalide.", scope);
-        }
-
         gtfsData = new HashMap<>();
-        Set<String> requiredFilesSet = new HashSet<>(Arrays.asList(REQUIRED_FILES));
 
         try {
+            File folder = new File(pathName);
             File[] files = folder.listFiles();
             if (files != null) {
                 for (File file : files) {
@@ -88,15 +117,9 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     if (fileName.endsWith(".txt")) {
                         IList<String> fileContent = readCsvFile(file);
                         gtfsData.put(fileName, fileContent);
-                        requiredFilesSet.remove(fileName);
                     }
                 }
             }
-
-            if (!requiredFilesSet.isEmpty()) {
-                throw GamaRuntimeException.error("Fichiers GTFS manquants : " + requiredFilesSet, scope);
-            }
-
         } catch (Exception e) {
             throw GamaRuntimeException.create(e, scope);
         }
@@ -106,9 +129,10 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      * Crée des objets TransportRoute, TransportTrip, et TransportStop à partir des fichiers GTFS.
      */
     private void createTransportObjects(IScope scope) {
-        routesMap = new HashMap<>();
-        stopsMap = new HashMap<>();
-        tripsMap = new HashMap<>();
+    	routesMap = GamaMapFactory.create(Types.STRING, Types.get(TransportRoute.class));
+    	stopsMap = GamaMapFactory.create(Types.STRING, Types.get(TransportStop.class));
+    	tripsMap = GamaMapFactory.create(Types.INT, Types.get(TransportTrip.class));
+
 
         // Créer des objets TransportStop à partir de stops.txt
         IList<String> stopsData = gtfsData.get("stops.txt");
