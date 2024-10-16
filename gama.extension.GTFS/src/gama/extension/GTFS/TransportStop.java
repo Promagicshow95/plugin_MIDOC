@@ -13,6 +13,15 @@ public class TransportStop {
         this.stopName = stopName;
         this.location = new GamaPoint(stopLat, stopLon);
     }
+    
+    public double getLatitude() {
+        return location.getY();  // GamaPoint.getY() renvoie la latitude (y)
+    }
+
+    // Méthode pour obtenir la longitude (x)
+    public double getLongitude() {
+        return location.getX();  // GamaPoint.getX() renvoie la longitude (x)
+    }
 
     // Getters
     public String getStopId() {

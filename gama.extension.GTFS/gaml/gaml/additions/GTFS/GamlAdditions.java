@@ -54,10 +54,19 @@ import static gama.core.common.interfaces.IKeyword.*;
 
 public class GamlAdditions extends gama.gaml.compilation.AbstractGamlAdditions {
 	public void initialize() throws SecurityException, NoSuchMethodException {
+	initializeVars();
 	initializeFile();
+	initializeAction();
+	initializeSkill();
+}public void initializeVars()  {
+_var(gama.extension.GTFS.skills.TransportStopSkill.class,desc(5,S("type","5","name","stops","of","11")),(s,a,t,v)->t==null? null:((gama.extension.GTFS.skills.TransportStopSkill)t).getStops(a),null,(s,a,t,v)->{if (t != null) ((gama.extension.GTFS.skills.TransportStopSkill) t).setStops(a, (IList) v); return null; });
 }public void initializeFile() throws SecurityException, NoSuchMethodException {
 _file("gtfs",gama.extension.GTFS.GTFS_reader.class,(s,o)-> {return new gama.extension.GTFS.GTFS_reader(s,((String)o[0]));},5,1,4,S("txt"));
 _operator(S("is_gtfs"),null,"Returns true if the parameter is a gtfs file",I(0),B,true,3,0,0,0,(s,o)-> { return GamaFileType.verifyExtension("gtfs",Cast.asString(s, o[0]));}, false);
 _operator(S("gtfs_file"),gama.extension.GTFS.GTFS_reader.class.getConstructor(SC,S),4,I(0),GF,false,"gtfs",(s,o)-> {return new gama.extension.GTFS.GTFS_reader(s,((String)o[0]));});
+}public void initializeAction() throws SecurityException, NoSuchMethodException {
+_action(new GamaHelper("loadStopsFromGTFS",gama.extension.GTFS.skills.TransportStopSkill.class,(s,a,t,v)->((gama.extension.GTFS.skills.TransportStopSkill) t).loadStopsFromGTFS(s)),desc(PRIM,new Children(_arg("filePath",4,F)),NAME,"loadStopsFromGTFS",TYPE,Ti(I),VIRTUAL,FALSE),gama.extension.GTFS.skills.TransportStopSkill.class.getMethod("loadStopsFromGTFS",SC));
+}public void initializeSkill()  {
+_skill("TransportStopSkill",gama.extension.GTFS.skills.TransportStopSkill.class,AS);
 }
 }

@@ -1,4 +1,4 @@
-model GTFSreader
+model TransportStopKill
 
 global {
     // Path to the GTFS file
@@ -9,9 +9,12 @@ global {
         write "Loading GTFS contents from: " + hanoi_gtfs;
         
         // Create bus_stop agents from the GTFS data
-       create bus_stop number:1  {
-//            myfile <- "../includes/hanoi_gtfs_am";
-				
+        create bus_stop number: length(hanoi_gtfs.stops) {
+            // Use the TransportStopSkill to load stops from the GTFS file
+            do loadStopsFromGTFS filePath: hanoi_gtfs;
+        }
+        create bus_stop number: length(hanoi_gtfs.stops) {
+            myfile <- "../includes/hanoi_gtfs_am";
         }
     }
 }
@@ -24,26 +27,18 @@ species bus_stop skills: [TransportStopSkill] {
     string stopId <- "";
     string stopName <- "";
 
-
-
+    // Geometry based on latitude and longitude (for display on map)
+    geometry shape <- point(longitude, latitude);
 
     // Initialization of the stop's attributes
-//    init {
-//        latitude <- attribute("latitude");
-//        longitude <- attribute("longitude");
-//        stopId <- attribute("stopId");
-//        stopName <- attribute("stopName");
-//    }
-    
-     aspect base {}
-}
-
-species my_species skills: [TransportStopSkill] {
-    // Accès à la liste des arrêts créés
-    reflex check_stops {
-        write "Nombre d'arrêts créés: " + length(stops);  // Affiche le nombre d'arrêts créés
+    init {
+        latitude <- attribute("latitude");
+        longitude <- attribute("longitude");
+        stopId <- attribute("stopId");
+        stopName <- attribute("stopName");
     }
-    aspect base {}
+    
+    as
 }
 
 // GUI-based experiment for visualization
@@ -54,9 +49,10 @@ experiment GTFSExperiment type: gui {
         // Display the bus stops on the map
         display "Bus Stops" {
             // Display the bus_stop agents on the map
-            species bus_stop aspect: base;
-            species my_species aspect:base;
-            
+            species bus_stop aspect: [ 
+                draw shape color: #blue label: stopName;  // Draw bus stops as blue points with stop names
+            ];
         }
     }
 }
+
