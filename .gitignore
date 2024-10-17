@@ -5,3 +5,13 @@ gama.extension.GTFS/bin/docGAMA.xml
 gama.extension.GTFS/bin/gama/extension/GTFS/GTFS_reader.class
 *.class
 /gama.extension.GTFS/bin
+gama.extension.GTFS/gaml/docGAMA.xml
+gama.extension.GTFS/gaml/gaml/additions/GTFS/GamlAdditions.java
+*.class
+gama.extension.GTFS/bin/gama/extension/GTFS/GTFS_reader.class
+gama.extension.GTFS/bin/gama/extension/GTFS/TransportStop.class
+gama.extension.GTFS/bin/gama/extension/GTFS/TransportRoute.class
+gama.extension.GTFS/bin/gama/extension/GTFS/TransportTrip.class
+gama.extension.GTFS/bin/gaml/additions/GTFS/GamlAdditions.class
+gama.extension.GTFS/gaml/docGAMA.xml
+gama.extension.GTFS/gaml/gaml/additions/GTFS/GamlAdditions.java

@@ -9,21 +9,22 @@ global {
         write "Loading GTFS contents from: " + hanoi_gtfs;
         
         // Create bus_stop agents from the GTFS data
-       create bus_stop number:1  {
-//            myfile <- "../includes/hanoi_gtfs_am";
+       create bus_stop from: hanoi_gtfs  {
 				
-        }
+       }
     }
 }
 
 // Species representing each transport stop
 species bus_stop skills: [TransportStopSkill] {
     // Attributes for latitude and longitude
-    float latitude <- 0.0;
-    float longitude <- 0.0;
-    string stopId <- "";
-    string stopName <- "";
+//    float latitude <- 0.0;
+//    float longitude <- 0.0;
+//		--> in the location attribute
 
+//    string stopId <- "";
+//    string stopName <- "";
+//		--> built-in attributes from the skill
 
 
 

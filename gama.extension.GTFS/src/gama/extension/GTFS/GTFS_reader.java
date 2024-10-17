@@ -73,7 +73,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             System.out.println("Chemin GTFS utilisé : " + pathName);  // Pour les tests hors de GAMA
         }
         
-        checkValidity(scope, pathName);  // Vérifier si le dossier est valide
+//        checkValidity(scope, pathName);  // Vérifier si le dossier est valide
         loadGtfsFiles(scope, pathName);
         createTransportObjects(scope);
     }
@@ -81,7 +81,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     // Ajoutez ici un nouveau constructeur avec un seul paramètre String
     public GTFS_reader(final String pathName) throws GamaRuntimeException {
         super(null, pathName);  // Passez 'null' pour IScope car vous n'en avez pas besoin ici
-        checkValidity(null, pathName);  // Vous pouvez passer 'null' si IScope n'est pas nécessaire pour cette vérification
+ //       checkValidity(null, pathName);  // Vous pouvez passer 'null' si IScope n'est pas nécessaire pour cette vérification
         loadGtfsFiles(null, pathName);
         createTransportObjects(null);
     }
@@ -103,9 +103,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      * @param pathName Le chemin du répertoire contenant les fichiers GTFS.
      * @throws GamaRuntimeException Si le dossier n'est pas valide ou ne contient pas les fichiers nécessaires.
      */
-    private void checkValidity(final IScope scope, final String pathName) throws GamaRuntimeException {
-        File folder = new File(pathName);
-
+    @Override
+	protected void checkValidity(final IScope scope) throws GamaRuntimeException { 
+ //   private void checkValidity(final IScope scope, final String pathName) throws GamaRuntimeException {
+   //     File folder = new File(pathName);
+        File folder = getFile(scope);
         // Vérifier si le chemin est valide et est un répertoire
         if (!folder.exists() || !folder.isDirectory()) {
             throw GamaRuntimeException.error("Le chemin fourni pour les fichiers GTFS est invalide. Assurez-vous que c'est un dossier contenant des fichiers .txt", scope);
