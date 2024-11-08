@@ -1,17 +1,18 @@
+# Ignorer les fichiers et dossiers de compilation
 /gama.extension.GTFS/bin/
 *.class
-gama.extension.GTFS/.DS_Store
+.DS_Store
+
+# Ignorer les fichiers spécifiques au projet
 gama.extension.GTFS/bin/docGAMA.xml
-gama.extension.GTFS/bin/gama/extension/GTFS/GTFS_reader.class
-*.class
-/gama.extension.GTFS/bin
 gama.extension.GTFS/gaml/docGAMA.xml
-gama.extension.GTFS/gaml/gaml/additions/GTFS/GamlAdditions.java
-*.class
+
+# Ignorer les classes Java compilées
 gama.extension.GTFS/bin/gama/extension/GTFS/GTFS_reader.class
 gama.extension.GTFS/bin/gama/extension/GTFS/TransportStop.class
 gama.extension.GTFS/bin/gama/extension/GTFS/TransportRoute.class
 gama.extension.GTFS/bin/gama/extension/GTFS/TransportTrip.class
 gama.extension.GTFS/bin/gaml/additions/GTFS/GamlAdditions.class
-gama.extension.GTFS/gaml/docGAMA.xml
-gama.extension.GTFS/gaml/gaml/additions/GTFS/GamlAdditions.java
+
+# Ignorer tout le répertoire /gaml/ si non nécessaire
+/gaml/
