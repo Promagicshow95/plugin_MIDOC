@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<projectDescription>
+	<name>GTFS</name>
+	<comment>GTFS plugin</comment>
+	<projects>
+	</projects>
+	<buildSpec>
+		<buildCommand>
+			<name>org.eclipse.xtext.ui.shared.xtextBuilder</name>
+			<arguments>
+			</arguments>
+		</buildCommand>
+	</buildSpec>
+	<natures>
+		<nature>org.eclipse.xtext.ui.shared.xtextNature</nature>
+		<nature>gama.ui.application.gamaNature</nature>
+		<nature>gama.ui.application.pluginNature</nature>
+	</natures>
+	<linkedResources>
+		<link>
+			<name>external/stops.txt</name>
+			<type>1</type>
+			<location>/Applications/Eclipse.app/Contents/MacOS/C::/Users/tiend/Desktop/Prepared for MIDOC/Prepared for MIDOC/Donnée/DataFile/tisseo_gtfs_v2/stops.txt</location>
+		</link>
+	</linkedResources>
+</projectDescription>
