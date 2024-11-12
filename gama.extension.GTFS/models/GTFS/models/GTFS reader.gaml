@@ -42,7 +42,7 @@ species bus_stop skills: [TransportStopSkill] {
 species my_species skills: [TransportStopSkill] {
     // Accès à la liste des arrêts créés
     reflex check_stops {
-        write "Nombre d'arrêts créés: " + length(stops);  // Affiche le nombre d'arrêts créés
+        write "Nombre d'arrêts créés: " + length(bus_stop);  // Affiche le nombre d'arrêts créés
     }
     aspect base {}
 }
