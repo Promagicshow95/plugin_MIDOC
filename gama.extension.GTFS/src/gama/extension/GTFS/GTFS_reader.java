@@ -26,8 +26,8 @@ import java.util.List;
 import java.util.Set;
 
 /**
- * Lecture et traitement des fichiers GTFS dans GAMA. Cette classe lit plusieurs fichiers GTFS
- * et crée des objets TransportRoute, TransportTrip, et TransportStop.
+ * Reading and processing GTFS files in GAMA. This class reads multiple GTFS files
+ * and creates TransportRoute, TransportTrip, and TransportStop objects.
  */
 @file(
     name = "gtfs",
@@ -40,80 +40,92 @@ import java.util.Set;
 )
 public class GTFS_reader extends GamaFile<IList<String>, String> {
 
-    // Fichiers obligatoires pour les données GTFS
+    // Required files for GTFS data
     private static final String[] REQUIRED_FILES = {
         "agency.txt", "routes.txt", "trips.txt", "calendar.txt", "stop_times.txt", "stops.txt"
     };
 
-    // Structure de données pour stocker les fichiers GTFS
+    // Data structure to store GTFS files
     private IMap<String, IList<String>> gtfsData;
 
-    // Collections pour les objets créés à partir des fichiers GTFS
-    private IMap<String, TransportRoute> routesMap;
+    // Collections for objects created from GTFS files
+//    private IMap<String, TransportRoute> routesMap;
+//    private IMap<Integer, TransportTrip> tripsMap;
     private IMap<String, TransportStop> stopsMap;
-    private IMap<Integer, TransportTrip> tripsMap;
 
     /**
-     * Constructeur pour la lecture des fichiers GTFS.
+     * Constructor for reading GTFS files.
      *
-     * @param scope    Le contexte de simulation dans GAMA.
-     * @param pathName Le chemin du répertoire contenant les fichiers GTFS.
-     * @throws GamaRuntimeException Si un problème survient lors du chargement des fichiers.
+     * @param scope    The simulation context in GAMA.
+     * @param pathName The directory path containing GTFS files.
+     * @throws GamaRuntimeException If an error occurs while loading the files.
      */
     @doc (
-            value = "Ce constructeur permet de charger les fichiers GTFS à partir d'un répertoire spécifié.",
+            value = "This constructor allows loading GTFS files from a specified directory.",
             examples = { @example (value = "GTFS_reader gtfs <- GTFS_reader(scope, \"path_to_gtfs_directory\");")})
     public GTFS_reader(final IScope scope, final String pathName) throws GamaRuntimeException {
         super(scope, pathName);
         
-     // Débogage : Affichez le chemin du dossier GTFS dans la console GAMA
+     // Debug: Print the GTFS path in the GAMA console
         if (scope != null && scope.getGui() != null) {
-            scope.getGui().getConsole().informConsole("Chemin GTFS utilisé : " + pathName, scope.getSimulation());
+            scope.getGui().getConsole().informConsole("GTFS path used: "  + pathName, scope.getSimulation());
         } else {
-            System.out.println("Chemin GTFS utilisé : " + pathName);  // Pour les tests hors de GAMA
+            System.out.println("GTFS path used: " + pathName);  // For testing outside of GAMA
         }
         
-//        checkValidity(scope, pathName);  // Vérifier si le dossier est valide
+        // Check the validity of the directory
+        System.out.println("Checking the validity of the GTFS directory...");
+        checkValidity(scope);  
+        System.out.println("Directory validation completed.");
+
+        // Load GTFS files
+        System.out.println("Loading GTFS files...");
         loadGtfsFiles(scope, pathName);
+        System.out.println("File loading completed.");
+        
+     // Create transport objects
+        System.out.println("Creating transport objects...");
         createTransportObjects(scope);
+        System.out.println("Transport object creation completed.");
     }
     
-    // Ajoutez ici un nouveau constructeur avec un seul paramètre String
+    
     public GTFS_reader(final String pathName) throws GamaRuntimeException {
-        super(null, pathName);  // Passez 'null' pour IScope car vous n'en avez pas besoin ici
- //       checkValidity(null, pathName);  // Vous pouvez passer 'null' si IScope n'est pas nécessaire pour cette vérification
+        super(null, pathName);  // Pass 'null' for IScope as it is not needed here
+        checkValidity(null);  // Pass 'null' if IScope is not necessary for this check
         loadGtfsFiles(null, pathName);
         createTransportObjects(null);
     }
     
     /**
-     * Méthode pour récupérer la liste des arrêts (TransportStop) à partir de stopsMap.
-     * @return Liste des arrêts de transport
+     * Method to retrieve the list of stops (TransportStop) from stopsMap.
+     * @return List of transport stops
      */
     public List<TransportStop> getStops() {
-        // Créer une liste Java à partir des valeurs dans stopsMap
+        // Create a Java list from the values in stopsMap
         List<TransportStop> stopList = new ArrayList<>(stopsMap.values());
         return stopList;
     }
 
     /**
-     * Méthode pour vérifier la validité du dossier
+     * Method to verify the directory's validity.
      *
-     * @param scope    Le contexte de simulation dans GAMA.
-     * @param pathName Le chemin du répertoire contenant les fichiers GTFS.
-     * @throws GamaRuntimeException Si le dossier n'est pas valide ou ne contient pas les fichiers nécessaires.
+     * @param scope    The simulation context in GAMA.
+     * @param pathName The directory path containing GTFS files.
+     * @throws GamaRuntimeException If the directory is invalid or does not contain required files.
      */
     @Override
-	protected void checkValidity(final IScope scope) throws GamaRuntimeException { 
- //   private void checkValidity(final IScope scope, final String pathName) throws GamaRuntimeException {
-   //     File folder = new File(pathName);
-        File folder = getFile(scope);
-        // Vérifier si le chemin est valide et est un répertoire
+    protected void checkValidity(final IScope scope) throws GamaRuntimeException {
+    	
+    	 System.out.println("Starting directory validity check...");
+
+    	File folder = getFile(scope);
+        // Check if the path is valid and is a directory
         if (!folder.exists() || !folder.isDirectory()) {
-            throw GamaRuntimeException.error("Le chemin fourni pour les fichiers GTFS est invalide. Assurez-vous que c'est un dossier contenant des fichiers .txt", scope);
+            throw GamaRuntimeException.error("The provided path for GTFS files is invalid. Ensure it is a directory containing .txt files.", scope);
         }
 
-        // Vérifier si les fichiers requis (comme stops.txt, routes.txt) sont présents dans le dossier
+        // Check if the required files (e.g., stops.txt, routes.txt) are present in the folder
         Set<String> requiredFilesSet = new HashSet<>(Set.of(REQUIRED_FILES));
         File[] files = folder.listFiles();
         if (files != null) {
@@ -125,143 +137,176 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-        // Si des fichiers requis manquent, déclencher une exception
+        // If required files are missing, throw an exception
         if (!requiredFilesSet.isEmpty()) {
-            throw GamaRuntimeException.error("Fichiers GTFS manquants : " + requiredFilesSet, scope);
+            throw GamaRuntimeException.error("Missing GTFS files: " + requiredFilesSet, scope);
         }
+        System.out.println("Directory validity check completed.");
     }
 
 
     /**
-     * Charge les fichiers GTFS et vérifie si tous les fichiers requis sont présents.
+     * Loads GTFS files and verifies if all required files are present.
      */
     private void loadGtfsFiles(final IScope scope, final String pathName) throws GamaRuntimeException {
-        gtfsData = GamaMapFactory.create(Types.STRING, Types.LIST); // Utilisation de GamaMap pour stocker les données GTFS
+        gtfsData = GamaMapFactory.create(Types.STRING, Types.LIST); // Use GamaMap for storing GTFS files
 
         try {
             File folder = new File(pathName);
-            File[] files = folder.listFiles();  // Liste tous les fichiers dans le dossier
+            File[] files = folder.listFiles();  // List of files in the folder
             if (files != null) {
                 for (File file : files) {
-                    // Vérifie si le fichier est un fichier et a l'extension .txt
+                    // Checks if the file is a file and has the extension .txt
                     if (file.isFile() && file.getName().endsWith(".txt")) {
-                        IList<String> fileContent = readCsvFile(file);  // Lecture du fichier CSV
-                        gtfsData.put(file.getName(), fileContent); // Stocker le contenu du fichier
+                    	System.out.println("Reading file: " + file.getName());
+                        IList<String> fileContent = readCsvFile(file);  // Reading the CSV file
+                        System.out.println("Finished reading file: " + file.getName());
+                        gtfsData.put(file.getName(), fileContent); 
+                        System.out.println("File content stored for: " + file.getName());
                     }
                 }
             }
         } catch (Exception e) {
-            throw GamaRuntimeException.create(e, scope);  // Gestion des exceptions
+        	System.err.println("Error while loading GTFS files: " + e.getMessage());
+            throw GamaRuntimeException.create(e, scope);  
         }
+        
+        System.out.println("All GTFS files have been loaded.");
     }
 
     /**
-     * Crée des objets TransportRoute, TransportTrip, et TransportStop à partir des fichiers GTFS.
+     * Creates TransportRoute, TransportTrip, and TransportStop objects from GTFS files.
      */
     private void createTransportObjects(IScope scope) {
-        routesMap = GamaMapFactory.create(Types.STRING, Types.get(TransportRoute.class)); // Utilisation de GamaMap pour routesMap
-        stopsMap = GamaMapFactory.create(Types.STRING, Types.get(TransportStop.class));   // Utilisation de GamaMap pour stopsMap
-        tripsMap = GamaMapFactory.create(Types.INT, Types.get(TransportTrip.class));      // Utilisation de GamaMap pour tripsMap
+    	System.out.println("Starting transport object creation...");
+//        routesMap = GamaMapFactory.create(Types.STRING, Types.get(TransportRoute.class)); // Using GamaMap for routesMap
+        stopsMap = GamaMapFactory.create(Types.STRING, Types.get(TransportStop.class));   // Using GamaMap for stopMap
+//        tripsMap = GamaMapFactory.create(Types.INT, Types.get(TransportTrip.class));      // Using GamaMap for tripMap
 
-        // Créer des objets TransportStop à partir de stops.txt
+        // Create TransportStop objects from stops.txt
         IList<String> stopsData = gtfsData.get("stops.txt");
         if (stopsData != null) {
             for (String line : stopsData) {
+            	// Ignore the first header line if present
+                if (line.startsWith("stop_id")) {
+                    continue;
+                }
                 String[] fields = line.split(",");
-                String stopId = fields[0];
-                String stopName = fields[1];
-                double stopLat = Double.parseDouble(fields[2]);
-                double stopLon = Double.parseDouble(fields[3]);
+                String stopId = fields[0]; 						// stop_id
+                String stopName = fields[2]; 					// stop_name
+                double stopLat = Double.parseDouble(fields[3]); // stop_lat
+                double stopLon = Double.parseDouble(fields[4]); // stop_lon
                 TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon);
-                stopsMap.put(stopId, stop); // Stockage dans stopsMap
+                stopsMap.put(stopId, stop); // Store in stopsMap
+                System.out.println("Created TransportStop object: " + stopId);
             }
+            System.out.println("Finished creating TransportStop objects.");
         }
 
-        // Créer des objets TransportRoute à partir de routes.txt
-        IList<String> routesData = gtfsData.get("routes.txt");
-        if (routesData != null) {
-            for (String line : routesData) {
-                String[] fields = line.split(",");
-                String routeId = fields[0];
-                String shortName = fields[1];
-                String longName = fields[2];
-                int type = Integer.parseInt(fields[3]);
-                String color = fields[4];
-                TransportRoute route = new TransportRoute(routeId, shortName, longName, type, color);
-                routesMap.put(routeId, route); // Stockage dans routesMap
-            }
-        }
+//        // Create TransportRoute objects from routes.txt
+//        IList<String> routesData = gtfsData.get("routes.txt");
+//        if (routesData != null) {
+//            for (String line : routesData) {
+//                String[] fields = line.split(",");
+//                String routeId = fields[0];
+//                String shortName = fields[1];
+//                String longName = fields[2];
+//                int type = Integer.parseInt(fields[3]);
+//                String color = fields[4];
+//                TransportRoute route = new TransportRoute(routeId, shortName, longName, type, color);
+//                routesMap.put(routeId, route); // Storage in routesMap
+//                System.out.println("Created TransportRoute object: " + routeId);
+//            }
+//        }
 
-        // Créer des objets TransportTrip à partir de trips.txt
-        IList<String> tripsData = gtfsData.get("trips.txt");
-        if (tripsData != null) {
-            for (String line : tripsData) {
-                String[] fields = line.split(",");
-                String routeId = fields[0];
-                String serviceId = fields[1];
-                int tripId = Integer.parseInt(fields[2]);
-                int directionId = Integer.parseInt(fields[3]);
-                int shapeId = Integer.parseInt(fields[4]);
-                TransportRoute route = routesMap.get(routeId);
-                TransportTrip trip = new TransportTrip(routeId, serviceId, tripId, directionId, shapeId, route);
-                tripsMap.put(tripId, trip); // Stockage dans tripsMap
-            }
-        }
+//        // Create TransportTrip objects from trips.txt
+//        IList<String> tripsData = gtfsData.get("trips.txt");
+//        if (tripsData != null) {
+//            for (String line : tripsData) {
+//                String[] fields = line.split(",");
+//                String routeId = fields[0];
+//                String serviceId = fields[1];
+//                int tripId = Integer.parseInt(fields[2]);
+//                int directionId = Integer.parseInt(fields[3]);
+//                int shapeId = Integer.parseInt(fields[4]);
+//                TransportRoute route = routesMap.get(routeId);
+//                TransportTrip trip = new TransportTrip(routeId, serviceId, tripId, directionId, shapeId, route);
+//                tripsMap.put(tripId, trip); // Storage in tripsMap
+//                System.out.println("Created TransportTrip object: " + tripId);
+//            }
+//            System.out.println("Finished creating TransportTrip objects.");
+//        }
+        System.out.println("Transport object creation completed.");
     }
 
     /**
-     * Lit un fichier CSV et renvoie son contenu sous forme de IList.
+     * Reads a CSV file and returns its content as an IList.
      */
     private IList<String> readCsvFile(File file) throws IOException {
         IList<String> content = GamaListFactory.create();
-     // Vérifier que l'objet File est bien un fichier
+     // Verify that the File object is indeed a file
         if (!file.isFile()) {
-            throw new IOException(file.getAbsolutePath() + " n'est pas un fichier valide.");
+            throw new IOException(file.getAbsolutePath() + " is not a valid file.");
         }
+        System.out.println("Reading file: " + file.getAbsolutePath());
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
+         // Ignore the first line (header)
+            br.readLine();  
             while ((line = br.readLine()) != null) {
                 content.add(line);
             }
         }
+        System.out.println("Finished reading file: " + file.getAbsolutePath());
         return content;
     }
 
     @Override
     protected void fillBuffer(final IScope scope) throws GamaRuntimeException {
+    	System.out.println("Filling buffer...");
         if (gtfsData == null) {
+        	System.out.println("gtfsData is null, loading GTFS files...");
             loadGtfsFiles(scope, getPath(scope));
-        }
+            System.out.println("Finished loading GTFS files.");
+        }else
+        	 System.out.println("gtfsData is already initialized.");
+    
     }
 
     @Override
     public IList<String> getAttributes(final IScope scope) {
-        Set<String> keySet = gtfsData.keySet();
-        return GamaListFactory.createWithoutCasting(Types.STRING, keySet.toArray(new String[0]));
+    	System.out.println("Retrieving GTFS data attributes...");
+    	if (gtfsData != null) {
+            Set<String> keySet = gtfsData.keySet();
+            System.out.println("Attributes retrieved: " + keySet);
+            return GamaListFactory.createWithoutCasting(Types.STRING, keySet.toArray(new String[0]));
+        } else {
+            System.out.println("gtfsData is null, no attributes to retrieve.");
+            return GamaListFactory.createWithoutCasting(Types.STRING);
+        }
     }
 
-    @Override
+    @SuppressWarnings("unchecked")
+	@Override
     public IContainerType<IList<String>> getGamlType() {
+    	System.out.println("Returning GAML type for GTFS file.");
         return Types.FILE.of(Types.STRING, Types.STRING);
     }
 
     @Override
     public Envelope3D computeEnvelope(final IScope scope) {
+    	System.out.println("Computing envelope - returning null.");
         return null;
     }
 
-    // Ajout d'une méthode pour accéder à une route spécifique
-    public TransportRoute getRoute(String routeId) {
-        return routesMap.get(routeId);
-    }
-
-    // Ajout d'une méthode pour accéder à un trajet spécifique
-    public TransportTrip getTrip(int tripId) {
-        return tripsMap.get(tripId);
-    }
-
-    // Ajout d'une méthode pour accéder à un arrêt spécifique
     public TransportStop getStop(String stopId) {
-        return stopsMap.get(stopId);
+        System.out.println("Getting stop with ID: " + stopId);
+        TransportStop stop = stopsMap.get(stopId);
+        if (stop != null) {
+            System.out.println("Stop found: " + stopId);
+        } else {
+            System.out.println("Stop not found: " + stopId);
+        }
+        return stop;
     }
 }

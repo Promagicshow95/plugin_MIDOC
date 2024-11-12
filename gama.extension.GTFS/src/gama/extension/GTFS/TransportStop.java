@@ -5,9 +5,9 @@ import gama.core.metamodel.shape.GamaPoint;
 public class TransportStop {
     private String stopId;
     private String stopName;
-    private GamaPoint location; // Utiliser GamaPoint pour gérer la localisation
+    private GamaPoint location; // Using GamaPoint to handle location
 
-    // Constructeur
+    // Constructor
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon) {
         this.stopId = stopId;
         this.stopName = stopName;
@@ -15,12 +15,12 @@ public class TransportStop {
     }
     
     public double getLatitude() {
-        return location.getY();  // GamaPoint.getY() renvoie la latitude (y)
+        return location.getY();  // GamaPoint.getY() returns the latitude (y)
     }
 
-    // Méthode pour obtenir la longitude (x)
+    // Method to get the longitude (x)
     public double getLongitude() {
-        return location.getX();  // GamaPoint.getX() renvoie la longitude (x)
+        return location.getX();  // GamaPoint.getX() returns the longitude (x)
     }
 
     // Getters
