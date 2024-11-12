@@ -10,5 +10,11 @@
             name="models">
       </path>
    </extension>
+   <extension
+         point="gama.create">
+      <implementation
+            class="gama.extension.GTFS.gaml.CreateAgentsFromGTFS">
+      </implementation>
+   </extension>
 
 </plugin>
