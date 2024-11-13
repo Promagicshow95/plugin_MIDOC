@@ -2,7 +2,7 @@ model TransportStopKill
 
 global {
     // Chemin vers le dossier contenant les fichiers GTFS
-    string gtfs_file_path <- "C:\\Users\\tiend\\Desktop\\Prepared for MIDOC\\Prepared for MIDOC\\Donnée\\DataFile\\tisseo_gtfs_v2";
+    string gtfs_file_path <- "../includes/tisseo_gtfs_v2";
 
     
     init {

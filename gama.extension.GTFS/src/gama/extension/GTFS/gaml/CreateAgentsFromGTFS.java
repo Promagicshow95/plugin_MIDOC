@@ -36,7 +36,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
      */
     @Override
     public boolean acceptSource(IScope scope, Object source) {
-        return source instanceof String; // Check if the source is a valid GTFS folder path
+        return source instanceof GTFS_reader; // Check if the source is a valid GTFS folder path
     }
 
     /**
