@@ -102,8 +102,8 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      * @return List of transport stops
      */
     public List<TransportStop> getStops() {
-        // Create a Java list from the values in stopsMap
         List<TransportStop> stopList = new ArrayList<>(stopsMap.values());
+        System.out.println("Number of crated stop : " + stopList.size());
         return stopList;
     }
 

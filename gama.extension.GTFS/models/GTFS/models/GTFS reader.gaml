@@ -2,7 +2,7 @@ model GTFSreader
 
 global {
     // Path to the GTFS file
-    gtfs_file hanoi_gtfs <- gtfs_file("../includes/hanoi_gtfs_am");
+    gtfs_file hanoi_gtfs <- gtfs_file("../includes/tisseo_gtfs_v2");
     
     // Initialization section
     init {
