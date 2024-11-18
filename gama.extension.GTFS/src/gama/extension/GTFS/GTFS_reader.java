@@ -1,21 +1,5 @@
 package gama.extension.GTFS;
 
-import gama.core.common.geometry.Envelope3D;
-import gama.core.runtime.IScope;
-import gama.core.runtime.exceptions.GamaRuntimeException;
-import gama.core.util.GamaListFactory;
-import gama.core.util.IList;
-import gama.core.util.GamaMapFactory;
-import gama.core.util.IMap;
-import gama.core.util.file.GamaFile;
-import gama.gaml.types.IType;
-import gama.gaml.types.Types;
-import gama.gaml.types.IContainerType;
-import gama.annotations.precompiler.IConcept;
-import gama.annotations.precompiler.GamlAnnotations.doc;
-import gama.annotations.precompiler.GamlAnnotations.example;
-import gama.annotations.precompiler.GamlAnnotations.file;
-
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
@@ -24,6 +8,24 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+
+import org.apache.commons.io.FileUtils;
+
+import gama.annotations.precompiler.GamlAnnotations.doc;
+import gama.annotations.precompiler.GamlAnnotations.example;
+import gama.annotations.precompiler.GamlAnnotations.file;
+import gama.annotations.precompiler.IConcept;
+import gama.core.common.geometry.Envelope3D;
+import gama.core.runtime.IScope;
+import gama.core.runtime.exceptions.GamaRuntimeException;
+import gama.core.util.GamaListFactory;
+import gama.core.util.GamaMapFactory;
+import gama.core.util.IList;
+import gama.core.util.IMap;
+import gama.core.util.file.GamaFile;
+import gama.gaml.types.IContainerType;
+import gama.gaml.types.IType;
+import gama.gaml.types.Types;
 
 /**
  * Reading and processing GTFS files in GAMA. This class reads multiple GTFS files
@@ -152,7 +154,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         gtfsData = GamaMapFactory.create(Types.STRING, Types.LIST); // Use GamaMap for storing GTFS files
 
         try {
-            File folder = new File(pathName);
+            File folder = FileUtils.getFile(pathName);
             File[] files = folder.listFiles();  // List of files in the folder
             if (files != null) {
                 for (File file : files) {
@@ -197,10 +199,10 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 double stopLat = Double.parseDouble(fields[3]); // stop_lat
                 double stopLon = Double.parseDouble(fields[4]); // stop_lon
                 TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon);
-                stopsMap.put(stopId, stop); // Store in stopsMap
-                System.out.println("Created TransportStop object: " + stopId);
+                stopsMap.put(stopId, stop); // Store in stopsMap 
+                System.out.println("Created TransportStop object: " + stopId + " -> " + stopsMap.length(scope));
             }
-            System.out.println("Finished creating TransportStop objects.");
+            System.out.println("Finished creating TransportStop objects.: " + stopsMap);
         }
 
 //        // Create TransportRoute objects from routes.txt

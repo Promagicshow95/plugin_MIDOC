@@ -2,7 +2,9 @@ model GTFSreader
 
 global {
     // Path to the GTFS file
-    gtfs_file hanoi_gtfs <- gtfs_file("../includes/tisseo_gtfs_v2");
+    string gtfs_file_path <- "C:\\Users\\tiend\\Desktop\\Prepared for MIDOC\\Prepared for MIDOC\\Donnée\\DataFile\\tisseo_gtfs_v2";
+    
+    gtfs_file hanoi_gtfs <- gtfs_file(gtfs_file_path);
     
     // Initialization section
     init {
@@ -14,7 +16,7 @@ global {
        }
     }
 }
-
+ 
 // Species representing each transport stop
 species bus_stop skills: [TransportStopSkill] {
     // Attributes for latitude and longitude

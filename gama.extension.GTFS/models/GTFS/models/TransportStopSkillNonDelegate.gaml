@@ -25,9 +25,9 @@ global {
 // Définition de l'espèce `bus_stop` avec le skill `TransportStopSkill`
 species bus_stop skills: [TransportStopSkillNonDelegate] {
     
-    // Attributs spécifiques à chaque arrêt de bus
-    string stopId;
-    string stopName;
+//    // Attributs spécifiques à chaque arrêt de bus
+//    string stopId;
+//    string stopName;
 
     // Aspect pour afficher chaque arrêt de transport
     aspect base {

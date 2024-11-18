@@ -77,7 +77,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     public IType<?> fromFacetType() {
         return Types.FILE; // The source is a GTFS file path (String)
     }
-
+ 
     /**
      * Fully handles the creation of agents using the GTFS data.
      */
