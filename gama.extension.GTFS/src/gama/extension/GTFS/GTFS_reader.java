@@ -76,13 +76,13 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
         
         // Check the validity of the directory
-        System.out.println("Checking the validity of the GTFS directory...");
-        checkValidity(scope);  
-        System.out.println("Directory validation completed.");
+//        System.out.println("Checking the validity of the GTFS directory...");
+//        checkValidity(scope);  
+//        System.out.println("Directory validation completed.");
 
         // Load GTFS files
         System.out.println("Loading GTFS files...");
-        loadGtfsFiles(scope, pathName);
+        loadGtfsFiles(scope);
         System.out.println("File loading completed.");
         
      // Create transport objects
@@ -95,7 +95,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     public GTFS_reader(final String pathName) throws GamaRuntimeException {
         super(null, pathName);  // Pass 'null' for IScope as it is not needed here
         checkValidity(null);  // Pass 'null' if IScope is not necessary for this check
-        loadGtfsFiles(null, pathName);
+        loadGtfsFiles(null);
         createTransportObjects(null);
     }
     
@@ -150,11 +150,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     /**
      * Loads GTFS files and verifies if all required files are present.
      */
-    private void loadGtfsFiles(final IScope scope, final String pathName) throws GamaRuntimeException {
+    private void loadGtfsFiles(final IScope scope) throws GamaRuntimeException {
         gtfsData = GamaMapFactory.create(Types.STRING, Types.LIST); // Use GamaMap for storing GTFS files
 
         try {
-            File folder = FileUtils.getFile(pathName);
+            File folder = this.getFile(scope);
             File[] files = folder.listFiles();  // List of files in the folder
             if (files != null) {
                 for (File file : files) {
@@ -268,7 +268,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     	System.out.println("Filling buffer...");
         if (gtfsData == null) {
         	System.out.println("gtfsData is null, loading GTFS files...");
-            loadGtfsFiles(scope, getPath(scope));
+            loadGtfsFiles(scope);
             System.out.println("Finished loading GTFS files.");
         }else
         	 System.out.println("gtfsData is already initialized.");
