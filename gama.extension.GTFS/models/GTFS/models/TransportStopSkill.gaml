@@ -1,19 +1,23 @@
 model GTFSreader
 
 global {
-	shape_file boundaryTLSEWGS84PM0_shape_file <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
-//	shape_file boundary_Toulouses0_shape_file <- shape_file("../includes/boundary_Toulouses.shp");
-	geometry shape <- envelope(boundaryTLSEWGS84PM0_shape_file);
-	
     // Path to the GTFS file
-    gtfs_file hanoi_gtfs <- gtfs_file("../includes/tisseo_gtfs_v2");
+     gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");	
+	 shape_file boundary_shp <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
+
+	//shape_file boundary_shp <- shape_file("../includes/boundaryHN.shp");
+    //gtfs_file gtfs_f <- gtfs_file("../includes/hanoi_gtfs_am");	
+
+
+	geometry shape <- envelope(boundary_shp);
+//	geometry shape <- envelope(gtfs_f);
     
     // Initialization section
     init {
-        write "Loading GTFS contents from: " + hanoi_gtfs;
+        write "Loading GTFS contents from: " + gtfs_f;
         
         // Create bus_stop agents from the GTFS data
-       create bus_stop from: hanoi_gtfs  {
+       create bus_stop from: gtfs_f  {
        	
 				
        }
