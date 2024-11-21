@@ -1,6 +1,10 @@
 model GTFSreader
 
 global {
+	shape_file boundaryTLSEWGS84PM0_shape_file <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
+//	shape_file boundary_Toulouses0_shape_file <- shape_file("../includes/boundary_Toulouses.shp");
+	geometry shape <- envelope(boundaryTLSEWGS84PM0_shape_file);
+	
     // Path to the GTFS file
     gtfs_file hanoi_gtfs <- gtfs_file("../includes/tisseo_gtfs_v2");
     
@@ -44,7 +48,9 @@ species bus_stop skills: [TransportStopSkill] {
 //        stopName <- attribute("stopName");
 //    }
     
-     aspect base {}
+     aspect base {
+		draw circle (100.0) at: location color:#blue;	
+     }
 }
 
 species my_species skills: [TransportStopSkill] {
@@ -53,7 +59,7 @@ species my_species skills: [TransportStopSkill] {
         write "Nombre d'arrêts créés: " + length(bus_stop);  // Affiche le nombre d'arrêts créés
     }
     aspect base {
-    	draw circle (1.0) at: location;
+    	draw circle (100.0) at: location color:#blue;
     }
 }
 
