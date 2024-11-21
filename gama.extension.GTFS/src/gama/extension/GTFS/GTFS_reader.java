@@ -5,8 +5,10 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 import org.apache.commons.io.FileUtils;
@@ -49,10 +51,13 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
     // Data structure to store GTFS files
     private IMap<String, IList<String>> gtfsData;
+    
+ // New field to store header mappings for each file
+    private IMap<String, IMap<String, Integer>> headerMaps = GamaMapFactory.create(Types.STRING, Types.get(IMap.class));
 
     // Collections for objects created from GTFS files
 //    private IMap<String, TransportRoute> routesMap;
-//    private IMap<Integer, TransportTrip> tripsMap;
+    private IMap<Integer, TransportTrip> tripsMap;
     private IMap<String, TransportStop> stopsMap;
 
     /**
@@ -105,8 +110,19 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      */
     public List<TransportStop> getStops() {
         List<TransportStop> stopList = new ArrayList<>(stopsMap.values());
-        System.out.println("Number of crated stop : " + stopList.size());
+        System.out.println("Number of created stop : " + stopList.size());
         return stopList;
+    }
+    
+    /**
+     * Method to retrieve the list of trips (TransportTrip) from tripsMap.
+     * @return List of transport stops
+     */
+    
+    public List<TransportTrip> getTrips() {
+    	List<TransportTrip> tripList = new ArrayList<>(tripsMap.values());
+    	System.out.println("Number of created trip : " + tripList.size());
+        return tripList;
     }
 
     /**
@@ -152,28 +168,47 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      */
     private void loadGtfsFiles(final IScope scope) throws GamaRuntimeException {
         gtfsData = GamaMapFactory.create(Types.STRING, Types.LIST); // Use GamaMap for storing GTFS files
-
+        headerMaps = GamaMapFactory.create(Types.STRING, Types.get(IMap.class));
         try {
             File folder = this.getFile(scope);
             File[] files = folder.listFiles();  // List of files in the folder
             if (files != null) {
                 for (File file : files) {
-                    // Checks if the file is a file and has the extension .txt
                     if (file.isFile() && file.getName().endsWith(".txt")) {
-                    	System.out.println("Reading file: " + file.getName());
-                        IList<String> fileContent = readCsvFile(file);  // Reading the CSV file
+                        System.out.println("Reading file: " + file.getName());
+                        Map<String, Integer> headerMap = new HashMap<>(); // Map for headers
+                        IList<String> fileContent = readCsvFile(file, headerMap);  // Reading the CSV file
+                        gtfsData.put(file.getName(), fileContent);
+                        IMap<String, Integer> headerIMap = GamaMapFactory.wrap(Types.STRING, Types.INT, headerMap);
+                        headerMaps.put(file.getName(), headerIMap); // Stocker dans headerMaps
+                        System.out.println("Headers loaded for file: " + file.getName() + " -> " + headerIMap);
                         System.out.println("Finished reading file: " + file.getName());
-                        gtfsData.put(file.getName(), fileContent); 
-                        System.out.println("File content stored for: " + file.getName());
                     }
                 }
             }
         } catch (Exception e) {
-        	System.err.println("Error while loading GTFS files: " + e.getMessage());
-            throw GamaRuntimeException.create(e, scope);  
+            System.err.println("Error while loading GTFS files: " + e.getMessage());
+            throw GamaRuntimeException.create(e, scope);
         }
-        
+
         System.out.println("All GTFS files have been loaded.");
+        System.out.println("Headers loaded for files: " + headerMaps.keySet());
+    }
+    
+    /**
+     * Retrieves the header map for a given file.
+     *
+     * @param fileName The name of the file
+     * @return The header map
+     */
+    private Map<String, Integer> getHeaderMap(String fileName) {
+        IList<String> headers = gtfsData.get(fileName + "_headers");
+        if (headers == null) return null;
+        Map<String, Integer> headerMap = new HashMap<>();
+        for (int i = 0; i < headers.size(); i++) {
+            headerMap.put(headers.get(i), i);
+        }
+        return headerMap;
     }
 
     /**
@@ -183,27 +218,50 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     	System.out.println("Starting transport object creation...");
 //        routesMap = GamaMapFactory.create(Types.STRING, Types.get(TransportRoute.class)); // Using GamaMap for routesMap
         stopsMap = GamaMapFactory.create(Types.STRING, Types.get(TransportStop.class));   // Using GamaMap for stopMap
-//        tripsMap = GamaMapFactory.create(Types.INT, Types.get(TransportTrip.class));      // Using GamaMap for tripMap
+        tripsMap = GamaMapFactory.create(Types.INT, Types.get(TransportTrip.class));      // Using GamaMap for tripMap
 
         // Create TransportStop objects from stops.txt
         IList<String> stopsData = gtfsData.get("stops.txt");
-        if (stopsData != null) {
-            for (String line : stopsData) {
-            	// Ignore the first header line if present
-                if (line.startsWith("stop_id")) {
-                    continue;
-                }
-                String[] fields = line.split(",");
-                String stopId = fields[0]; 						// stop_id
-                String stopName = fields[2]; 					// stop_name
-                double stopLat = Double.parseDouble(fields[3]); // stop_lat
-                double stopLon = Double.parseDouble(fields[4]); // stop_lon
-                TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon);
-                stopsMap.put(stopId, stop); // Store in stopsMap 
-                System.out.println("Created TransportStop object: " + stopId + " -> " + stopsMap.length(scope));
-            }
-            System.out.println("Finished creating TransportStop objects.: " + stopsMap);
+     // Use header map stored in gtfsData
+        IMap<String, Integer> headerIMap = headerMaps.get("stops.txt"); // Retrieve headers from headerMaps
+        if (stopsData == null || stopsData.isEmpty()) {
+            System.err.println("stopsData is null or empty.");
+        } else {
+            System.out.println("stopsData size: " + stopsData.size());
         }
+
+        if (headerIMap == null) {
+            System.err.println("headerIMap for stops.txt is null.");
+        } else {
+            System.out.println("Headers for stops.txt: " + headerIMap);
+        }
+
+        if (stopsData != null && headerIMap != null) {
+            int stopIdIndex = headerIMap.get("stop_id");
+            int stopNameIndex = headerIMap.get("stop_name");
+            int stopLatIndex = headerIMap.get("stop_lat");
+            int stopLonIndex = headerIMap.get("stop_lon");
+
+            for (String line : stopsData) {
+                String[] fields = line.split(",");
+                try {
+                    String stopId = fields[stopIdIndex];
+                    String stopName = fields[stopNameIndex];
+                    double stopLat = Double.parseDouble(fields[stopLatIndex]);
+                    double stopLon = Double.parseDouble(fields[stopLonIndex]);
+                    TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon);
+                    stopsMap.put(stopId, stop);
+                    System.out.println("Created TransportStop: " + stopId);
+                } catch (Exception e) {
+                    System.err.println("Error processing line: " + line + " -> " + e.getMessage());
+                }
+            }
+        } else {
+            System.err.println("stops.txt data or headers are missing.");
+        }
+
+        System.out.println("Finished creating TransportStop objects.");
+        
 
 //        // Create TransportRoute objects from routes.txt
 //        IList<String> routesData = gtfsData.get("routes.txt");
@@ -222,39 +280,62 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 //        }
 
 //        // Create TransportTrip objects from trips.txt
-//        IList<String> tripsData = gtfsData.get("trips.txt");
-//        if (tripsData != null) {
-//            for (String line : tripsData) {
-//                String[] fields = line.split(",");
-//                String routeId = fields[0];
-//                String serviceId = fields[1];
-//                int tripId = Integer.parseInt(fields[2]);
-//                int directionId = Integer.parseInt(fields[3]);
-//                int shapeId = Integer.parseInt(fields[4]);
-//                TransportRoute route = routesMap.get(routeId);
-//                TransportTrip trip = new TransportTrip(routeId, serviceId, tripId, directionId, shapeId, route);
-//                tripsMap.put(tripId, trip); // Storage in tripsMap
-//                System.out.println("Created TransportTrip object: " + tripId);
-//            }
-//            System.out.println("Finished creating TransportTrip objects.");
-//        }
+        IList<String> tripsData = gtfsData.get("trips.txt");
+        IMap<String, Integer> tripsHeaderMap = headerMaps.get("trips.txt");
+        if (tripsData != null && tripsHeaderMap != null) {
+            System.out.println("Processing trips.txt...");
+            int routeIdIndex = tripsHeaderMap.get("route_id");
+            int serviceIdIndex = tripsHeaderMap.get("service_id");
+            int tripIdIndex = tripsHeaderMap.get("trip_id");
+            int directionIdIndex = tripsHeaderMap.get("direction_id");
+            int shapeIdIndex = tripsHeaderMap.get("shape_id");
+
+            for (String line : tripsData) {
+                String[] fields = line.split(",");
+                try {
+                    String routeId = fields[routeIdIndex];
+                    String serviceId = fields[serviceIdIndex];
+                    int tripId = Integer.parseInt(fields[tripIdIndex]);
+                    int directionId = Integer.parseInt(fields[directionIdIndex]);
+                    int shapeId = Integer.parseInt(fields[shapeIdIndex]);
+
+                    // Create the TransportTrip object (ATTENTION,in this line null replace TransportRoute latter)
+                    TransportTrip trip = new TransportTrip(routeId, serviceId, tripId, directionId, shapeId, null);
+                    tripsMap.put(tripId, trip);
+                    System.out.println("Created TransportTrip: " + tripId);
+                } catch (Exception e) {
+                    System.err.println("Error processing trip line: " + line + " -> " + e.getMessage());
+                }
+            }
+            System.out.println("Finished creating TransportTrip objects.");
+        } else {
+            System.err.println("trips.txt data or headers are missing.");
+        }
+        
         System.out.println("Transport object creation completed.");
     }
 
     /**
      * Reads a CSV file and returns its content as an IList.
      */
-    private IList<String> readCsvFile(File file) throws IOException {
+    private IList<String> readCsvFile(File file, Map<String, Integer> headerMap) throws IOException {
         IList<String> content = GamaListFactory.create();
-     // Verify that the File object is indeed a file
         if (!file.isFile()) {
             throw new IOException(file.getAbsolutePath() + " is not a valid file.");
         }
         System.out.println("Reading file: " + file.getAbsolutePath());
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
-         // Ignore the first line (header)
-            br.readLine();  
+            // Read the header line
+            String headerLine = br.readLine();
+            if (headerLine != null) {
+                String[] headers = headerLine.split(",");
+                for (int i = 0; i < headers.length; i++) {
+                    headerMap.put(headers[i].trim(), i);
+                }
+            }
+
+            // Read the rest of the file
             while ((line = br.readLine()) != null) {
                 content.add(line);
             }
@@ -262,6 +343,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         System.out.println("Finished reading file: " + file.getAbsolutePath());
         return content;
     }
+
 
     @Override
     protected void fillBuffer(final IScope scope) throws GamaRuntimeException {
