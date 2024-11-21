@@ -7,7 +7,6 @@ import gama.annotations.precompiler.GamlAnnotations.getter;
 import gama.annotations.precompiler.GamlAnnotations.setter;
 import gama.annotations.precompiler.GamlAnnotations.doc;
 import gama.core.metamodel.agent.IAgent;
-import gama.core.metamodel.shape.GamaPoint;
 import gama.gaml.skills.Skill;
 import gama.gaml.types.IType;
 
@@ -18,8 +17,8 @@ import gama.gaml.types.IType;
 @skill(name = "TransportStopSkill", doc = @doc("Skill for agents that represent individual transport stops with attributes like stopId, stopName, and location (as a GamaPoint)."))
 @vars({
     @variable(name = "stopId", type = IType.STRING, doc = @doc("The ID of the transport stop.")),
-    @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop.")),
-    @variable(name = "location", type = IType.POINT, doc = @doc("The transformed location of the transport stop in the GAMA CRS, stored as a GamaPoint."))
+    @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop."))//,
+//    @variable(name = "location", type = IType.POINT, doc = @doc("The transformed location of the transport stop in the GAMA CRS, stored as a GamaPoint."))
 })
 public class TransportStopSkill extends Skill {
 
@@ -45,14 +44,14 @@ public class TransportStopSkill extends Skill {
         agent.setAttribute("stopName", stopName);
     }
 
-    // Getter and setter for location
-    @getter("location")
-    public GamaPoint getLocation(final IAgent agent) {
-        return (GamaPoint) agent.getAttribute("location");
-    }
+//    // Getter and setter for location
+//    @getter("location")
+//    public GamaPoint getLocation(final IAgent agent) {
+//        return (GamaPoint) agent.getAttribute("location");
+//    }
 
-    @setter("location")
-    public void setLocation(final IAgent agent, final GamaPoint location) {
-        agent.setAttribute("location", location);
-    }
+//    @setter("location")
+//    public void setLocation(final IAgent agent, final GamaPoint location) {
+ //       agent.setAttribute("location", location);
+//    }
 }
