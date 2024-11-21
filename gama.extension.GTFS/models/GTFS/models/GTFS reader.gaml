@@ -18,10 +18,7 @@ global {
 // Species representing each transport stop
 species bus_stop skills: [TransportStopSkill] {
     // Attributes for latitude and longitude
-//    float latitude <- 0.0;
-//    float longitude <- 0.0;
 //		--> in the location attribute
-
 //    string stopId <- "";
 //    string stopName <- "";
 //		--> built-in attributes from the skill

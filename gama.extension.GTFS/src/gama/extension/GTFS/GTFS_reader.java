@@ -237,19 +237,22 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
 
         if (stopsData != null && headerIMap != null) {
-            int stopIdIndex = headerIMap.get("stop_id");
+        	int stopIdIndex = headerIMap.get("stop_id");
             int stopNameIndex = headerIMap.get("stop_name");
             int stopLatIndex = headerIMap.get("stop_lat");
             int stopLonIndex = headerIMap.get("stop_lon");
 
+
             for (String line : stopsData) {
                 String[] fields = line.split(",");
                 try {
-                    String stopId = fields[stopIdIndex];
+                	String stopId = fields[stopIdIndex];
                     String stopName = fields[stopNameIndex];
                     double stopLat = Double.parseDouble(fields[stopLatIndex]);
                     double stopLon = Double.parseDouble(fields[stopLonIndex]);
-                    TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon);
+                    
+                 // Pass the scope to the TransportStop constructor for CRS transformation
+                    TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon, scope);
                     stopsMap.put(stopId, stop);
                     System.out.println("Created TransportStop: " + stopId);
                 } catch (Exception e) {

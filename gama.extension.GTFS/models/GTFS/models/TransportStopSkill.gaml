@@ -21,6 +21,10 @@ global {
 
 // Species representing each transport stop
 species bus_stop skills: [TransportStopSkill] {
+
+    init {
+        write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location;
+    }
     // Attributes for latitude and longitude
 //    float latitude <- 0.0;
 //    float longitude <- 0.0;
@@ -48,7 +52,9 @@ species my_species skills: [TransportStopSkill] {
     reflex check_stops {
         write "Nombre d'arrêts créés: " + length(bus_stop);  // Affiche le nombre d'arrêts créés
     }
-    aspect base {}
+    aspect base {
+    	draw circle (1.0) at: location;
+    }
 }
 
 // GUI-based experiment for visualization

@@ -4,6 +4,7 @@ import gama.core.common.interfaces.ICreateDelegate;
 import gama.core.runtime.IScope;
 import gama.core.metamodel.agent.IAgent;
 import gama.core.metamodel.population.IPopulation;
+import gama.core.metamodel.shape.GamaPoint;
 import gama.core.util.GamaListFactory;
 import gama.core.util.IList;
 import gama.extension.GTFS.TransportStop;
@@ -15,6 +16,7 @@ import gama.gaml.statements.RemoteSequence;
 import gama.gaml.types.IType;
 import gama.gaml.types.Types;
 
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -77,12 +79,25 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
         for (int i = 0; i < limit; i++) {
             TransportStop stop = stops.get(i);
-            Map<String, Object> stopInit = Map.of(
-                "stopId", stop.getStopId(),
-                "stopName", stop.getStopName()
-            );
+
+            // Vérification des données de stop
+            GamaPoint location = stop.getLocation();
+            if (location == null) {
+                System.err.println("[Error] Null location for stopId: " + stop.getStopId());
+                continue; // Ne pas ajouter d'initialisation si la localisation est invalide
+            }
+
+            // Création d'une carte mutable pour les initialisations
+            Map<String, Object> stopInit = new HashMap<>();
+            stopInit.put("stopId", stop.getStopId());
+            stopInit.put("stopName", stop.getStopName());
+            stopInit.put("location", location);
+
+            // Vérification finale des données
+            System.out.println("Adding stop init: " + stopInit);
+
+            // Ajout des initialisations
             inits.add(stopInit);
-            scope.getGui().getConsole().informConsole("Added TransportStop to inits: " + stop.getStopId(), scope.getSimulation());
         }
     }
 
@@ -120,19 +135,37 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     @Override
     public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population,
                                                 List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
+    	
+    	System.out.println("[Debug] Populations in scope: " + scope.getRoot().getPopulation());
         IList<IAgent> createdAgents = GamaListFactory.create();
 
         for (Map<String, Object> init : inits) {
-            IList<? extends IAgent> agents = population.createAgents(scope, 1, List.of(init), false, true);
+        	
+        	System.out.println("[Debug] Data in init before agent creation: " + init);
+            System.out.println("Processing init: " + init);
+
+            if (init.get("stopId") == null || init.get("stopName") == null || init.get("location") == null) {
+                System.err.println("[Error] Missing required data in init: " + init);
+                continue; // Ignore les initialisations invalides
+            }
+
+            // Création des agents avec des initialisations valides
+            IList<Map<String, Object>> mutableInitList = GamaListFactory.create();
+            mutableInitList.add(init);
+            System.out.println("[Debug] Creating agent with init: " + mutableInitList);
+            
+            System.out.println("[Debug] Population: " + population.getName());
+            IList<? extends IAgent> agents = population.createAgents(scope, 1, mutableInitList, false, true);
+
+            if (agents.isEmpty()) {
+                System.err.println("[Error] Failed to create agent for init: " + init);
+                continue;
+            }
+
             IAgent agent = agents.get(0);
             createdAgents.add(agent);
 
-            // Log details about the created agent
-            if (init.containsKey("stopId")) {
-                System.out.println("Created Stop Agent: stopId = " + init.get("stopId") + ", stopName = " + init.get("stopName"));
-            } else if (init.containsKey("tripId")) {
-                System.out.println("Created Trip Agent: tripId = " + init.get("tripId") + ", routeId = " + init.get("routeId"));
-            }
+            System.out.println("Created agent: " + agent);
         }
 
         return createdAgents;

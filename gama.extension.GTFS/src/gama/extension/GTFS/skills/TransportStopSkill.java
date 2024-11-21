@@ -1,4 +1,3 @@
-
 package gama.extension.GTFS.skills;
 
 import gama.annotations.precompiler.GamlAnnotations.skill;
@@ -7,20 +6,20 @@ import gama.annotations.precompiler.GamlAnnotations.variable;
 import gama.annotations.precompiler.GamlAnnotations.getter;
 import gama.annotations.precompiler.GamlAnnotations.setter;
 import gama.annotations.precompiler.GamlAnnotations.doc;
-import gama.gaml.skills.Skill;
 import gama.core.metamodel.agent.IAgent;
+import gama.core.metamodel.shape.GamaPoint;
+import gama.gaml.skills.Skill;
 import gama.gaml.types.IType;
 
 /**
  * The skill TransportStopSkill for managing individual transport stops in GAMA.
- * This skill stores attributes like stopId, stopName, latitude, and longitude for each stop.
+ * This skill stores attributes like stopId, stopName, and location (as a GamaPoint) for each stop.
  */
-@skill(name = "TransportStopSkill", doc = @doc("Skill for agents that represent individual transport stops with attributes like stopId, stopName, latitude, and longitude."))
+@skill(name = "TransportStopSkill", doc = @doc("Skill for agents that represent individual transport stops with attributes like stopId, stopName, and location (as a GamaPoint)."))
 @vars({
     @variable(name = "stopId", type = IType.STRING, doc = @doc("The ID of the transport stop.")),
     @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop.")),
-//    @variable(name = "latitude", type = IType.FLOAT, doc = @doc("The latitude of the transport stop.")),
-//    @variable(name = "longitude", type = IType.FLOAT, doc = @doc("The longitude of the transport stop."))
+    @variable(name = "location", type = IType.POINT, doc = @doc("The transformed location of the transport stop in the GAMA CRS, stored as a GamaPoint."))
 })
 public class TransportStopSkill extends Skill {
 
@@ -38,35 +37,22 @@ public class TransportStopSkill extends Skill {
     // Getter and setter for stopName
     @getter("stopName")
     public String getStopName(final IAgent agent) {
-    	
         return (String) agent.getAttribute("stopName");
     }
 
     @setter("stopName")
     public void setStopName(final IAgent agent, final String stopName) {
-    	
         agent.setAttribute("stopName", stopName);
     }
 
-//    // Getter and setter for latitude
-//    @getter("latitude")
-//    public double getLatitude(final IAgent agent) {
-//        return (Double) agent.getAttribute("latitude");
-//    }
-//
-//    @setter("latitude")
-//    public void setLatitude(final IAgent agent, final double latitude) {
-//        agent.setAttribute("latitude", latitude);
-//    }
-//
-//    // Getter and setter for longitude
-//    @getter("longitude")
-//    public double getLongitude(final IAgent agent) {
-//        return (Double) agent.getAttribute("longitude");
-//    }
-//
-//    @setter("longitude")
-//    public void setLongitude(final IAgent agent, final double longitude) {
-//        agent.setAttribute("longitude", longitude);
-//    }
+    // Getter and setter for location
+    @getter("location")
+    public GamaPoint getLocation(final IAgent agent) {
+        return (GamaPoint) agent.getAttribute("location");
+    }
+
+    @setter("location")
+    public void setLocation(final IAgent agent, final GamaPoint location) {
+        agent.setAttribute("location", location);
+    }
 }
