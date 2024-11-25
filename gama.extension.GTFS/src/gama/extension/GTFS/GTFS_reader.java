@@ -11,11 +11,16 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.locationtech.jts.geom.Polygon;
+
 import gama.annotations.precompiler.GamlAnnotations.doc;
 import gama.annotations.precompiler.GamlAnnotations.example;
 import gama.annotations.precompiler.GamlAnnotations.file;
 import gama.annotations.precompiler.IConcept;
 import gama.core.common.geometry.Envelope3D;
+import gama.core.metamodel.shape.GamaPoint;
+import gama.core.metamodel.shape.GamaShape;
+import gama.core.metamodel.shape.GamaShapeFactory;
 import gama.core.runtime.IScope;
 import gama.core.runtime.exceptions.GamaRuntimeException;
 import gama.core.util.GamaListFactory;
@@ -57,6 +62,8 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 //    private IMap<String, TransportRoute> routesMap;
     private IMap<Integer, TransportTrip> tripsMap;
     private IMap<String, TransportStop> stopsMap;
+    private IMap<Integer, TransportShape> shapesMap;
+    
 
     /**
      * Constructor for reading GTFS files.
@@ -110,6 +117,14 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         List<TransportStop> stopList = new ArrayList<>(stopsMap.values());
         System.out.println("Number of created stop : " + stopList.size());
         return stopList;
+    }
+    
+    /**
+     * Method to retrieve the list of shape (TransportShape) from shapesMap.
+     * @return List of transport shapes
+     */   
+    public List<TransportShape> getShapes() {
+        return new ArrayList<>(shapesMap.values());
     }
     
     /**
@@ -217,7 +232,8 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 //        routesMap = GamaMapFactory.create(Types.STRING, Types.get(TransportRoute.class)); // Using GamaMap for routesMap
         stopsMap = GamaMapFactory.create(Types.STRING, Types.get(TransportStop.class));   // Using GamaMap for stopMap
         tripsMap = GamaMapFactory.create(Types.INT, Types.get(TransportTrip.class));      // Using GamaMap for tripMap
-
+        shapesMap = GamaMapFactory.create(Types.INT, Types.get(TransportShape.class));
+        
         // Create TransportStop objects from stops.txt
         IList<String> stopsData = gtfsData.get("stops.txt");
      // Use header map stored in gtfsData
@@ -262,6 +278,40 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
 
         System.out.println("Finished creating TransportStop objects.");
+        
+     // Create TransporShape objects from shapes.txt
+        IList<String> shapesData = gtfsData.get("shapes.txt");
+        IMap<String, Integer> headerMap = headerMaps.get("shapes.txt");
+        if (shapesData != null && headerMap != null) {
+            System.out.println("Processing shapes.txt...");
+            int shapeIdIndex = headerMap.get("shape_id");
+            int latIndex = headerMap.get("shape_pt_lat");
+            int lonIndex = headerMap.get("shape_pt_lon");
+
+            for (String line : shapesData) {
+                String[] fields = line.split(",");
+                try {
+                    int shapeId = Integer.parseInt(fields[shapeIdIndex]);
+                    double lat = Double.parseDouble(fields[latIndex]);
+                    double lon = Double.parseDouble(fields[lonIndex]);
+
+                    // Crée ou récupère un objet TransportShape
+                    TransportShape shape = shapesMap.get(shapeId);
+                    if (shape == null) {
+                        shape = new TransportShape(shapeId);
+                        shapesMap.put(shapeId, shape);
+                    }
+
+                    // Add the point to shape
+                    shape.addPoint(lat, lon, scope);
+                } catch (Exception e) {
+                    System.err.println("Error processing shape line: " + line + " -> " + e.getMessage());
+                }
+            }
+            System.out.println("Finished creating TransportShape objects.");
+        } else {
+            System.err.println("shapes.txt data or headers are missing.");
+        }
         
 
 //        // Create TransportRoute objects from routes.txt
@@ -378,11 +428,53 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         return Types.FILE.of(Types.STRING, Types.STRING);
     }
 
+
     @Override
     public Envelope3D computeEnvelope(final IScope scope) {
-    	System.out.println("Computing envelope - returning null.");
-        return null;
+        System.out.println("Calculating envelope for GTFS stops...");
+
+        if (stopsMap == null || stopsMap.isEmpty()) {
+            System.err.println("No stops available to compute the envelope.");
+            return Envelope3D.EMPTY;
+        }
+
+        Envelope3D envelope = Envelope3D.create();
+
+        for (TransportStop stop : stopsMap.values()) {
+            try {
+                GamaPoint location = stop.getLocation();
+                if (location == null) {
+                    System.err.println("Skipping stop with null location: " + stop.getStopId());
+                    continue;
+                }
+                // Add the transformed location to the envelope
+                envelope.expandToInclude(location);
+            } catch (Exception e) {
+                System.err.println("Error adding stop to envelope: " + stop.getStopId() + " -> " + e.getMessage());
+            }
+        }
+
+        System.out.println("Computed envelope: " + envelope);
+        return envelope;
     }
+    
+    public GamaShape getEnvelopeAsShape(final IScope scope) {
+        Envelope3D envelope = computeEnvelope(scope);
+        if (envelope.isNull()) {
+            System.err.println("Envelope is empty. Cannot create shape.");
+            return null;
+        }
+
+        try {
+            Polygon polygon = envelope.toGeometry();
+            return GamaShapeFactory.createFrom(polygon);
+        } catch (Exception e) {
+            System.err.println("Error creating shape from envelope: " + e.getMessage());
+            return null;
+        }
+    }
+
+
 
     public TransportStop getStop(String stopId) {
         System.out.println("Getting stop with ID: " + stopId);
