@@ -3,101 +3,100 @@ package gama.extension.GTFS;
 import java.util.List;
 
 public class TransportTrip {
-	
-	 private String routeId; // Identifiant de la route
-	    private String serviceId; // Identifiant du service
-	    private int tripId; // Identifiant du trajet
-	    private int directionId; // Direction du trajet
-	    private int shapeId; // Identifiant de la forme (shape)
-	    private TransportRoute transportRoute; // La route associée à ce trajet
-	    private List<TransportStop> stops; // Liste des arrêts associés à ce trajet
-	    private List<String> departureTimes; // Liste des heures de départ à chaque arrêt
 
-	    // Constructeur
-	    public TransportTrip(String routeId, String serviceId, int tripId, int directionId, int shapeId, TransportRoute transportRoute) {
-	        this.routeId = routeId;
-	        this.serviceId = serviceId;
-	        this.tripId = tripId;
-	        this.directionId = directionId;
-	        this.shapeId = shapeId;
-	        this.transportRoute = transportRoute;
-	    }
+    private String routeId; // Route identifier
+    private String serviceId; // Service identifier
+    private int tripId; // Trip identifier
+    private int directionId; // Direction identifier
+    private int shapeId; // Shape identifier
+    private TransportRoute transportRoute; // The route associated with this trip
+    private List<TransportStop> stops; // List of stops associated with this trip
+    private List<String> departureTimes; // List of departure times at each stop
 
-	    // Getters et Setters
-	    public String getRouteId() {
-	        return routeId;
-	    }
+    // Constructor
+    public TransportTrip(String routeId, String serviceId, int tripId, int directionId, int shapeId, TransportRoute transportRoute) {
+        this.routeId = routeId;
+        this.serviceId = serviceId;
+        this.tripId = tripId;
+        this.directionId = directionId;
+        this.shapeId = shapeId;
+        this.transportRoute = transportRoute;
+    }
 
-	    public void setRouteId(String routeId) {
-	        this.routeId = routeId;
-	    }
+    // Getters and Setters
+    public String getRouteId() {
+        return routeId;
+    }
 
-	    public String getServiceId() {
-	        return serviceId;
-	    }
+    public void setRouteId(String routeId) {
+        this.routeId = routeId;
+    }
 
-	    public void setServiceId(String serviceId) {
-	        this.serviceId = serviceId;
-	    }
+    public String getServiceId() {
+        return serviceId;
+    }
 
-	    public int getTripId() {
-	        return tripId;
-	    }
+    public void setServiceId(String serviceId) {
+        this.serviceId = serviceId;
+    }
 
-	    public void setTripId(int tripId) {
-	        this.tripId = tripId;
-	    }
+    public int getTripId() {
+        return tripId;
+    }
 
-	    public int getDirectionId() {
-	        return directionId;
-	    }
+    public void setTripId(int tripId) {
+        this.tripId = tripId;
+    }
 
-	    public void setDirectionId(int directionId) {
-	        this.directionId = directionId;
-	    }
+    public int getDirectionId() {
+        return directionId;
+    }
 
-	    public int getShapeId() {
-	        return shapeId;
-	    }
+    public void setDirectionId(int directionId) {
+        this.directionId = directionId;
+    }
 
-	    public void setShapeId(int shapeId) {
-	        this.shapeId = shapeId;
-	    }
+    public int getShapeId() {
+        return shapeId;
+    }
 
-	    public TransportRoute getTransportRoute() {
-	        return transportRoute;
-	    }
+    public void setShapeId(int shapeId) {
+        this.shapeId = shapeId;
+    }
 
-	    public void setTransportRoute(TransportRoute transportRoute) {
-	        this.transportRoute = transportRoute;
-	    }
+    public TransportRoute getTransportRoute() {
+        return transportRoute;
+    }
 
-	    public List<TransportStop> getStops() {
-	        return stops;
-	    }
+    public void setTransportRoute(TransportRoute transportRoute) {
+        this.transportRoute = transportRoute;
+    }
 
-	    public void setStops(List<TransportStop> stops) {
-	        this.stops = stops;
-	    }
+    public List<TransportStop> getStops() {
+        return stops;
+    }
 
-	    public List<String> getDepartureTimes() {
-	        return departureTimes;
-	    }
+    public void setStops(List<TransportStop> stops) {
+        this.stops = stops;
+    }
 
-	    public void setDepartureTimes(List<String> departureTimes) {
-	        this.departureTimes = departureTimes;
-	    }
+    public List<String> getDepartureTimes() {
+        return departureTimes;
+    }
 
-	    // Méthode pour ajouter un arrêt et son heure de départ
-	    public void addStop(String departureTime, TransportStop stop) {
-	        this.departureTimes.add(departureTime);
-	        this.stops.add(stop);
-	    }
+    public void setDepartureTimes(List<String> departureTimes) {
+        this.departureTimes = departureTimes;
+    }
 
-	    // Méthode pour afficher les informations du trajet
-	    @Override
-	    public String toString() {
-	        return "Trip ID: " + tripId + ", Route ID: " + routeId + ", Stops: " + stops.size() + " stops.";
-	    }
+    // Method to add a stop and its departure time
+    public void addStop(String departureTime, TransportStop stop) {
+        this.departureTimes.add(departureTime);
+        this.stops.add(stop);
+    }
 
+    // Method to display trip information
+    @Override
+    public String toString() {
+        return "Trip ID: " + tripId + ", Route ID: " + routeId + ", Stops: " + stops.size() + " stops.";
+    }
 }
