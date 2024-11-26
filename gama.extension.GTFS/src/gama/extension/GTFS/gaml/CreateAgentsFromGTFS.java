@@ -111,7 +111,17 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         return false;
     }
 
+    private boolean isStopAgent(Map<String, Object> init) {
+        return init.containsKey("stopId") && init.containsKey("stopName") && init.containsKey("location");
+    }
 
+    private boolean isTripAgent(Map<String, Object> init) {
+        return init.containsKey("tripId") && init.containsKey("routeId") && init.containsKey("shapeId");
+    }
+
+    private boolean isShapeAgent(Map<String, Object> init) {
+        return init.containsKey("shapeId") && init.containsKey("points");
+    }
     /**
      * Adds initialization data for TransportStop agents.
      */
@@ -121,23 +131,17 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         for (int i = 0; i < limit; i++) {
             TransportStop stop = stops.get(i);
 
-            // Vérification stop's data
             GamaPoint location = stop.getLocation();
-            if (location == null) {
-                System.err.println("[Error] Null location for stopId: " + stop.getStopId());
-                continue; // Ne pas ajouter d'initialisation si la localisation est invalide
+            if (location == null || stop.getStopId() == null || stop.getStopName() == null) {
+                System.err.println("[Error] Invalid data for TransportStop: " + stop);
+                continue;
             }
 
-            // Création d'une carte mutable pour les initialisations
             Map<String, Object> stopInit = new HashMap<>();
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", location);
 
-            // Vérification finale des données
-            System.out.println("Adding stop init: " + stopInit);
-
-            // Ajout des initialisations
             inits.add(stopInit);
         }
     }
@@ -150,6 +154,11 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
         for (int i = 0; i < limit; i++) {
             TransportTrip trip = trips.get(i);
+            if (trip.getTripId() == 0 || trip.getRouteId() == null || trip.getShapeId() == 0) {
+                System.err.println("[Error] Invalid data for TransportTrip: " + trip);
+                continue;
+            }
+
             Map<String, Object> tripInit = Map.of(
                 "tripId", trip.getTripId(),
                 "routeId", trip.getRouteId(),
@@ -158,9 +167,9 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
                 "shapeId", trip.getShapeId()
             );
             inits.add(tripInit);
-            scope.getGui().getConsole().informConsole("Added TransportTrip to inits: " + trip.getTripId(), scope.getSimulation());
         }
     }
+
     
     /**
      * Adds initialization data for TransportShape agents.
@@ -172,16 +181,19 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         for (int i = 0; i < limit; i++) {
             TransportShape shape = shapes.get(i);
 
-            // Préparez les données d'initialisation
+            if (shape.getShapeId() == 0 || shape.getPoints() == null || shape.getPoints().isEmpty()) {
+                System.err.println("[Error] Invalid data for TransportShape: " + shape);
+                continue;
+            }
+
             Map<String, Object> shapeInit = new HashMap<>();
             shapeInit.put("shapeId", shape.getShapeId());
             shapeInit.put("points", shape.getPoints());
 
-            // Ajoutez les initialisations
             inits.add(shapeInit);
-            scope.getGui().getConsole().informConsole("Added TransportShape to inits: " + shape.getShapeId(), scope.getSimulation());
         }
     }
+
 
     /**
      * Defines the source type as a GTFS_reader.
@@ -206,9 +218,24 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         	System.out.println("[Debug] Data in init before agent creation: " + init);
             System.out.println("Processing init: " + init);
 
-            if (init.get("stopId") == null || init.get("stopName") == null || init.get("location") == null) {
-                System.err.println("[Error] Missing required data in init: " + init);
-                continue; // Ignore les initialisations invalides
+            if (isStopAgent(init)) {
+                if (init.get("stopId") == null || init.get("stopName") == null || init.get("location") == null) {
+                    System.err.println("[Error] Missing required data for TransportStop in init: " + init);
+                    continue;
+                }
+            } else if (isTripAgent(init)) {
+                if (init.get("tripId") == null || init.get("routeId") == null || init.get("shapeId") == null) {
+                    System.err.println("[Error] Missing required data for TransportTrip in init: " + init);
+                    continue;
+                }
+            } else if (isShapeAgent(init)) {
+                if (init.get("shapeId") == null || init.get("points") == null || ((List<?>) init.get("points")).isEmpty()) {
+                    System.err.println("[Error] Missing required data for TransportShape in init: " + init);
+                    continue;
+                }
+            } else {
+                System.err.println("[Error] Unknown agent type in init: " + init);
+                continue;
             }
 
             // Création des agents avec des initialisations valides
