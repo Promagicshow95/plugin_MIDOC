@@ -28,7 +28,7 @@ species transport_shape skills: [TransportShapeSkill] {
 
     // Aspect to visualize the shape as a polygon
     aspect base {
-        draw polygon (points) color: #green;
+        draw polyline (points) color: #green;
     }
 }
 

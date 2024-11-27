@@ -5,6 +5,7 @@ import gama.core.runtime.IScope;
 import gama.core.metamodel.agent.IAgent;
 import gama.core.metamodel.population.IPopulation;
 import gama.core.metamodel.shape.GamaPoint;
+import gama.core.metamodel.shape.IShape;
 import gama.core.util.GamaListFactory;
 import gama.core.util.IList;
 import gama.extension.GTFS.TransportStop;
@@ -189,6 +190,13 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             Map<String, Object> shapeInit = new HashMap<>();
             shapeInit.put("shapeId", shape.getShapeId());
             shapeInit.put("points", shape.getPoints());
+            
+            try {
+                IShape polyline = shape.toPolyline(scope);
+                shapeInit.put("polyline", polyline);
+            } catch (Exception e) {
+                System.err.println("Error creating polyline for shape ID " + shape.getShapeId() + ": " + e.getMessage());
+            }
 
             inits.add(shapeInit);
         }

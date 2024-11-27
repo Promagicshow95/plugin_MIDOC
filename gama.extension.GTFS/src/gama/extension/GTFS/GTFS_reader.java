@@ -21,6 +21,7 @@ import gama.core.common.geometry.Envelope3D;
 import gama.core.metamodel.shape.GamaPoint;
 import gama.core.metamodel.shape.GamaShape;
 import gama.core.metamodel.shape.GamaShapeFactory;
+import gama.core.metamodel.shape.IShape;
 import gama.core.runtime.IScope;
 import gama.core.runtime.exceptions.GamaRuntimeException;
 import gama.core.util.GamaListFactory;
@@ -312,6 +313,17 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         } else {
             System.err.println("shapes.txt data or headers are missing.");
         }
+        
+     // Convert each TransportShape into a polyline
+        for (TransportShape shape : shapesMap.values()) {
+            try {
+                IShape polyline = shape.toPolyline(scope);
+                System.out.println("Polyline created for Shape ID " + shape.getShapeId() + ": " + polyline);
+            } catch (Exception e) {
+                System.err.println("Error converting Shape ID " + shape.getShapeId() + " to polyline: " + e.getMessage());
+            }
+        }
+        
         
 
 //        // Create TransportRoute objects from routes.txt

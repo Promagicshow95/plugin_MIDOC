@@ -7,18 +7,22 @@ import gama.annotations.precompiler.GamlAnnotations.getter;
 import gama.annotations.precompiler.GamlAnnotations.setter;
 import gama.annotations.precompiler.GamlAnnotations.doc;
 import gama.core.metamodel.agent.IAgent;
+import gama.gaml.operators.spatial.SpatialCreation;
 import gama.gaml.skills.Skill;
 import gama.gaml.types.IType;
 import gama.core.metamodel.shape.GamaPoint;
 import gama.core.metamodel.shape.IShape;
 import gama.core.runtime.IScope;
+import gama.core.util.GamaListFactory;
+import gama.core.util.IList;
 
 import java.util.List;
 
 @skill(name = "TransportShapeSkill", doc = @doc("Skill for agents representing transport shapes with a list of points."))
 @vars({
     @variable(name = "shapeId", type = IType.INT, doc = @doc("The ID of the transport shape.")),
-    @variable(name = "points", type = IType.LIST, of = IType.POINT, doc = @doc("The list of points composing the shape."))
+    @variable(name = "points", type = IType.LIST, of = IType.POINT, doc = @doc("The list of points composing the shape.")),
+    @variable(name = "polyline", type = IType.GEOMETRY, doc = @doc("The polyline representation of the transport shape."))
 })
 public class TransportShapeSkill extends Skill {
 
@@ -51,5 +55,21 @@ public class TransportShapeSkill extends Skill {
             length += points.get(i - 1).euclidianDistanceTo(points.get(i));
         }
         return length;
+    }
+    
+    @getter("polyline")
+    public IShape getPolyline(final IAgent agent) {
+        List<GamaPoint> points = getPoints(agent);
+        if (points == null || points.isEmpty()) return null;
+
+        IScope scope = agent.getScope();
+        try {
+            IList<IShape> shapes = GamaListFactory.create();
+            shapes.addAll(points);
+            return SpatialCreation.line(scope, shapes);
+        } catch (Exception e) {
+            System.err.println("Error generating polyline for agent: " + e.getMessage());
+            return null;
+        }
     }
 }
