@@ -142,6 +142,9 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", location);
+            stopInit.put("routePositions", stop.getRoutePositions());
+            
+            System.out.println("Stop Init Data: " + stopInit);
 
             inits.add(stopInit);
         }

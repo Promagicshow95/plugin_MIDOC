@@ -17,7 +17,8 @@ import gama.gaml.types.IType;
 @skill(name = "TransportStopSkill", doc = @doc("Skill for agents that represent individual transport stops with attributes like stopId, stopName, and location (as a GamaPoint)."))
 @vars({
     @variable(name = "stopId", type = IType.STRING, doc = @doc("The ID of the transport stop.")),
-    @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop."))//,
+    @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop.")),
+    @variable(name = "routePositions", type = IType.LIST, doc = @doc("The roles of the stop, such as START or END."))
 //    @variable(name = "location", type = IType.POINT, doc = @doc("The transformed location of the transport stop in the GAMA CRS, stored as a GamaPoint."))
 })
 public class TransportStopSkill extends Skill {
@@ -42,6 +43,16 @@ public class TransportStopSkill extends Skill {
     @setter("stopName")
     public void setStopName(final IAgent agent, final String stopName) {
         agent.setAttribute("stopName", stopName);
+    }
+    
+    @getter("routePosition")
+    public String getRoutePosition(final IAgent agent) {
+        return (String) agent.getAttribute("routePosition");
+    }
+    
+    @setter("routePosition")
+    public void setRoutePosition(final IAgent agent, final String routePosition) {
+        agent.setAttribute("routePosition", routePosition);
     }
 
 //    // Getter and setter for location

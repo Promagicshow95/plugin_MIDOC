@@ -11,10 +11,21 @@ global {
 
 	geometry shape <- envelope(boundary_shp);
 //	geometry shape <- envelope(gtfs_f);
-    
+	
+	
+//	geometry shape <- polygon([{0, 20688.512012230232}, {24854.298367634357, 20688.512012230232}, {24854.298367634357, 0}, {0,0}]);
+//	geometry shape <- polygon([{0, 116161.06372411549}, {99901.35871416889 ,116161.06372411549}, {99901.35871416889, 0}, {0,0}]);
+ 
     // Initialization section
     init {
         write "Loading GTFS contents from: " + gtfs_f;
+        
+        // Log the boundary envelope by stops
+    	write "Boundary envelope: " + shape;
+    	
+    	// Check envelope of shape file
+    	geometry stop_envelope <- envelope(gtfs_f);
+    	write "Stop envelope: " + stop_envelope;
         
         // Create bus_stop agents from the GTFS data
        create bus_stop from: gtfs_f  {
@@ -31,7 +42,8 @@ global {
 species bus_stop skills: [TransportStopSkill] {
 
     init {
-        write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location;
+       write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location;
+
     }
     // Attributes for latitude and longitude
 //    float latitude <- 0.0;
@@ -53,6 +65,8 @@ species bus_stop skills: [TransportStopSkill] {
 //    }
     
      aspect base {
+     	
+     	
 		draw circle (100.0) at: location color:#blue;	
      }
 }
@@ -73,7 +87,9 @@ experiment GTFSExperiment type: gui {
     // Output section to define the display
     output {
         // Display the bus stops on the map
-        display "Bus Stops" {
+        display "Bus Stops And Envelope" {
+        	// Draw boundary envelope
+            
             // Display the bus_stop agents on the map
             species bus_stop aspect: base;
             species my_species aspect:base;

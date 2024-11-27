@@ -5,40 +5,34 @@ import gama.core.metamodel.shape.IShape;
 import gama.gaml.operators.spatial.SpatialProjections;
 import gama.core.runtime.IScope;
 
-public class TransportStop {
-    private String stopId;
-    private String stopName;
-    private GamaPoint location; // Using GamaPoint to store the transformed location
+import java.util.HashSet;
+import java.util.Set;
 
-    // Constructor
+public class TransportStop {
+    private String stopId; // ID de l'arrêt
+    private String stopName; // Nom de l'arrêt
+    private GamaPoint location; // Localisation transformée en GAMA CRS
+    private Set<String> routePositions; // Rôles (START, END, etc.)
+
+    // Constructeur
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
         this.stopId = stopId;
         this.stopName = stopName;
-        
-        // Convert raw coordinates to GAMA CRS using the GAMA operator "to_GAMA_CRS"
         this.location = convertToGamaCRS(scope, stopLat, stopLon);
+        this.routePositions = new HashSet<>(); // Initialise les rôles comme un ensemble vide
     }
 
     /**
-     * Method to convert latitude and longitude to GAMA CRS
-     * @param scope - The GAMA scope
-     * @param lat - Latitude in EPSG:4326
-     * @param lon - Longitude in EPSG:4326
-     * @return GamaPoint in the GAMA CRS
+     * Méthode pour convertir latitude et longitude en GAMA CRS
+     * @param scope - Le scope GAMA
+     * @param lat - Latitude en EPSG:4326
+     * @param lon - Longitude en EPSG:4326
+     * @return GamaPoint en GAMA CRS
      */
     private GamaPoint convertToGamaCRS(IScope scope, double lat, double lon) {
-        // Create a GamaPoint for the original location
+        // Crée un GamaPoint pour la localisation originale
         GamaPoint rawLocation = new GamaPoint(lon, lat, 0.0); // Longitude (X), Latitude (Y), Altitude (Z)
-        System.out.println("Raw location: " + rawLocation);
-        // Transform the point to the GAMA CRS using the operator "to_GAMA_CRS"
         IShape transformedShape = SpatialProjections.to_GAMA_CRS(scope, rawLocation, "EPSG:4326");
-        
-        System.out.println("Transformed location: " + transformedShape.getLocation());
-        
-     System.out.println("Transformed location: " + transformedShape.getLocation());
-
-
-        // Return the location as a GamaPoint
         return (GamaPoint) transformedShape.getLocation();
     }
 
@@ -55,19 +49,39 @@ public class TransportStop {
         return location;
     }
 
-    // Get latitude from the transformed location
+    // Getter pour les rôles de l'arrêt
+    public Set<String> getRoutePositions() {
+        return routePositions != null ? routePositions : new HashSet<>();
+    }
+
+    // Ajoute un rôle au stop
+    public void addRoutePosition(String position) {
+        if (routePositions == null) {
+            routePositions = new HashSet<>();
+        }
+        routePositions.add(position);
+    }
+
+    // Retourne une chaîne avec les rôles
+    public String getRolesAsString() {
+        return String.join(", ", routePositions);
+    }
+
+    // Get latitude depuis la localisation transformée
     public double getLatitude() {
         return location.getY();
     }
 
-    // Get longitude from the transformed location
+    // Get longitude depuis la localisation transformée
     public double getLongitude() {
         return location.getX();
     }
 
-    // toString for debugging
+    // toString pour le débogage
     @Override
     public String toString() {
-        return "Stop ID: " + stopId + ", Stop Name: " + stopName + ", Location: " + location.toString();
+        return "Stop ID: " + stopId + ", Stop Name: " + stopName +
+                ", Location: " + location.toString() +
+                ", Roles: " + getRolesAsString();
     }
 }

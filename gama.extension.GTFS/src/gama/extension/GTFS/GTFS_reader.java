@@ -5,6 +5,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -29,9 +30,23 @@ import gama.core.util.GamaMapFactory;
 import gama.core.util.IList;
 import gama.core.util.IMap;
 import gama.core.util.file.GamaFile;
+import gama.core.util.file.GamaGisFile;
+import gama.gaml.operators.spatial.SpatialProjections;
 import gama.gaml.types.IContainerType;
 import gama.gaml.types.IType;
 import gama.gaml.types.Types;
+
+import org.geotools.data.DataUtilities;
+import org.geotools.data.FileDataStore;
+import org.geotools.data.FileDataStoreFinder;
+import org.geotools.data.simple.SimpleFeatureStore;
+import org.geotools.data.simple.SimpleFeatureCollection;
+import org.geotools.feature.simple.SimpleFeatureBuilder;
+import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
+import org.locationtech.jts.geom.Polygon;
+import org.opengis.feature.simple.SimpleFeature;
+
+import java.io.File;
 
 /**
  * Reading and processing GTFS files in GAMA. This class reads multiple GTFS files
@@ -100,7 +115,13 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         System.out.println("Creating transport objects...");
         createTransportObjects(scope);
         System.out.println("Transport object creation completed.");
+        
+     // Identify the stop positions (START, END)
+        identifyStopPositions(scope);
     }
+    
+
+    
     
     
     public GTFS_reader(final String pathName) throws GamaRuntimeException {
@@ -108,6 +129,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         checkValidity(null);  // Pass 'null' if IScope is not necessary for this check
         loadGtfsFiles(null);
         createTransportObjects(null);
+        identifyStopPositions(null);
     }
     
     /**
@@ -377,6 +399,77 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         
         System.out.println("Transport object creation completed.");
     }
+    
+    public void identifyStopPositions(IScope scope) {
+        IList<String> stopTimesData = gtfsData.get("stop_times.txt");
+        IMap<String, Integer> headerMap = headerMaps.get("stop_times.txt");
+        
+        if (stopTimesData == null || headerMap == null) {
+            System.err.println("stop_times.txt is missing or headers are not defined.");
+            return;
+        }
+
+        // Indices des colonnes importantes
+        int tripIdIndex = headerMap.get("trip_id");
+        int stopIdIndex = headerMap.get("stop_id");
+        int stopSequenceIndex = headerMap.get("stop_sequence");
+
+        Map<Integer, List<StopSequence>> tripStops = new HashMap<>();
+
+        for (String line : stopTimesData) {
+            String[] fields = line.split(",");
+            try {
+                int tripId = Integer.parseInt(fields[tripIdIndex]);
+                String stopId = fields[stopIdIndex];
+                int stopSequence = Integer.parseInt(fields[stopSequenceIndex]);
+
+                tripStops.putIfAbsent(tripId, new ArrayList<>());
+                tripStops.get(tripId).add(new StopSequence(stopId, stopSequence));
+            } catch (Exception e) {
+                System.err.println("Error parsing line: " + line + " -> " + e.getMessage());
+            }
+        }
+
+        // Identifier les positions START/END
+        for (Map.Entry<Integer, List<StopSequence>> entry : tripStops.entrySet()) {
+            System.out.println("Processing trip ID: " + entry.getKey());
+            List<StopSequence> stops = entry.getValue();
+            stops.sort(Comparator.comparingInt(s -> s.sequence));
+
+            StopSequence start = stops.get(0);
+            StopSequence end = stops.get(stops.size() - 1);
+
+            TransportStop startStop = stopsMap.get(start.stopId);
+            TransportStop endStop = stopsMap.get(end.stopId);
+
+            if (startStop != null) { 
+                startStop.addRoutePosition("START"); // Remplace setRoutePosition par addRoutePosition
+                System.out.println("Stop ID: " + start.stopId + " set as START.");
+            } else {
+                System.err.println("Start stop not found for ID: " + start.stopId);
+            }
+
+            if (endStop != null) {
+                endStop.addRoutePosition("END"); // Remplace setRoutePosition par addRoutePosition
+                System.out.println("Stop ID: " + end.stopId + " set as END.");
+            } else {
+                System.err.println("End stop not found for ID: " + end.stopId);
+            }
+
+        }
+    }
+
+  //Internal class to store stop and stop Sequence temporarily
+    private static class StopSequence {
+        String stopId;
+        int sequence;
+
+        StopSequence(String stopId, int sequence) {
+            this.stopId = stopId;
+            this.sequence = sequence;
+        }
+    }
+
 
     /**
      * Reads a CSV file and returns its content as an IList.
@@ -450,8 +543,8 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             return Envelope3D.EMPTY;
         }
 
+        // Ensure CRS consistency
         Envelope3D envelope = Envelope3D.create();
-
         for (TransportStop stop : stopsMap.values()) {
             try {
                 GamaPoint location = stop.getLocation();
@@ -459,34 +552,42 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     System.err.println("Skipping stop with null location: " + stop.getStopId());
                     continue;
                 }
-                // Add the transformed location to the envelope
-                envelope.expandToInclude(location);
+                
+                // Transform to match the CRS of the shapefile
+                IShape transformedLocation = SpatialProjections.to_GAMA_CRS(scope, location, "EPSG:XXXX"); // Replace with shapefile CRS
+                envelope.expandToInclude(transformedLocation.getLocation());
             } catch (Exception e) {
                 System.err.println("Error adding stop to envelope: " + stop.getStopId() + " -> " + e.getMessage());
             }
         }
 
         System.out.println("Computed envelope: " + envelope);
+        
+        
         return envelope;
     }
     
     public GamaShape getEnvelopeAsShape(final IScope scope) {
-        Envelope3D envelope = computeEnvelope(scope);
+        Envelope3D envelope = computeEnvelope(scope); // Calculer l'enveloppe
+
         if (envelope.isNull()) {
             System.err.println("Envelope is empty. Cannot create shape.");
             return null;
         }
 
         try {
+            // Convertir l'enveloppe en un polygone
             Polygon polygon = envelope.toGeometry();
+            // Retourner une forme GAMA (GamaShape) pour utilisation dans la simulation
             return GamaShapeFactory.createFrom(polygon);
         } catch (Exception e) {
             System.err.println("Error creating shape from envelope: " + e.getMessage());
             return null;
         }
     }
-
-
+    
+    
+    
 
     public TransportStop getStop(String stopId) {
         System.out.println("Getting stop with ID: " + stopId);

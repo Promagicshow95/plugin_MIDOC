@@ -11,6 +11,8 @@ import gama.core.util.IList;
 import java.util.ArrayList;
 import java.util.List;
 
+import GamaGTFSUtils.SpatialUtils;
+
 public class TransportShape {
     private final int shapeId;
     private final List<GamaPoint> points;
@@ -18,6 +20,11 @@ public class TransportShape {
     public TransportShape(int shapeId) {
         this.shapeId = shapeId;
         this.points = new ArrayList<>();
+    }
+
+    public void addPoint(double lat, double lon, IScope scope) {
+        // Use the utility method for CRS conversion
+        points.add(SpatialUtils.toGamaCRS(scope, lat, lon));
     }
 
 
@@ -29,10 +36,6 @@ public class TransportShape {
         return points;
     }
     
-    public void addPoint(double lat, double lon, IScope scope) {
-        GamaPoint point = new GamaPoint(lon, lat, 0.0); // Longitude (X), Latitude (Y)
-        points.add(SpatialProjections.to_GAMA_CRS(scope, point, "EPSG:4326").getLocation());
-    }
 
     /**
      * Converts the list of GamaPoints into a polyline (IShape).
