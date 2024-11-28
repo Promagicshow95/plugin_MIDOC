@@ -1,39 +1,80 @@
 package gama.extension.GTFS;
 
 import gama.core.metamodel.shape.GamaPoint;
-import gama.core.metamodel.shape.IShape;
-import gama.gaml.operators.spatial.SpatialProjections;
 import gama.core.runtime.IScope;
-
-import java.util.HashSet;
-import java.util.Set;
+import gama.core.util.GamaListFactory;
+import gama.core.util.GamaMapFactory;
+import gama.core.util.IList;
+import gama.core.util.IMap;
+import gama.gaml.types.Types;
+import GamaGTFSUtils.SpatialUtils;
 
 public class TransportStop {
-    private String stopId; // ID de l'arrêt
-    private String stopName; // Nom de l'arrêt
-    private GamaPoint location; // Localisation transformée en GAMA CRS
-    private Set<String> routePositions; // Rôles (START, END, etc.)
+    private String stopId;
+    private String stopName;
+    private GamaPoint location;
+    
+    private IMap<Integer, IList<TransportStop>> tripAssociations; // Map de tripId -> Liste des prédécesseurs
+    private IMap<Integer, String> tripHeadsigns; // Map of tripId -> headsign
 
-    // Constructeur
+    @SuppressWarnings("unchecked")
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
         this.stopId = stopId;
         this.stopName = stopName;
-        this.location = convertToGamaCRS(scope, stopLat, stopLon);
-        this.routePositions = new HashSet<>(); // Initialise les rôles comme un ensemble vide
+        this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
+        this.tripAssociations = GamaMapFactory.create(Types.INT, Types.get(IList.class)); // Map avec des listes de prédécesseurs
+        this.tripHeadsigns = GamaMapFactory.create(Types.INT, Types.STRING);
     }
 
     /**
-     * Méthode pour convertir latitude et longitude en GAMA CRS
-     * @param scope - Le scope GAMA
-     * @param lat - Latitude en EPSG:4326
-     * @param lon - Longitude en EPSG:4326
-     * @return GamaPoint en GAMA CRS
+     * Ajoute ou met à jour les prédécesseurs pour un tripId donné.
+     * @param tripId ID du trajet
+     * @param predecessors Liste des arrêts prédécesseurs
      */
-    private GamaPoint convertToGamaCRS(IScope scope, double lat, double lon) {
-        // Crée un GamaPoint pour la localisation originale
-        GamaPoint rawLocation = new GamaPoint(lon, lat, 0.0); // Longitude (X), Latitude (Y), Altitude (Z)
-        IShape transformedShape = SpatialProjections.to_GAMA_CRS(scope, rawLocation, "EPSG:4326");
-        return (GamaPoint) transformedShape.getLocation();
+    public void addTripWithPredecessors(int tripId, IList<TransportStop> predecessors) {
+        tripAssociations.put(tripId, predecessors);
+    }
+
+    /**
+     * Récupère les prédécesseurs d'un arrêt pour un tripId donné.
+     * @param tripId ID du trajet
+     * @return Liste des prédécesseurs, ou une liste vide si non défini
+     */
+    public IList<TransportStop> getPredecessors(int tripId) {
+        return tripAssociations.getOrDefault(tripId, GamaListFactory.create());
+    }
+
+    /**
+     * Ajoute un headsign pour un tripId donné.
+     * @param tripId ID du trajet
+     * @param headsign Le headsign associé
+     */
+    public void addHeadsign(int tripId, String headsign) {
+        tripHeadsigns.put(tripId, headsign);
+    }
+
+    /**
+     * Récupère le headsign pour un tripId donné.
+     * @return Le headsign ou null si non défini
+     */
+    public String getHeadsign(int tripId) {
+        return tripHeadsigns.get(tripId);
+    }
+
+    /**
+     * Récupère toutes les associations des trips avec leurs prédécesseurs.
+     * @return Map des associations
+     */
+    public IMap<Integer, IList<TransportStop>> getTripAssociations() {
+        return tripAssociations;
+    }
+
+    /**
+     * Récupère toutes les headsigns des trips.
+     * @return Map des headsigns
+     */
+    public IMap<Integer, String> getTripHeadsigns() {
+        return tripHeadsigns;
     }
 
     // Getters
@@ -47,24 +88,6 @@ public class TransportStop {
 
     public GamaPoint getLocation() {
         return location;
-    }
-
-    // Getter pour les rôles de l'arrêt
-    public Set<String> getRoutePositions() {
-        return routePositions != null ? routePositions : new HashSet<>();
-    }
-
-    // Ajoute un rôle au stop
-    public void addRoutePosition(String position) {
-        if (routePositions == null) {
-            routePositions = new HashSet<>();
-        }
-        routePositions.add(position);
-    }
-
-    // Retourne une chaîne avec les rôles
-    public String getRolesAsString() {
-        return String.join(", ", routePositions);
     }
 
     // Get latitude depuis la localisation transformée
@@ -81,7 +104,6 @@ public class TransportStop {
     @Override
     public String toString() {
         return "Stop ID: " + stopId + ", Stop Name: " + stopName +
-                ", Location: " + location.toString() +
-                ", Roles: " + getRolesAsString();
+                ", Location: " + location.toString();
     }
 }

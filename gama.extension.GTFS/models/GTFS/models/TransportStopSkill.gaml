@@ -43,7 +43,12 @@ species bus_stop skills: [TransportStopSkill] {
 
     init {
        write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location;
-
+       
+        // Log trip associations and headsigns
+        write "Trip associations: " + tripAssociations;
+        write "Trip headsigns: " + tripHeadsigns;
+		
+		
     }
     // Attributes for latitude and longitude
 //    float latitude <- 0.0;

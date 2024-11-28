@@ -18,9 +18,9 @@ import gama.gaml.types.IType;
 @vars({
     @variable(name = "tripId", type = IType.INT, doc = @doc("The ID of the transport trip.")),
     @variable(name = "routeId", type = IType.STRING, doc = @doc("The ID of the route associated with the trip.")),
-    @variable(name = "serviceId", type = IType.STRING, doc = @doc("The ID of the service associated with the trip.")),
-    @variable(name = "directionId", type = IType.INT, doc = @doc("The direction of the trip (e.g., 0 for one direction, 1 for the reverse).")),
-    @variable(name = "shapeId", type = IType.INT, doc = @doc("The ID of the shape associated with the trip."))
+    @variable(name = "stopsInOrder", type = IType.LIST, doc = @doc("The ordered list of stops in the trip.")),
+    @variable(name = "destination", type = IType.AGENT, doc = @doc("The final stop in the trip.")),
+    @variable(name = "predecessors", type = IType.LIST, doc = @doc("The list of stops before a specific stop in the trip."))
 })
 public class TransportTripSkill extends Skill {
 
@@ -35,47 +35,21 @@ public class TransportTripSkill extends Skill {
         agent.setAttribute("tripId", tripId);
     }
 
-    // Getter and setter for routeId
-    @getter("routeId")
-    public String getRouteId(final IAgent agent) {
-        return (String) agent.getAttribute("routeId");
+    // Getter for stopsInOrder
+    @getter("stopsInOrder")
+    public Object getStopsInOrder(final IAgent agent) {
+        return agent.getAttribute("stopsInOrder");
     }
 
-    @setter("routeId")
-    public void setRouteId(final IAgent agent, final String routeId) {
-        agent.setAttribute("routeId", routeId);
+    // Getter for destination
+    @getter("destination")
+    public Object getDestination(final IAgent agent) {
+        return agent.getAttribute("destination");
     }
 
-    // Getter and setter for serviceId
-    @getter("serviceId")
-    public String getServiceId(final IAgent agent) {
-        return (String) agent.getAttribute("serviceId");
-    }
-
-    @setter("serviceId")
-    public void setServiceId(final IAgent agent, final String serviceId) {
-        agent.setAttribute("serviceId", serviceId);
-    }
-
-    // Getter and setter for directionId
-    @getter("directionId")
-    public int getDirectionId(final IAgent agent) {
-        return (Integer) agent.getAttribute("directionId");
-    }
-
-    @setter("directionId")
-    public void setDirectionId(final IAgent agent, final int directionId) {
-        agent.setAttribute("directionId", directionId);
-    }
-
-    // Getter and setter for shapeId
-    @getter("shapeId")
-    public int getShapeId(final IAgent agent) {
-        return (Integer) agent.getAttribute("shapeId");
-    }
-
-    @setter("shapeId")
-    public void setShapeId(final IAgent agent, final int shapeId) {
-        agent.setAttribute("shapeId", shapeId);
+    // Getter for predecessors
+    @getter("predecessors")
+    public Object getPredecessors(final IAgent agent) {
+        return agent.getAttribute("predecessors");
     }
 }

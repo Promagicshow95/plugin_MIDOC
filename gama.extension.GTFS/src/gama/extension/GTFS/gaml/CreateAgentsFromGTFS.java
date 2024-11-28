@@ -7,10 +7,13 @@ import gama.core.metamodel.population.IPopulation;
 import gama.core.metamodel.shape.GamaPoint;
 import gama.core.metamodel.shape.IShape;
 import gama.core.util.GamaListFactory;
+import gama.core.util.GamaMapFactory;
 import gama.core.util.IList;
+import gama.core.util.IMap;
 import gama.extension.GTFS.TransportStop;
 import gama.extension.GTFS.TransportTrip;
 import gama.extension.GTFS.GTFS_reader;
+import gama.extension.GTFS.TransportRoute;
 import gama.extension.GTFS.TransportShape;
 import gama.gaml.expressions.IExpression;
 import gama.gaml.operators.Cast;
@@ -57,6 +60,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     public boolean createFrom(IScope scope, List<Map<String, Object>> inits, Integer max, Object source, Arguments init, CreateStatement statement) {
         if (source instanceof GTFS_reader) {
             GTFS_reader gtfsReader = (GTFS_reader) source;
+            
 
             // Récupérer l'espèce (species) depuis la déclaration
             IExpression speciesExpr = statement.getFacet(SPECIES);
@@ -67,41 +71,33 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
                 return false;
             }
 
-            // Vérification des compétences implémentées par l'espèce
+            // Check the implemented skill to decide the type of agents to create
             if (targetSpecies.implementsSkill("TransportStopSkill")) {
-                // Gestion de la création des arrêts (TransportStop)
                 List<TransportStop> stops = gtfsReader.getStops();
                 if (!stops.isEmpty()) {
-                    scope.getGui().getConsole().informConsole("Creating agents from GTFS_reader with " + stops.size() + " stops", scope.getSimulation());
                     addStopInits(scope, inits, stops, max);
                 } else {
                     scope.getGui().getConsole().informConsole("No stops found in GTFS data.", scope.getSimulation());
                 }
-
             } else if (targetSpecies.implementsSkill("TransportTripSkill")) {
-                // Gestion de la création des trajets (TransportTrip)
                 List<TransportTrip> trips = gtfsReader.getTrips();
                 if (!trips.isEmpty()) {
-                    scope.getGui().getConsole().informConsole("Creating agents from GTFS_reader with " + trips.size() + " trips", scope.getSimulation());
                     addTripInits(scope, inits, trips, max);
                 } else {
                     scope.getGui().getConsole().informConsole("No trips found in GTFS data.", scope.getSimulation());
                 }
-
             } else if (targetSpecies.implementsSkill("TransportShapeSkill")) {
                 List<TransportShape> shapes = gtfsReader.getShapes();
                 if (!shapes.isEmpty()) {
-                    scope.getGui().getConsole().informConsole("Creating agents from GTFS_reader with " + shapes.size() + " shapes", scope.getSimulation());
                     addShapeInits(scope, inits, shapes, max);
-                } else {
-                    scope.getGui().getConsole().informConsole("No shapes found in GTFS data.", scope.getSimulation());
                 }
-            }else {
-                // Espèce inconnue ou sans compétence correspondante
-                scope.getGui().getConsole().informConsole(
-                    "The species does not implement a recognized skill (e.g., TransportStopSkill or TransportTripSkill).",
-                    scope.getSimulation()
-                );
+            } else if (targetSpecies.implementsSkill("TransportRouteSkill")) {
+                List<TransportRoute> routes = gtfsReader.getRoutes();
+                if (!routes.isEmpty()) {
+                    addRouteInits(scope, inits, routes, max);
+                }
+            } else {
+                scope.getGui().getConsole().informConsole("The species does not implement a recognized skill.", scope.getSimulation());
                 return false;
             }
 
@@ -123,6 +119,13 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     private boolean isShapeAgent(Map<String, Object> init) {
         return init.containsKey("shapeId") && init.containsKey("points");
     }
+    
+    private boolean isRouteAgent(Map<String, Object> init) {
+        return init.containsKey("routeId") && init.containsKey("shortName") 
+               && init.containsKey("longName") && init.containsKey("type");
+    }
+    
+    
     /**
      * Adds initialization data for TransportStop agents.
      */
@@ -142,13 +145,29 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", location);
-            stopInit.put("routePositions", stop.getRoutePositions());
-            
-            System.out.println("Stop Init Data: " + stopInit);
+
+            // Convert tripAssociations to a format compatible with GAMA agents
+            @SuppressWarnings("unchecked")
+            IMap<Integer, IList<IAgent>> associations = GamaMapFactory.create(Types.INT, Types.get(IList.class));
+            for (Map.Entry<Integer, IList<TransportStop>> entry : stop.getTripAssociations().entrySet()) {
+                IList<IAgent> predecessorAgents = GamaListFactory.create(Types.get(IAgent.class));
+                for (TransportStop predecessor : entry.getValue()) {
+                    if (predecessor instanceof IAgent) { // Vérifie si le prédécesseur est un agent
+                        predecessorAgents.add((IAgent) predecessor);
+                    } else {
+                        System.err.println("[Error] TransportStop is not an IAgent: " + predecessor);
+                    }
+                }
+                associations.put(entry.getKey(), predecessorAgents);
+            }
+
+            stopInit.put("tripAssociations", associations);
+            stopInit.put("tripHeadsigns", stop.getTripHeadsigns());
 
             inits.add(stopInit);
         }
     }
+
 
     /**
      * Adds initialization data for TransportTrip agents.
@@ -163,14 +182,41 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
                 continue;
             }
 
-            Map<String, Object> tripInit = Map.of(
-                "tripId", trip.getTripId(),
-                "routeId", trip.getRouteId(),
-                "serviceId", trip.getServiceId(),
-                "directionId", trip.getDirectionId(),
-                "shapeId", trip.getShapeId()
-            );
+            Map<String, Object> tripInit = new HashMap<>();
+            tripInit.put("tripId", trip.getTripId());
+            tripInit.put("routeId", trip.getRouteId());
+            tripInit.put("serviceId", trip.getServiceId());
+            tripInit.put("directionId", trip.getDirectionId());
+            tripInit.put("shapeId", trip.getShapeId());
+            tripInit.put("stopsInOrder", trip.getStopsInOrder());
+            tripInit.put("destination", trip.getDestination());
+
             inits.add(tripInit);
+        }
+    }
+    
+    /**
+     * Adds initialization data for TransportRoute agents.
+     */
+    private void addRouteInits(IScope scope, List<Map<String, Object>> inits, List<TransportRoute> routes, Integer max) {
+        int limit = max != null ? Math.min(max, routes.size()) : routes.size();
+
+        for (int i = 0; i < limit; i++) {
+            TransportRoute route = routes.get(i);
+
+            if (route.getRouteId() == null || route.getShortName() == null || route.getLongName() == null) {
+                System.err.println("[Error] Invalid data for TransportRoute: " + route);
+                continue;
+            }
+
+            Map<String, Object> routeInit = new HashMap<>();
+            routeInit.put("routeId", route.getRouteId());
+            routeInit.put("shortName", route.getShortName());
+            routeInit.put("longName", route.getLongName());
+            routeInit.put("type", route.getType());
+
+            inits.add(routeInit);
+            System.out.println("Route Init Data: " + routeInit);
         }
     }
 
@@ -244,7 +290,14 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
                     System.err.println("[Error] Missing required data for TransportShape in init: " + init);
                     continue;
                 }
-            } else {
+            } else if (isRouteAgent(init)) {
+                if (init.get("routeId") == null || init.get("shortName") == null || init.get("longName") == null || init.get("type") == null) {
+                    System.err.println("[Error] Missing required data for TransportRoute in init: " + init);
+                    continue;
+                }
+            }
+            
+            else {
                 System.err.println("[Error] Unknown agent type in init: " + init);
                 continue;
             }
