@@ -131,41 +131,66 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
      */
     private void addStopInits(IScope scope, List<Map<String, Object>> inits, List<TransportStop> stops, Integer max) {
         int limit = max != null ? Math.min(max, stops.size()) : stops.size();
+        System.out.println("[Debug] Nombre total d'arrêts : " + stops.size() + ", Limite : " + limit);
 
         for (int i = 0; i < limit; i++) {
             TransportStop stop = stops.get(i);
+            System.out.println("[Debug] Traitement de l'arrêt " + (i + 1) + "/" + limit + " : " + stop.getStopId());
 
+            // Vérification des données de base
             GamaPoint location = stop.getLocation();
             if (location == null || stop.getStopId() == null || stop.getStopName() == null) {
-                System.err.println("[Error] Invalid data for TransportStop: " + stop);
+                System.err.println("[Error] Données invalides pour l'arrêt : " + stop);
                 continue;
             }
 
+            // Création de la map d'initialisation
             Map<String, Object> stopInit = new HashMap<>();
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", location);
+            System.out.println("[Debug] Informations de base ajoutées pour l'arrêt : " + stop.getStopId());
 
-            // Convert tripAssociations to a format compatible with GAMA agents
-            @SuppressWarnings("unchecked")
-            IMap<Integer, IList<IAgent>> associations = GamaMapFactory.create(Types.INT, Types.get(IList.class));
+            // Traitement des tripAssociations
+            IMap<Integer, IList<GamaPoint>> associations = GamaMapFactory.create(Types.INT, Types.get(IList.class));
             for (Map.Entry<Integer, IList<TransportStop>> entry : stop.getTripAssociations().entrySet()) {
-                IList<IAgent> predecessorAgents = GamaListFactory.create(Types.get(IAgent.class));
-                for (TransportStop predecessor : entry.getValue()) {
-                    if (predecessor instanceof IAgent) { // Vérifie si le prédécesseur est un agent
-                        predecessorAgents.add((IAgent) predecessor);
+                Integer tripId = entry.getKey();
+                IList<TransportStop> predecessors = entry.getValue();
+                System.out.println("[Debug] Traitement des prédécesseurs pour tripId : " + tripId);
+
+                // Transformation des TransportStop en leurs positions (GamaPoint)
+                IList<GamaPoint> predecessorLocations = GamaListFactory.create(Types.get(IShape.class));
+                for (TransportStop predecessor : predecessors) {
+                    if (predecessor != null && predecessor.getLocation() != null) {
+                        predecessorLocations.add(predecessor.getLocation());
                     } else {
-                        System.err.println("[Error] TransportStop is not an IAgent: " + predecessor);
+                        System.err.println("[Warning] Prédécesseur avec données manquantes pour tripId : " + tripId);
                     }
                 }
-                associations.put(entry.getKey(), predecessorAgents);
+                associations.put(tripId, predecessorLocations);
             }
-
             stopInit.put("tripAssociations", associations);
-            stopInit.put("tripHeadsigns", stop.getTripHeadsigns());
+            System.out.println("[Debug] Associations ajoutées pour l'arrêt : " + stop.getStopId());
 
+            // Gestion des destinations
+            IMap<Integer, String> destinations = GamaMapFactory.create(Types.INT, Types.STRING);
+            for (Integer tripId : stop.getTripAssociations().keySet()) {
+                String destination = stop.getDestination(tripId);
+                if (destination != null) {
+                    destinations.put(tripId, destination);
+                } else {
+                    System.err.println("[Warning] Destination manquante pour tripId : " + tripId);
+                }
+            }
+            stopInit.put("destinations", destinations);
+            System.out.println("[Debug] Destinations ajoutées pour l'arrêt : " + stop.getStopId());
+
+            // Ajout à la liste globale d'initialisations
             inits.add(stopInit);
+            System.out.println("[Debug] Initialisation ajoutée pour l'arrêt : " + stop.getStopId());
         }
+
+        System.out.println("[Debug] Traitement des arrêts terminé.");
     }
 
 

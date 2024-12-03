@@ -14,14 +14,14 @@ import gama.gaml.types.IType;
 
 /**
  * The skill TransportStopSkill for managing individual transport stops in GAMA.
- * This skill stores attributes like stopId, stopName, and tripAssociations for each stop.
+ * This skill stores attributes like stopId, stopName, tripAssociations, and destinationMap for each stop.
  */
-@skill(name = "TransportStopSkill", doc = @doc("Skill for agents that represent individual transport stops with attributes like stopId, stopName, and tripAssociations."))
+@skill(name = "TransportStopSkill", doc = @doc("Skill for agents that represent individual transport stops with attributes like stopId, stopName, tripAssociations, and destinationMap."))
 @vars({
     @variable(name = "stopId", type = IType.STRING, doc = @doc("The ID of the transport stop.")),
     @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop.")),
     @variable(name = "tripAssociations", type = IType.MAP, doc = @doc("A map of trip IDs to the list of predecessor stops (IList<TransportStop>).")),
-    @variable(name = "tripHeadsigns", type = IType.MAP, doc = @doc("A map of trip IDs to their corresponding headsigns."))
+    @variable(name = "destinationMap", type = IType.MAP, doc = @doc("A map of trip IDs to their destination stop IDs."))
 })
 public class TransportStopSkill extends Skill {
 
@@ -49,7 +49,7 @@ public class TransportStopSkill extends Skill {
 
     // Getter and setter for tripAssociations
     @SuppressWarnings("unchecked")
-	@getter("tripAssociations")
+    @getter("tripAssociations")
     public IMap<Integer, IList<IAgent>> getTripAssociations(final IAgent agent) {
         return (IMap<Integer, IList<IAgent>>) agent.getAttribute("tripAssociations");
     }
@@ -59,22 +59,22 @@ public class TransportStopSkill extends Skill {
         agent.setAttribute("tripAssociations", tripAssociations);
     }
 
-    // Getter and setter for tripHeadsigns
+    // Getter and setter for destinationMap
     @SuppressWarnings("unchecked")
-	@getter("tripHeadsigns")
-    public IMap<Integer, String> getTripHeadsigns(final IAgent agent) {
-        return (IMap<Integer, String>) agent.getAttribute("tripHeadsigns");
+    @getter("destinationMap")
+    public IMap<Integer, String> getDestinationMap(final IAgent agent) {
+        return (IMap<Integer, String>) agent.getAttribute("destinationMap");
     }
 
-    @setter("tripHeadsigns")
-    public void setTripHeadsigns(final IAgent agent, final IMap<Integer, String> tripHeadsigns) {
-        agent.setAttribute("tripHeadsigns", tripHeadsigns);
+    @setter("destinationMap")
+    public void setDestinationMap(final IAgent agent, final IMap<Integer, String> destinationMap) {
+        agent.setAttribute("destinationMap", destinationMap);
     }
 
-    // Optional: Utility method to retrieve predecessors for a specific trip
-    @getter("predecessors")
-    public IList<IAgent> getPredecessorsForTrip(final IAgent agent, final int tripId) {
-        IMap<Integer, IList<IAgent>> associations = getTripAssociations(agent);
-        return associations != null ? associations.get(tripId) : null;
+    // Optional: Utility method to retrieve the destination for a specific trip
+    @getter("destination")
+    public String getDestinationForTrip(final IAgent agent, final int tripId) {
+        IMap<Integer, String> destinations = getDestinationMap(agent);
+        return destinations != null ? destinations.get(tripId) : null;
     }
 }

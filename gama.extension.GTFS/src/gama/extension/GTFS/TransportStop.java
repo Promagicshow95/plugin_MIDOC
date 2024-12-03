@@ -13,17 +13,20 @@ public class TransportStop {
     private String stopId;
     private String stopName;
     private GamaPoint location;
-    
-    private IMap<Integer, IList<TransportStop>> tripAssociations; // Map de tripId -> Liste des prédécesseurs
-    private IMap<Integer, String> tripHeadsigns; // Map of tripId -> headsign
+
+    // Nouvelle structure pour les associations de trajets
+    private IMap<Integer, IList<TransportStop>> tripAssociations;
+
+    // Nouvelle structure pour les destinations
+    private IMap<Integer, String> destinationMap;
 
     @SuppressWarnings("unchecked")
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
         this.stopId = stopId;
         this.stopName = stopName;
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
-        this.tripAssociations = GamaMapFactory.create(Types.INT, Types.get(IList.class)); // Map avec des listes de prédécesseurs
-        this.tripHeadsigns = GamaMapFactory.create(Types.INT, Types.STRING);
+        this.tripAssociations = GamaMapFactory.create(Types.INT, Types.get(IList.class));
+        this.destinationMap = GamaMapFactory.create(Types.INT, Types.STRING); // Map pour les destinations
     }
 
     /**
@@ -45,20 +48,21 @@ public class TransportStop {
     }
 
     /**
-     * Ajoute un headsign pour un tripId donné.
+     * Définit la destination pour un tripId donné.
      * @param tripId ID du trajet
-     * @param headsign Le headsign associé
+     * @param destination Id de l'arrêt de destination
      */
-    public void addHeadsign(int tripId, String headsign) {
-        tripHeadsigns.put(tripId, headsign);
+    public void setDestination(int tripId, String destination) {
+        destinationMap.put(tripId, destination);
     }
 
     /**
-     * Récupère le headsign pour un tripId donné.
-     * @return Le headsign ou null si non défini
+     * Récupère la destination pour un tripId donné.
+     * @param tripId ID du trajet
+     * @return Id de l'arrêt de destination ou null si non défini
      */
-    public String getHeadsign(int tripId) {
-        return tripHeadsigns.get(tripId);
+    public String getDestination(int tripId) {
+        return destinationMap.get(tripId);
     }
 
     /**
@@ -69,15 +73,7 @@ public class TransportStop {
         return tripAssociations;
     }
 
-    /**
-     * Récupère toutes les headsigns des trips.
-     * @return Map des headsigns
-     */
-    public IMap<Integer, String> getTripHeadsigns() {
-        return tripHeadsigns;
-    }
-
-    // Getters
+    // Getters existants
     public String getStopId() {
         return stopId;
     }
@@ -89,18 +85,17 @@ public class TransportStop {
     public GamaPoint getLocation() {
         return location;
     }
-
-    // Get latitude depuis la localisation transformée
-    public double getLatitude() {
-        return location.getY();
+    
+    /**
+     * Adds or updates the destination for a specific tripId.
+     * @param tripId ID of the trip.
+     * @param destination The destination stopId.
+     */
+    public void addDestination(Integer tripId, String destination) {
+        destinationMap.put(tripId, destination);
     }
 
-    // Get longitude depuis la localisation transformée
-    public double getLongitude() {
-        return location.getX();
-    }
 
-    // toString pour le débogage
     @Override
     public String toString() {
         return "Stop ID: " + stopId + ", Stop Name: " + stopName +

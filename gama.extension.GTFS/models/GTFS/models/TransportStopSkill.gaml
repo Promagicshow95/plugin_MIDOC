@@ -46,7 +46,7 @@ species bus_stop skills: [TransportStopSkill] {
        
         // Log trip associations and headsigns
         write "Trip associations: " + tripAssociations;
-        write "Trip headsigns: " + tripHeadsigns;
+        write "Trip destination: " + destinationMap;
 		
 		
     }

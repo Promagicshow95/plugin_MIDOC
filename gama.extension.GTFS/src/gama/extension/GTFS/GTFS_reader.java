@@ -548,140 +548,93 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      * Compute trips and their predecessors for each stop.
      */
     public void computeStopTripAssociations(IScope scope) {
-        // Start computing tripAssociations
-        System.out.println("Starting tripAssociations computation...");
-
-        // Retrieve GTFS data
         IList<String> stopTimesData = gtfsData.get("stop_times.txt");
         IMap<String, Integer> stopTimesHeader = headerMaps.get("stop_times.txt");
-        IList<String> tripsData = gtfsData.get("trips.txt");
-        IMap<String, Integer> tripsHeader = headerMaps.get("trips.txt");
 
-        // Add verification for GTFS file content
-        if (stopTimesData == null || stopTimesData.isEmpty()) {
-            System.err.println("stop_times.txt is empty or not loaded.");
-        } else {
-            System.out.println("stop_times.txt contains " + stopTimesData.size() + " lines.");
-        }
-
-        if (tripsData == null || tripsData.isEmpty()) {
-            System.err.println("trips.txt is empty or not loaded.");
-        } else {
-            System.out.println("trips.txt contains " + tripsData.size() + " lines.");
-        }
-
-        // Add verification for header mappings
-        if (stopTimesHeader == null || stopTimesHeader.isEmpty()) {
-            System.err.println("Headers for stop_times.txt are missing or not loaded.");
-        } else {
-            System.out.println("stop_times.txt header mapping: " + stopTimesHeader);
-        }
-
-        if (tripsHeader == null || tripsHeader.isEmpty()) {
-            System.err.println("Headers for trips.txt are missing or not loaded.");
-        } else {
-            System.out.println("trips.txt header mapping: " + tripsHeader);
-        }
-
-        // Verify specific column indices
-        System.out.println("Index for stop_id: " + stopTimesHeader.get("stop_id"));
-        System.out.println("Index for trip_id: " + stopTimesHeader.get("trip_id"));
-        System.out.println("Index for stop_sequence: " + stopTimesHeader.get("stop_sequence"));
-        System.out.println("Index for trip_headsign: " + tripsHeader.get("trip_headsign"));
-
-        if (stopTimesData == null || stopTimesHeader == null || tripsData == null || tripsHeader == null) {
-            System.err.println("Required GTFS files are missing or not loaded.");
+        if (stopTimesData == null || stopTimesHeader == null) {
+            System.err.println("Erreur : Les données ou en-têtes de stop_times.txt sont null.");
             return;
         }
 
-        // Retrieve column indices
         int tripIdIndex = stopTimesHeader.get("trip_id");
         int stopIdIndex = stopTimesHeader.get("stop_id");
         int stopSequenceIndex = stopTimesHeader.get("stop_sequence");
-        int headsignIndex = tripsHeader.get("trip_headsign");
 
-        System.out.println("Column indices retrieved: trip_id=" + tripIdIndex + ", stop_id=" + stopIdIndex + ", stop_sequence=" + stopSequenceIndex);
+        System.out.println("Indices des colonnes : trip_id = " + tripIdIndex +
+                ", stop_id = " + stopIdIndex +
+                ", stop_sequence = " + stopSequenceIndex);
 
-        // Process each line in stop_times.txt
+        Map<String, Integer> stopSequences = new HashMap<>();
+        Map<Integer, List<TransportStop>> tripStopsMap = new HashMap<>();
+
+        // Construire les séquences et organiser les arrêts
         for (String line : stopTimesData) {
-            System.out.println("Processing line: " + line);
+            String[] fields = line.split(",");
+            int tripId;
+            String stopId;
+            int sequence;
 
             try {
-                String[] fields = line.split(",");
-                String stopId = fields[stopIdIndex];
-                int tripId = Integer.parseInt(fields[tripIdIndex]);
-                int sequence = Integer.parseInt(fields[stopSequenceIndex]);
-
-                System.out.println("Stop found: stopId=" + stopId + ", tripId=" + tripId + ", sequence=" + sequence);
-
-                TransportStop currentStop = stopsMap.get(stopId);
-                if (currentStop != null) {
-                    System.out.println("Processing stop ID: " + stopId + ", trip ID: " + tripId + ", sequence: " + sequence);
-
-                    // Retrieve or initialize the list of predecessors
-                    IList<TransportStop> predecessors = GamaListFactory.create();
-                    if (currentStop.getTripAssociations().containsKey(tripId)) {
-                        predecessors = currentStop.getTripAssociations().get(tripId);
-                    }
-
-                    // Add all previous stops in the sequence
-                    for (TransportStop stop : stopsMap.values()) {
-                        if (stop != null && stop != currentStop) {
-                            if (stop.getTripAssociations().containsKey(tripId)) {
-                                IList<TransportStop> otherStops = stop.getTripAssociations().get(tripId);
-                                if (otherStops != null && otherStops.size() < sequence) {
-                                    predecessors.add(stop);
-                                }
-                            }
-                        }
-                    }
-
-                    System.out.println("Predecessors for stop ID " + stopId + ": " + predecessors);
-
-                    // Update trip associations
-                    currentStop.addTripWithPredecessors(tripId, predecessors);
-                    System.out.println("Predecessors added for stopId=" + stopId + ": " + predecessors.size() + " stops.");
-                } else {
-                    System.err.println("Stop not found for stopId=" + stopId);
-                }
-            } catch (Exception e) {
-                System.err.println("Error processing line: " + line + " -> " + e.getMessage());
+                tripId = Integer.parseInt(fields[tripIdIndex]);
+                stopId = fields[stopIdIndex];
+                sequence = Integer.parseInt(fields[stopSequenceIndex]);
+            } catch (NumberFormatException | ArrayIndexOutOfBoundsException e) {
+                System.err.println("Erreur lors du traitement de la ligne : " + line);
+                continue;
             }
+
+            System.out.println("Traitement : tripId = " + tripId + ", stopId = " + stopId + ", sequence = " + sequence);
+
+            stopSequences.put(stopId, sequence);
+
+            TransportStop stop = stopsMap.get(stopId);
+            if (stop == null) {
+                System.err.println("Erreur : Aucun arrêt trouvé pour stopId = " + stopId);
+                continue;
+            }
+
+            tripStopsMap.computeIfAbsent(tripId, id -> new ArrayList<>()).add(stop);
         }
 
-        // Add headsigns for trips
-        for (String line : tripsData) {
-            System.out.println("Processing trips line: " + line);
+        // Trier et traiter les arrêts par trajet
+        tripStopsMap.forEach((tripId, stops) -> {
+            System.out.println("Traitement des arrêts pour tripId = " + tripId);
 
-            try {
-                String[] fields = line.split(",");
-                int tripId = Integer.parseInt(fields[tripsHeader.get("trip_id")]);
-                String headsign = fields[headsignIndex];
+            // Tri des arrêts par séquence
+            stops.sort((a, b) -> Integer.compare(
+                stopSequences.get(a.getStopId()),
+                stopSequences.get(b.getStopId())
+            ));
 
-                System.out.println("Processing trip ID: " + tripId + ", headsign: " + headsign);
+            System.out.println("Arrêts triés pour tripId = " + tripId);
 
-                // Add headsign to all stops associated with this trip
-                for (TransportStop stop : stopsMap.values()) {
-                    if (stop.getTripAssociations().containsKey(tripId)) {
-                        System.out.println("Stop ID: " + stop.getStopId());
-                        System.out.println("Trip Associations: " + stop.getTripAssociations());
-                        System.out.println("Trip Headsigns: " + stop.getTripHeadsigns());
-                        stop.addHeadsign(tripId, headsign);
-                        System.out.println("Added headsign for trip ID: " + tripId + " to stop ID: " + stop.getStopId());
-                    }
+            for (int i = 0; i < stops.size(); i++) {
+                TransportStop currentStop = stops.get(i);
+                System.out.println("Arrêt actuel : " + currentStop.getStopId() + " (index = " + i + ")");
+
+                // Récupérer les prédécesseurs
+                List<TransportStop> predecessors = stops.subList(0, i);
+                System.out.println("Prédécesseurs pour " + currentStop.getStopId() + ": " + predecessors);
+
+                // Ajouter les prédécesseurs
+                IList<TransportStop> gamaList = GamaListFactory.createWithoutCasting(
+                    Types.get(TransportStop.class),
+                    predecessors.toArray(new TransportStop[0])
+                );
+
+                currentStop.addTripWithPredecessors(tripId, gamaList);
+
+                // Si c'est le dernier arrêt, définir comme destination
+                if (i == stops.size() - 1) {
+                    System.out.println("Arrêt final pour tripId = " + tripId + ": " + currentStop.getStopId());
+                    currentStop.addDestination(tripId, currentStop.getStopId());
                 }
-            } catch (Exception e) {
-                System.err.println("Error processing trips line: " + line + " -> " + e.getMessage());
             }
-        }
+        });
 
-        System.out.println("TripAssociations computation completed.");
+        System.out.println("Traitement terminé.");
     }
 
-
-
-
-    
 
     public TransportStop getStop(String stopId) {
         System.out.println("Getting stop with ID: " + stopId);
