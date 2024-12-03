@@ -26,7 +26,7 @@ public class TransportStop {
         this.stopName = stopName;
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
         this.tripAssociations = GamaMapFactory.create(Types.INT, Types.get(IList.class));
-        this.destinationMap = GamaMapFactory.create(Types.INT, Types.STRING); // Map pour les destinations
+        this.destinationMap = GamaMapFactory.create(Types.INT, Types.STRING); // Map for the destination
     }
 
     /**
@@ -62,9 +62,12 @@ public class TransportStop {
      * @return Id de l'arrêt de destination ou null si non défini
      */
     public String getDestination(int tripId) {
-        return destinationMap.get(tripId);
+        String destination = destinationMap.get(tripId);
+        System.out.println("[Debug] Fetching destination for tripId=" + tripId + ": " + destination);
+        return destination;
     }
 
+ 
     /**
      * Récupère toutes les associations des trips avec leurs prédécesseurs.
      * @return Map des associations
@@ -95,7 +98,10 @@ public class TransportStop {
         destinationMap.put(tripId, destination);
     }
 
-
+    public IMap<Integer, String> getDestinationMap() {
+        System.out.println("[Debug] Fetching destination map: " + destinationMap);
+        return destinationMap;
+    }
     @Override
     public String toString() {
         return "Stop ID: " + stopId + ", Stop Name: " + stopName +

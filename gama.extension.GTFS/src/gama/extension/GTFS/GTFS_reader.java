@@ -262,10 +262,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         shapesMap = GamaMapFactory.create(Types.INT, Types.get(TransportShape.class));
         
         
-        // Create TransportStop objects from stops.txt
+     // Create TransportStop objects from stops.txt
         IList<String> stopsData = gtfsData.get("stops.txt");
-     // Use header map stored in gtfsData
+        // Use header map stored in gtfsData
         IMap<String, Integer> headerIMap = headerMaps.get("stops.txt"); // Retrieve headers from headerMaps
+
         if (stopsData == null || stopsData.isEmpty()) {
             System.err.println("stopsData is null or empty.");
         } else {
@@ -279,24 +280,27 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
 
         if (stopsData != null && headerIMap != null) {
-        	int stopIdIndex = headerIMap.get("stop_id");
+            int stopIdIndex = headerIMap.get("stop_id");
             int stopNameIndex = headerIMap.get("stop_name");
             int stopLatIndex = headerIMap.get("stop_lat");
             int stopLonIndex = headerIMap.get("stop_lon");
 
-
             for (String line : stopsData) {
                 String[] fields = line.split(",");
                 try {
-                	String stopId = fields[stopIdIndex];
+                    String stopId = fields[stopIdIndex];
                     String stopName = fields[stopNameIndex];
                     double stopLat = Double.parseDouble(fields[stopLatIndex]);
                     double stopLon = Double.parseDouble(fields[stopLonIndex]);
-                    
-                 // Pass the scope to the TransportStop constructor for CRS transformation
-                    TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon, scope);
-                    stopsMap.put(stopId, stop);
-                    System.out.println("Created TransportStop: " + stopId);
+
+                    // Filter only stop_point stop_ids
+                    if (stopId.startsWith("stop_point")) {
+                        TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon, scope);
+                        stopsMap.put(stopId, stop);
+                        System.out.println("Created TransportStop: " + stopId);
+                    } else {
+                        System.out.println("Skipped non stop_point: " + stopId);
+                    }
                 } catch (Exception e) {
                     System.err.println("Error processing line: " + line + " -> " + e.getMessage());
                 }
@@ -626,8 +630,9 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
                 // Si c'est le dernier arrêt, définir comme destination
                 if (i == stops.size() - 1) {
+                	currentStop.addDestination(tripId, currentStop.getStopId());
                     System.out.println("Arrêt final pour tripId = " + tripId + ": " + currentStop.getStopId());
-                    currentStop.addDestination(tripId, currentStop.getStopId());
+//                    currentStop.addDestination(tripId, currentStop.getStopId());
                 }
             }
         });
