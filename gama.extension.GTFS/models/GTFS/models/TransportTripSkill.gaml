@@ -21,7 +21,7 @@ global {
 // Species representing each transport stop
 species bus_trip skills: [TransportTripSkill] {
 	init {
-        write "Bus trip initialized: " + tripId + ", " + directionId + ", shapeId: " + shapeId;
+        write "Bus trip initialized: " + tripId + ", " + stopsInOrder;
     }
     // Attributes for latitude and longitude
 //    float latitude <- 0.0;

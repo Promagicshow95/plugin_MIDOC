@@ -395,7 +395,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             System.err.println("routes.txt data or headers are missing.");
         }
 
-        // Create TransportTrip objects from trips.txt
+     // Create TransportTrip objects from trips.txt
         IList<String> tripsData = gtfsData.get("trips.txt");
         IMap<String, Integer> tripsHeaderMap = headerMaps.get("trips.txt");
         if (tripsData != null && tripsHeaderMap != null) {
@@ -415,8 +415,14 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     int directionId = Integer.parseInt(fields[directionIdIndex]);
                     int shapeId = Integer.parseInt(fields[shapeIdIndex]);
 
-                    // Create the TransportTrip object (ATTENTION,in this line null replace TransportRoute latter)
-                    TransportTrip trip = new TransportTrip(routeId, serviceId, tripId, directionId, shapeId, null);
+                    // Create the TransportTrip object
+                    TransportTrip trip = new TransportTrip(routeId, serviceId, tripId, directionId, shapeId);
+
+                    // Initialize the list of stop_ids for the trip
+                    IList<String> stopIdsInOrder = GamaListFactory.create();
+                    trip.setStopIdsInOrder(stopIdsInOrder);
+
+                    // Add the trip to the map
                     tripsMap.put(tripId, trip);
                     System.out.println("Created TransportTrip: " + tripId);
                 } catch (Exception e) {
@@ -427,8 +433,9 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         } else {
             System.err.println("trips.txt data or headers are missing.");
         }
-        
+
         System.out.println("Transport object creation completed.");
+
     }
     
 
@@ -570,6 +577,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
         Map<String, Integer> stopSequences = new HashMap<>();
         Map<Integer, List<TransportStop>> tripStopsMap = new HashMap<>();
+        Map<Integer, List<String>> tripStopIdsMap = new HashMap<>(); // Nouveau map pour stocker les stop_ids par trip
 
         // Construire les séquences et organiser les arrêts
         for (String line : stopTimesData) {
@@ -597,7 +605,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 continue;
             }
 
+            // Ajouter les arrêts au map tripStopsMap
             tripStopsMap.computeIfAbsent(tripId, id -> new ArrayList<>()).add(stop);
+
+            // Ajouter les stop_ids au map tripStopIdsMap
+            tripStopIdsMap.computeIfAbsent(tripId, id -> new ArrayList<>()).add(sequence + ":" + stopId);
         }
 
         // Trier et traiter les arrêts par trajet
@@ -630,11 +642,33 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
                 // Si c'est le dernier arrêt, définir comme destination
                 if (i == stops.size() - 1) {
-                	currentStop.addDestination(tripId, currentStop.getStopId());
+                    currentStop.addDestination(tripId, currentStop.getStopId());
                     System.out.println("Arrêt final pour tripId = " + tripId + ": " + currentStop.getStopId());
-//                    currentStop.addDestination(tripId, currentStop.getStopId());
                 }
             }
+        });
+
+        // Traiter les stop_ids pour chaque TransportTrip
+        tripStopIdsMap.forEach((tripId, stopData) -> {
+            TransportTrip trip = tripsMap.get(tripId);
+            if (trip == null) {
+                System.err.println("Aucun trip trouvé pour tripId = " + tripId);
+                return;
+            }
+
+            // Trier les stop_ids par séquence
+            stopData.sort(Comparator.comparingInt(data -> Integer.parseInt(data.split(":")[0])));
+
+            // Extraire les stop_ids triés
+            IList<String> sortedStopIds = GamaListFactory.create();
+            for (String data : stopData) {
+                String stopId = data.split(":")[1];
+                sortedStopIds.add(stopId);
+            }
+
+            // Mettre à jour stopIdsInOrder dans TransportTrip
+            trip.setStopIdsInOrder(sortedStopIds);
+            System.out.println("stopIdsInOrder mis à jour pour tripId = " + tripId);
         });
 
         System.out.println("Traitement terminé.");

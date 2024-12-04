@@ -12,15 +12,14 @@ import gama.gaml.types.IType;
 
 /**
  * The skill TransportTripSkill for managing individual transport trips in GAMA.
- * This skill stores attributes like tripId, routeId, serviceId, directionId, and shapeId for each trip.
+ * This skill manages attributes like tripId, routeId, stopsInOrder, and destination.
  */
-@skill(name = "TransportTripSkill", doc = @doc("Skill for agents that represent individual transport trips with attributes like tripId, routeId, serviceId, directionId, and shapeId."))
+@skill(name = "TransportTripSkill", doc = @doc("Skill for agents that represent individual transport trips with attributes like tripId, routeId, stopsInOrder, and destination."))
 @vars({
-    @variable(name = "tripId", type = IType.INT, doc = @doc("The ID of the transport trip.")),
-    @variable(name = "routeId", type = IType.STRING, doc = @doc("The ID of the route associated with the trip.")),
-    @variable(name = "stopsInOrder", type = IType.LIST, doc = @doc("The ordered list of stops in the trip.")),
-    @variable(name = "destination", type = IType.AGENT, doc = @doc("The final stop in the trip.")),
-    @variable(name = "predecessors", type = IType.LIST, doc = @doc("The list of stops before a specific stop in the trip."))
+    @variable(name = "tripId", type = IType.INT, doc = @doc("The unique identifier of the transport trip.")),
+    @variable(name = "routeId", type = IType.STRING, doc = @doc("The unique identifier of the route associated with the trip.")),
+    @variable(name = "stopsInOrder", type = IType.LIST, doc = @doc("The ordered list of stop IDs for this trip.")),
+    @variable(name = "destination", type = IType.STRING, doc = @doc("The final stop ID for this trip.")),
 })
 public class TransportTripSkill extends Skill {
 
@@ -35,21 +34,36 @@ public class TransportTripSkill extends Skill {
         agent.setAttribute("tripId", tripId);
     }
 
-    // Getter for stopsInOrder
+    // Getter and setter for routeId
+    @getter("routeId")
+    public String getRouteId(final IAgent agent) {
+        return (String) agent.getAttribute("routeId");
+    }
+
+    @setter("routeId")
+    public void setRouteId(final IAgent agent, final String routeId) {
+        agent.setAttribute("routeId", routeId);
+    }
+
+    // Getter and setter for stopsInOrder
     @getter("stopsInOrder")
     public Object getStopsInOrder(final IAgent agent) {
         return agent.getAttribute("stopsInOrder");
     }
 
-    // Getter for destination
-    @getter("destination")
-    public Object getDestination(final IAgent agent) {
-        return agent.getAttribute("destination");
+    @setter("stopsInOrder")
+    public void setStopsInOrder(final IAgent agent, final Object stopsInOrder) {
+        agent.setAttribute("stopsInOrder", stopsInOrder);
     }
 
-    // Getter for predecessors
-    @getter("predecessors")
-    public Object getPredecessors(final IAgent agent) {
-        return agent.getAttribute("predecessors");
+    // Getter and setter for destination
+    @getter("destination")
+    public String getDestination(final IAgent agent) {
+        return (String) agent.getAttribute("destination");
+    }
+
+    @setter("destination")
+    public void setDestination(final IAgent agent, final String destination) {
+        agent.setAttribute("destination", destination);
     }
 }

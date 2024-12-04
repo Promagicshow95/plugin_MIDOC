@@ -113,8 +113,13 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     }
 
     private boolean isTripAgent(Map<String, Object> init) {
-        return init.containsKey("tripId") && init.containsKey("routeId") && init.containsKey("shapeId");
+        // Ajoutez ici des vérifications pour le champ stopsInOrder
+        return init.containsKey("tripId") 
+            && init.containsKey("routeId") 
+            && init.containsKey("shapeId")
+            && init.containsKey("stopsInOrder");
     }
+
 
     private boolean isShapeAgent(Map<String, Object> init) {
         return init.containsKey("shapeId") && init.containsKey("points");
@@ -202,23 +207,35 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
         for (int i = 0; i < limit; i++) {
             TransportTrip trip = trips.get(i);
-            if (trip.getTripId() == 0 || trip.getRouteId() == null || trip.getShapeId() == 0) {
+
+            // Validation des données du TransportTrip
+            if (trip.getTripId() == 0 || trip.getRouteId() == null || trip.getShapeId() == 0 || trip.getStopsInOrder() == null) {
                 System.err.println("[Error] Invalid data for TransportTrip: " + trip);
                 continue;
             }
 
+            // Préparation des données d'initialisation pour l'agent
             Map<String, Object> tripInit = new HashMap<>();
             tripInit.put("tripId", trip.getTripId());
             tripInit.put("routeId", trip.getRouteId());
             tripInit.put("serviceId", trip.getServiceId());
             tripInit.put("directionId", trip.getDirectionId());
             tripInit.put("shapeId", trip.getShapeId());
-            tripInit.put("stopsInOrder", trip.getStopsInOrder());
-            tripInit.put("destination", trip.getDestination());
 
+            // Ajouter les stopsInOrder au tripInit
+            IList<String> stopsInOrder = trip.getStopsInOrder();
+            tripInit.put("stopsInOrder", stopsInOrder);
+
+            // Ajouter la destination
+            String destination = trip.getDestination();
+            tripInit.put("destination", destination);
+
+            // Ajout de l'initialisation à la liste globale
             inits.add(tripInit);
+            System.out.println("[Debug] Initialisation ajoutée pour le trip: " + trip.getTripId());
         }
     }
+
     
     /**
      * Adds initialization data for TransportRoute agents.
