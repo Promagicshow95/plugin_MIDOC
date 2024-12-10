@@ -14,66 +14,41 @@ public class TransportStop {
     private String stopName;
     private GamaPoint location;
 
-    // Nouvelle structure pour les associations de trajets
-    private IMap<Integer, IList<TransportStop>> tripAssociations;
-
-    // Nouvelle structure pour les destinations
-    private IMap<Integer, String> destinationMap;
+    // Nouvelle structure pour les informations de départ
+    private IList<IList<Object>> departureInfoList;
 
     @SuppressWarnings("unchecked")
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
         this.stopId = stopId;
         this.stopName = stopName;
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
-        this.tripAssociations = GamaMapFactory.create(Types.INT, Types.get(IList.class));
-        this.destinationMap = GamaMapFactory.create(Types.INT, Types.STRING); // Map for the destination
+        this.departureInfoList = GamaListFactory.create(Types.LIST); // Liste principale pour les trips
     }
 
     /**
-     * Ajoute ou met à jour les prédécesseurs pour un tripId donné.
-     * @param tripId ID du trajet
-     * @param predecessors Liste des arrêts prédécesseurs
+     * Ajoute une information de départ pour un trajet.
+     * 
+     * @param departureTime Heure de départ globale pour le trip
+     * @param stopsForTrip  Liste des arrêts associés au trajet avec leurs heures de départ
      */
-    public void addTripWithPredecessors(int tripId, IList<TransportStop> predecessors) {
-        tripAssociations.put(tripId, predecessors);
+    @SuppressWarnings("unchecked")
+    public void addDepartureInfo(String departureTime, IList<IMap<String, Object>> stopsForTrip) {
+        // Création de l'entrée principale pour ce trip
+        IList<Object> tripEntry = GamaListFactory.create(Types.NO_TYPE);
+        tripEntry.add(departureTime);  // Premier élément : heure de départ globale
+        tripEntry.add(stopsForTrip);  // Deuxième élément : liste des arrêts avec leurs heures de départ
+
+        // Ajout à la liste des informations de départ
+        departureInfoList.add(tripEntry);
     }
 
     /**
-     * Récupère les prédécesseurs d'un arrêt pour un tripId donné.
-     * @param tripId ID du trajet
-     * @return Liste des prédécesseurs, ou une liste vide si non défini
+     * Récupère les informations de départ pour ce stop.
+     * 
+     * @return Liste des informations de départ
      */
-    public IList<TransportStop> getPredecessors(int tripId) {
-        return tripAssociations.getOrDefault(tripId, GamaListFactory.create());
-    }
-
-    /**
-     * Définit la destination pour un tripId donné.
-     * @param tripId ID du trajet
-     * @param destination Id de l'arrêt de destination
-     */
-    public void setDestination(int tripId, String destination) {
-        destinationMap.put(tripId, destination);
-    }
-
-    /**
-     * Récupère la destination pour un tripId donné.
-     * @param tripId ID du trajet
-     * @return Id de l'arrêt de destination ou null si non défini
-     */
-    public String getDestination(int tripId) {
-        String destination = destinationMap.get(tripId);
-        System.out.println("[Debug] Fetching destination for tripId=" + tripId + ": " + destination);
-        return destination;
-    }
-
- 
-    /**
-     * Récupère toutes les associations des trips avec leurs prédécesseurs.
-     * @return Map des associations
-     */
-    public IMap<Integer, IList<TransportStop>> getTripAssociations() {
-        return tripAssociations;
+    public IList<IList<Object>> getDepartureInfoList() {
+        return departureInfoList;
     }
 
     // Getters existants
@@ -88,23 +63,26 @@ public class TransportStop {
     public GamaPoint getLocation() {
         return location;
     }
-    
-    /**
-     * Adds or updates the destination for a specific tripId.
-     * @param tripId ID of the trip.
-     * @param destination The destination stopId.
-     */
-    public void addDestination(Integer tripId, String destination) {
-        destinationMap.put(tripId, destination);
-    }
 
-    public IMap<Integer, String> getDestinationMap() {
-        System.out.println("[Debug] Fetching destination map: " + destinationMap);
-        return destinationMap;
-    }
     @Override
     public String toString() {
-        return "Stop ID: " + stopId + ", Stop Name: " + stopName +
-                ", Location: " + location.toString();
+        return "TransportStop{id='" + stopId + "', name='" + stopName + "', location=" + location + "}";
+    }
+
+
+    /**
+     * Exemple de méthode utilitaire pour ajouter des arrêts avec leurs heures de départ
+     * 
+     * @param stop          Le stop à ajouter
+     * @param departureTime L'heure de départ de ce stop
+     * @return Une map représentant un arrêt avec son heure de départ
+     */
+    @SuppressWarnings("unchecked")
+    public static IMap<String, Object> createStopEntry(TransportStop stop, String departureTime) {
+    	 // Use GamaMapFactory for creating maps
+        IMap<String, Object> stopEntry = GamaMapFactory.create(Types.STRING, Types.NO_TYPE);
+        stopEntry.put("stop", stop);
+        stopEntry.put("departureTime", departureTime);
+        return stopEntry;
     }
 }

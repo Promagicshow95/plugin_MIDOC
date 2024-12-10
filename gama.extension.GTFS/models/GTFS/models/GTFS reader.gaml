@@ -42,11 +42,10 @@ global {
 species bus_stop skills: [TransportStopSkill] {
 
     init {
-       write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location;
+       write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + "," + departureInfoList;
        
-       // Log trip associations and headsigns
-   write "Trip associations: " + tripAssociations;
-   write "Trip destination: " + destinationMap;
+       
+ 
 		
 		
     }
