@@ -5,8 +5,13 @@ import gama.annotations.precompiler.GamlAnnotations.vars;
 import gama.annotations.precompiler.GamlAnnotations.variable;
 import gama.annotations.precompiler.GamlAnnotations.getter;
 import gama.annotations.precompiler.GamlAnnotations.setter;
+
+import java.util.List;
+
 import gama.annotations.precompiler.GamlAnnotations.doc;
 import gama.core.metamodel.agent.IAgent;
+import gama.core.metamodel.population.IPopulation;
+import gama.core.runtime.IScope;
 import gama.core.util.GamaListFactory;
 import gama.core.util.GamaMapFactory;
 import gama.core.util.IList;
@@ -14,6 +19,7 @@ import gama.core.util.IMap;
 import gama.extension.GTFS.TransportStop;
 import gama.gaml.skills.Skill;
 import gama.gaml.types.IType;
+import gama.gaml.types.Types;
 
 /**
  * The skill TransportStopSkill for managing individual transport stops in GAMA.
@@ -58,28 +64,28 @@ public class TransportStopSkill extends Skill {
 
     // Utility method: Retrieve all stop IDs and names for a given trip
     @getter("stopDetailsForTrip")
-    @SuppressWarnings("unchecked")
     public IList<IMap<String, String>> getStopDetailsForTrip(final IAgent agent, final int tripIndex) {
         IList<IList<Object>> departureInfoList = getDepartureInfoList(agent);
         if (departureInfoList == null || tripIndex >= departureInfoList.size()) {
             return null;
         }
 
-        // Extract the stops for the specified trip
+        // Extraire les arrêts pour le trajet spécifié
         IList<Object> tripData = departureInfoList.get(tripIndex);
+        @SuppressWarnings("unchecked")
         IList<IMap<String, Object>> stopsForTrip = (IList<IMap<String, Object>>) tripData.get(1);
 
-        // Extract the IDs and names of stops
-        IList<IMap<String, String>> stopDetails = gama.core.util.GamaListFactory.create();
+        // Récupérer les détails des stops
+        IList<IMap<String, String>> stopDetails = GamaListFactory.create();
         for (IMap<String, Object> stopEntry : stopsForTrip) {
             IMap<String, String> details = GamaMapFactory.create();
-            TransportStop stop = (TransportStop) stopEntry.get("stop");
-            details.put("stopId", stop.getStopId());
-            details.put("stopName", stop.getStopName());
+            details.put("stopId", (String) stopEntry.get("stopId"));
+            details.put("departureTime", (String) stopEntry.get("departureTime"));
             stopDetails.add(details);
         }
         return stopDetails;
     }
+
 
     // Utility method: Retrieve the departure times of stops for a given trip
     @getter("departureTimesForTrip")
@@ -125,9 +131,9 @@ public class TransportStopSkill extends Skill {
             return null;
         }
 
-        // Extract trip details
         IList<Object> tripData = departureInfoList.get(tripIndex);
         String globalDepartureTime = (String) tripData.get(0);
+        @SuppressWarnings("unchecked")
         IList<IMap<String, Object>> stopsForTrip = (IList<IMap<String, Object>>) tripData.get(1);
 
         IMap<String, Object> tripDetails = GamaMapFactory.create();
@@ -136,6 +142,56 @@ public class TransportStopSkill extends Skill {
 
         return tripDetails;
     }
+
+    
+    /**
+     * Extraire les stopId d'un trajet à partir de departureInfoList.
+     * @param departureInfoList La liste des informations de départ (stopId et heures de départ).
+     * @return Une liste des stopId associés au trajet.
+     */
+    public static IList<String> extractStopIdsFromTrip(IList<IList<Object>> departureInfoList) {
+        IList<String> stopIds = GamaListFactory.create(Types.STRING);
+
+        for (IList<Object> trip : departureInfoList) {
+            if (trip.size() < 2) continue; // Chaque entrée doit contenir [tripDepartureTime, stopsForTrip]
+
+            @SuppressWarnings("unchecked")
+            IList<IMap<String, Object>> stopsForTrip = (IList<IMap<String, Object>>) trip.get(1);
+
+            for (IMap<String, Object> stopEntry : stopsForTrip) {
+                String stopId = (String) stopEntry.get("stopId");
+                if (stopId != null) {
+                    stopIds.add(stopId);
+                }
+            }
+        }
+
+        return stopIds;
+    }
+
+
+    /**
+     * Récupérer les détails d'un arrêt à partir de son stopId.
+     * @param scope Le contexte de simulation.
+     * @param stopId L'identifiant unique de l'arrêt à rechercher.
+     * @param population La population des agents TransportStop.
+     * @return Les détails de l'arrêt correspondant ou null si non trouvé.
+     */
+    public static IAgent getStopDetailsFromPopulation(IScope scope, String stopId, IPopulation<? extends IAgent> population) {
+        for (IAgent agent : population) {
+            if (stopId.equals(agent.getAttribute("stopId"))) {
+                // Log les détails de l'arrêt
+                System.out.println("[Info] Stop trouvé : stopId = " + stopId + 
+                                   ", stopName = " + agent.getAttribute("stopName") + 
+                                   ", location = " + agent.getGeometry().getLocation());
+                return agent;
+            }
+        }
+
+        System.err.println("[Error] Aucun arrêt trouvé pour stopId = " + stopId);
+        return null;
+    }
 }
+
 
            

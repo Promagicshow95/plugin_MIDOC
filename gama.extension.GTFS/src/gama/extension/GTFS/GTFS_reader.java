@@ -523,7 +523,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 }
                 
                 // Transform to match the CRS of the shapefile
-                IShape transformedLocation = SpatialProjections.to_GAMA_CRS(scope, location, "EPSG:XXXX"); // Replace with shapefile CRS
+                IShape transformedLocation = SpatialProjections.to_GAMA_CRS(scope, location, "EPSG:4326"); // Replace with shapefile CRS
                 envelope.expandToInclude(transformedLocation.getLocation());
             } catch (Exception e) {
                 System.err.println("Error adding stop to envelope: " + stop.getStopId() + " -> " + e.getMessage());
@@ -555,9 +555,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
     }
     
-    /**
-     * Compute trips and their predecessors for each stop.
-     */
     public void computeDepartureInfo(IScope scope) {
         System.out.println("Entrée dans computeDepartureInfo...");
 
@@ -581,7 +578,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 ", stop_sequence = " + stopSequenceIndex);
 
         // Étape 1 : Filtrer les arrêts de départ (stop_sequence = 1)
-        Set<String> uniqueDepartureStops = new HashSet<>(); // Pour éviter les doublons
+        Set<String> uniqueDepartureStops = new HashSet<>();
         IList<TransportStop> departureStops = GamaListFactory.create();
 
         for (String line : stopTimesData) {
@@ -617,7 +614,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             try {
                 System.out.println("Traitement de l'arrêt de départ : " + stop.getStopId());
 
-                // Initialiser une map pour stocker les arrêts d'un trajet avec leurs heures
+                // Map pour stocker les stopIds et heures de départ pour chaque trajet
                 IMap<Integer, IList<IMap<String, Object>>> tripsMap = GamaMapFactory.create(Types.INT, Types.LIST);
 
                 // Parcours des lignes de stop_times.txt
@@ -628,30 +625,19 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                         String stopId = fields[stopIdIndex];
                         String departureTime = fields[departureTimeIndex];
 
-                        // Ajouter chaque arrêt et son heure à la map des trajets
-                        TransportStop currentStop = stopsMap.get(stopId);
-                        if (currentStop == null) {
-                            System.err.println("Erreur : Aucun arrêt trouvé pour stopId = " + stopId);
-                            continue;
-                        }
-
-                        IMap<String, Object> stopEntry = TransportStop.createStopEntry(currentStop, departureTime);
-                        tripsMap.computeIfAbsent(tripId, k -> GamaListFactory.create(Types.get(IMap.class)))
-                                .add(stopEntry);
+                        // Ajouter chaque stopId et heure de départ à la liste des trajets
+                        IMap<String, Object> stopEntry = TransportStop.createStopEntry(stopId, departureTime);
+                        tripsMap.computeIfAbsent(tripId, k -> GamaListFactory.create(Types.get(IMap.class))).add(stopEntry);
                     } catch (Exception e) {
                         System.err.println("Erreur lors du traitement de la ligne : " + line + " -> " + e.getMessage());
                     }
                 }
 
-                // Pour chaque trajet, créer une entrée dans departureInfoList
+                // Pour chaque trajet, créer une entrée dans departureInfoList avec stopIds et heures
                 for (Map.Entry<Integer, IList<IMap<String, Object>>> entry : tripsMap.entrySet()) {
                     int tripId = entry.getKey();
                     IList<IMap<String, Object>> stopsForTrip = entry.getValue();
 
-                    // MODIFICATION : Ajout des logs pour visualiser les informations ajoutées
-                    System.out.println("Trip ID: " + tripId + ", Nombre d'arrêts pour ce trip : " + stopsForTrip.size());
-
-                    // Ajouter à departureInfoList
                     if (!stopsForTrip.isEmpty()) {
                         String tripDepartureTime = stopsForTrip.get(0).get("departureTime").toString(); // Première heure
                         stop.addDepartureInfo(tripDepartureTime, stopsForTrip);

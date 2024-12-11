@@ -36,7 +36,7 @@ public class TransportStop {
         // Création de l'entrée principale pour ce trip
         IList<Object> tripEntry = GamaListFactory.create(Types.NO_TYPE);
         tripEntry.add(departureTime);  // Premier élément : heure de départ globale
-        tripEntry.add(stopsForTrip);  // Deuxième élément : liste des arrêts avec leurs heures de départ
+        tripEntry.add(stopsForTrip);  // Deuxième élément : liste des arrêts avec leurs heures de départ (stopId + departureTime)
 
         // Ajout à la liste des informations de départ
         departureInfoList.add(tripEntry);
@@ -69,19 +69,18 @@ public class TransportStop {
         return "TransportStop{id='" + stopId + "', name='" + stopName + "', location=" + location + "}";
     }
 
-
     /**
-     * Exemple de méthode utilitaire pour ajouter des arrêts avec leurs heures de départ
+     * Méthode utilitaire pour créer une entrée représentant un stop et son heure de départ.
      * 
-     * @param stop          Le stop à ajouter
-     * @param departureTime L'heure de départ de ce stop
+     * @param stopId        L'identifiant du stop
+     * @param departureTime L'heure de départ spécifique pour ce stop
      * @return Une map représentant un arrêt avec son heure de départ
      */
     @SuppressWarnings("unchecked")
-    public static IMap<String, Object> createStopEntry(TransportStop stop, String departureTime) {
-    	 // Use GamaMapFactory for creating maps
+    public static IMap<String, Object> createStopEntry(String stopId, String departureTime) {
+        // Utilisation de GamaMapFactory pour créer des maps
         IMap<String, Object> stopEntry = GamaMapFactory.create(Types.STRING, Types.NO_TYPE);
-        stopEntry.put("stop", stop);
+        stopEntry.put("stopId", stopId);
         stopEntry.put("departureTime", departureTime);
         return stopEntry;
     }

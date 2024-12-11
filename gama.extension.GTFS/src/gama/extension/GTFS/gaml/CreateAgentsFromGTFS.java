@@ -144,29 +144,49 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
             GamaPoint location = stop.getLocation();
             if (location == null || stop.getStopId() == null || stop.getStopName() == null) {
-                System.err.println("[Error] Données manquantes pour l'arrêt : stopId = " + stop.getStopId() + 
-                                   ", location = " + location + 
+                System.err.println("[Error] Données manquantes pour l'arrêt : stopId = " + stop.getStopId() +
+                                   ", location = " + location +
                                    ", stopName = " + stop.getStopName());
                 continue;
             }
 
-            // Initialisation des données de base
+            // Récupération de departureInfoList
+            IList<IList<Object>> departureInfoList = stop.getDepartureInfoList();
+
+            // Préparation de la structure des données
             Map<String, Object> stopInit = new HashMap<>();
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", location);
 
-            // Processing departureInfoList
-            IList<IList<Object>> departureInfoList = stop.getDepartureInfoList();
-            if (departureInfoList.isEmpty()) {
-                System.err.println("[Error] departureInfoList is empty for stopId: " + stop.getStopId());
+            if (departureInfoList != null && !departureInfoList.isEmpty()) {
+                System.out.println("[Info] DepartureInfoList non vide pour stopId: " + stop.getStopId());
+
+                // Transformation de departureInfoList pour l'initialisation
+                IList<IMap<String, Object>> formattedDepartureInfo = GamaListFactory.create();
+                for (IList<Object> trip : departureInfoList) {
+                    String globalDepartureTime = (String) trip.get(0);
+                    @SuppressWarnings("unchecked")
+                    IList<IMap<String, Object>> stopsForTrip = (IList<IMap<String, Object>>) trip.get(1);
+
+                    // Formatage des informations
+                    IMap<String, Object> tripInfo = GamaMapFactory.create();
+                    tripInfo.put("globalDepartureTime", globalDepartureTime);
+                    tripInfo.put("stopsForTrip", stopsForTrip);
+                    formattedDepartureInfo.add(tripInfo);
+                }
+
+                stopInit.put("departureInfoList", formattedDepartureInfo);
+            } else {
+                System.err.println("[Info] DepartureInfoList vide pour stopId: " + stop.getStopId());
+                stopInit.put("departureInfoList", GamaListFactory.create());
             }
 
-            stopInit.put("departureInfoList", departureInfoList);
-
             inits.add(stopInit);
+            System.out.println("[Debug] Stop ajouté à inits : " + stopInit);
         }
     }
+
 
 
     /**
