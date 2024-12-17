@@ -308,12 +308,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         } else {
             System.err.println("stops.txt data or headers are missing.");
         }
-        
-     // Add this at the end of createTransportObjects(IScope scope)
-        System.out.println("Calling computeDepartureInfo...");
-        computeDepartureInfo(scope);
-        System.out.println("computeDepartureInfo completed.");
-
 
         System.out.println("Finished creating TransportStop objects.");
         
@@ -398,8 +392,10 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      // Create TransportTrip objects from trips.txt
         IList<String> tripsData = gtfsData.get("trips.txt");
         IMap<String, Integer> tripsHeaderMap = headerMaps.get("trips.txt");
+
         if (tripsData != null && tripsHeaderMap != null) {
             System.out.println("Processing trips.txt...");
+
             int routeIdIndex = tripsHeaderMap.get("route_id");
             int serviceIdIndex = tripsHeaderMap.get("service_id");
             int tripIdIndex = tripsHeaderMap.get("trip_id");
@@ -418,21 +414,20 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     // Create the TransportTrip object
                     TransportTrip trip = new TransportTrip(routeId, serviceId, tripId, directionId, shapeId);
 
-                    // Initialize the list of stop_ids for the trip
-                    IList<String> stopIdsInOrder = GamaListFactory.create();
-                    trip.setStopIdsInOrder(stopIdsInOrder);
-
-                    // Add the trip to the map
                     tripsMap.put(tripId, trip);
-                    System.out.println("Created TransportTrip: " + tripId);
+                    System.out.println("Created TransportTrip: tripId=" + tripId);
                 } catch (Exception e) {
                     System.err.println("Error processing trip line: " + line + " -> " + e.getMessage());
                 }
             }
-            System.out.println("Finished creating TransportTrip objects.");
+            System.out.println("Finished creating TransportTrip objects. Total trips: " + tripsMap.size());
         } else {
             System.err.println("trips.txt data or headers are missing.");
         }
+
+        System.out.println("Calling computeDepartureInfo to enrich TransportTrips and TransportStops...");
+        computeDepartureInfo(scope);
+        System.out.println("computeDepartureInfo completed.");
 
         System.out.println("Transport object creation completed.");
 
@@ -556,104 +551,85 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     }
     
     public void computeDepartureInfo(IScope scope) {
-        System.out.println("Entrée dans computeDepartureInfo...");
+        System.out.println("Starting computeDepartureInfo...");
 
+        // Récupérer les données et les en-têtes du fichier stop_times.txt
         IList<String> stopTimesData = gtfsData.get("stop_times.txt");
         IMap<String, Integer> stopTimesHeader = headerMaps.get("stop_times.txt");
 
         if (stopTimesData == null || stopTimesHeader == null) {
-            System.err.println("Erreur : Les données ou en-têtes de stop_times.txt sont null.");
+            System.err.println("Error: stop_times.txt data or headers are missing.");
             return;
         }
 
-        // Indices des colonnes dans stop_times.txt
+        // Indices des colonnes nécessaires
         int tripIdIndex = stopTimesHeader.get("trip_id");
         int stopIdIndex = stopTimesHeader.get("stop_id");
         int departureTimeIndex = stopTimesHeader.get("departure_time");
         int stopSequenceIndex = stopTimesHeader.get("stop_sequence");
 
-        System.out.println("Indices des colonnes : trip_id = " + tripIdIndex +
-                ", stop_id = " + stopIdIndex +
-                ", departure_time = " + departureTimeIndex +
-                ", stop_sequence = " + stopSequenceIndex);
+        // Map temporaire pour éviter les doublons
+        Set<Integer> processedTrips = new HashSet<>();
 
-        // Étape 1 : Filtrer les arrêts de départ (stop_sequence = 1)
-        Set<String> uniqueDepartureStops = new HashSet<>();
-        IList<TransportStop> departureStops = GamaListFactory.create();
-
+        // Étape 1 : Lecture du fichier stop_times.txt pour remplir tripsMap et stopsMap
         for (String line : stopTimesData) {
             String[] fields = line.split(",");
             try {
+                int tripId = Integer.parseInt(fields[tripIdIndex]);
+                String stopId = fields[stopIdIndex];
+                String departureTime = fields[departureTimeIndex];
                 int stopSequence = Integer.parseInt(fields[stopSequenceIndex]);
 
-                // Vérifier si c'est un arrêt de départ
-                if (stopSequence == 1) {
-                    String stopId = fields[stopIdIndex];
-
-                    // Éviter les doublons
-                    if (!uniqueDepartureStops.contains(stopId)) {
-                        TransportStop stop = stopsMap.get(stopId);
-                        if (stop != null) {
-                            departureStops.add(stop);
-                            uniqueDepartureStops.add(stopId);
-                            System.out.println("Ajouté à departureStops : stopId = " + stopId);
-                        } else {
-                            System.err.println("Erreur : Aucun arrêt trouvé pour stopId = " + stopId);
-                        }
-                    }
+                // Récupérer le trip correspondant dans tripsMap
+                TransportTrip trip = tripsMap.get(tripId);
+                if (trip == null) {
+                    System.err.println("Trip not found for tripId: " + tripId);
+                    continue;
                 }
+
+                // Ajouter les arrêts et heures de départ au TransportTrip
+                trip.addStop(stopId);
+                trip.addStopDetail(stopId, departureTime);
             } catch (Exception e) {
-                System.err.println("Erreur lors du traitement de la ligne : " + line + " -> " + e.getMessage());
+                System.err.println("Error processing stop_times line: " + line + " -> " + e.getMessage());
             }
         }
 
-        System.out.println("Nombre total d'arrêts de départ : " + departureStops.size());
+        // Étape 2 : Mise à jour des TransportStop avec les infos de départ
+        for (TransportTrip trip : tripsMap.values()) {
+            IList<String> stopsInOrder = trip.getStopsInOrder();
+            IList<IMap<String, Object>> stopDetails = trip.getStopDetails();
 
-        // Étape 2 : Traitement des arrêts de départ pour remplir departureInfoList
-        for (TransportStop stop : departureStops) {
-            try {
-                System.out.println("Traitement de l'arrêt de départ : " + stop.getStopId());
+            // Vérifier que stopsInOrder et stopDetails ne sont pas vides
+            if (stopsInOrder.isEmpty() || stopDetails.isEmpty()) {
+                System.err.println("Error: stopsInOrder or stopDetails is empty for tripId: " + trip.getTripId());
+                continue;
+            }
 
-                // Map pour stocker les stopIds et heures de départ pour chaque trajet
-                IMap<Integer, IList<IMap<String, Object>>> tripsMap = GamaMapFactory.create(Types.INT, Types.LIST);
+            // Le premier arrêt est le stop de départ
+            String firstStopId = stopsInOrder.get(0);
+            TransportStop stop = stopsMap.get(firstStopId);
 
-                // Parcours des lignes de stop_times.txt
-                for (String line : stopTimesData) {
-                    String[] fields = line.split(",");
-                    try {
-                        int tripId = Integer.parseInt(fields[tripIdIndex]);
-                        String stopId = fields[stopIdIndex];
-                        String departureTime = fields[departureTimeIndex];
+            if (stop != null) {
+                String globalDepartureTime = stopDetails.get(0).get("departureTime").toString();
+                stop.addDepartureInfo(globalDepartureTime, stopDetails);
+                System.out.println("Departure stop processed: stopId=" + firstStopId + ", tripId=" + trip.getTripId());
 
-                        // Ajouter chaque stopId et heure de départ à la liste des trajets
-                        IMap<String, Object> stopEntry = TransportStop.createStopEntry(stopId, departureTime);
-                        tripsMap.computeIfAbsent(tripId, k -> GamaListFactory.create(Types.get(IMap.class))).add(stopEntry);
-                    } catch (Exception e) {
-                        System.err.println("Erreur lors du traitement de la ligne : " + line + " -> " + e.getMessage());
-                    }
+                // Vérification : S'assurer que departureInfoList a bien été rempli
+                if (stop.hasDepartureInfo()) {
+                    System.out.println("[CHECK] StopId=" + firstStopId + " has " + stop.getDepartureInfoList().size() + " entries in departureInfoList.");
+                } else {
+                    System.err.println("[CHECK-ERROR] StopId=" + firstStopId + " has an EMPTY departureInfoList after processing.");
                 }
-
-                // Pour chaque trajet, créer une entrée dans departureInfoList avec stopIds et heures
-                for (Map.Entry<Integer, IList<IMap<String, Object>>> entry : tripsMap.entrySet()) {
-                    int tripId = entry.getKey();
-                    IList<IMap<String, Object>> stopsForTrip = entry.getValue();
-
-                    if (!stopsForTrip.isEmpty()) {
-                        String tripDepartureTime = stopsForTrip.get(0).get("departureTime").toString(); // Première heure
-                        stop.addDepartureInfo(tripDepartureTime, stopsForTrip);
-
-                        // LOG : Afficher les informations ajoutées
-                        System.out.println("Informations ajoutées pour stopId = " + stop.getStopId() +
-                                " : tripDepartureTime = " + tripDepartureTime + ", stopsForTrip = " + stopsForTrip);
-                    }
-                }
-            } catch (Exception e) {
-                System.err.println("Erreur lors du traitement de l'arrêt : " + stop.getStopId() + " -> " + e.getMessage());
+            } else {
+                System.err.println("Stop not found for stopId: " + firstStopId + ", tripId=" + trip.getTripId());
             }
         }
 
-        System.out.println("Traitement des départs terminé.");
+        System.out.println("computeDepartureInfo completed successfully.");
     }
+
+
 
  
     public TransportStop getStop(String stopId) {

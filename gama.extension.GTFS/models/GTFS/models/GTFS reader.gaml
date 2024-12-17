@@ -42,9 +42,11 @@ global {
 species bus_stop skills: [TransportStopSkill] {
 
     init {
-       write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + "," + departureInfoList;
        
        
+       if length(departureInfoList)> 0 {
+       	write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + "," + departureInfoList;
+       }
  
 		
 		

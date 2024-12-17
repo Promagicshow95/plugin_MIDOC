@@ -13,8 +13,6 @@ public class TransportStop {
     private String stopId;
     private String stopName;
     private GamaPoint location;
-
-    // Nouvelle structure pour les informations de départ
     private IList<IList<Object>> departureInfoList;
 
     @SuppressWarnings("unchecked")
@@ -22,36 +20,33 @@ public class TransportStop {
         this.stopId = stopId;
         this.stopName = stopName;
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
-        this.departureInfoList = GamaListFactory.create(Types.LIST); // Liste principale pour les trips
+        this.departureInfoList = GamaListFactory.create(Types.LIST); // Initialise la liste des trips
     }
 
     /**
      * Ajoute une information de départ pour un trajet.
      * 
      * @param departureTime Heure de départ globale pour le trip
-     * @param stopsForTrip  Liste des arrêts associés au trajet avec leurs heures de départ
+     * @param stopsForTrip  Liste des arrêts associés au trajet
      */
-    @SuppressWarnings("unchecked")
     public void addDepartureInfo(String departureTime, IList<IMap<String, Object>> stopsForTrip) {
-        // Création de l'entrée principale pour ce trip
-        IList<Object> tripEntry = GamaListFactory.create(Types.NO_TYPE);
-        tripEntry.add(departureTime);  // Premier élément : heure de départ globale
-        tripEntry.add(stopsForTrip);  // Deuxième élément : liste des arrêts avec leurs heures de départ (stopId + departureTime)
-
-        // Ajout à la liste des informations de départ
+        IList<Object> tripEntry = GamaListFactory.create();
+        tripEntry.add(departureTime);
+        tripEntry.add(stopsForTrip);
         departureInfoList.add(tripEntry);
     }
 
     /**
-     * Récupère les informations de départ pour ce stop.
-     * 
-     * @return Liste des informations de départ
+     * Vérifie si la liste des départs est vide.
      */
+    public boolean hasDepartureInfo() {
+        return departureInfoList != null && !departureInfoList.isEmpty();
+    }
+
     public IList<IList<Object>> getDepartureInfoList() {
         return departureInfoList;
     }
 
-    // Getters existants
     public String getStopId() {
         return stopId;
     }
@@ -66,19 +61,10 @@ public class TransportStop {
 
     @Override
     public String toString() {
-        return "TransportStop{id='" + stopId + "', name='" + stopName + "', location=" + location + "}";
+        return "TransportStop{id='" + stopId + "', name='" + stopName + "', location=" + location + ", departureInfo=" + departureInfoList + "}";
     }
 
-    /**
-     * Méthode utilitaire pour créer une entrée représentant un stop et son heure de départ.
-     * 
-     * @param stopId        L'identifiant du stop
-     * @param departureTime L'heure de départ spécifique pour ce stop
-     * @return Une map représentant un arrêt avec son heure de départ
-     */
-    @SuppressWarnings("unchecked")
     public static IMap<String, Object> createStopEntry(String stopId, String departureTime) {
-        // Utilisation de GamaMapFactory pour créer des maps
         IMap<String, Object> stopEntry = GamaMapFactory.create(Types.STRING, Types.NO_TYPE);
         stopEntry.put("stopId", stopId);
         stopEntry.put("departureTime", departureTime);

@@ -1,7 +1,9 @@
 package gama.extension.GTFS;
 
 import gama.core.util.GamaListFactory;
+import gama.core.util.GamaMapFactory;
 import gama.core.util.IList;
+import gama.core.util.IMap;
 
 public class TransportTrip {
 
@@ -11,6 +13,7 @@ public class TransportTrip {
     private int directionId; // Direction identifier
     private int shapeId; // Shape identifier
     private IList<String> stopIdsInOrder; // List of stop_ids in sequence
+    private IList<IMap<String, Object>> stopDetails; // List of stop details (stopId and departureTime)
 
     // Constructor
     public TransportTrip(String routeId, String serviceId, int tripId, int directionId, int shapeId) {
@@ -20,11 +23,30 @@ public class TransportTrip {
         this.directionId = directionId;
         this.shapeId = shapeId;
         this.stopIdsInOrder = GamaListFactory.create(); // Initialize list
+        this.stopDetails = GamaListFactory.create();    // Initialize stop details
     }
 
     // Add a stop_id in sequence order
     public void addStop(String stopId) {
         stopIdsInOrder.add(stopId);
+    }
+
+    // Add stop details (stopId and departureTime)
+    public void addStopDetail(String stopId, String departureTime) {
+        IMap<String, Object> stopEntry = GamaMapFactory.create();
+        stopEntry.put("stopId", stopId);
+        stopEntry.put("departureTime", departureTime);
+        stopDetails.add(stopEntry);
+    }
+
+    // Set stop details
+    public void setStopDetails(IList<IMap<String, Object>> stopDetails) {
+        this.stopDetails = stopDetails;
+    }
+
+    // Get stop details
+    public IList<IMap<String, Object>> getStopDetails() {
+        return stopDetails;
     }
 
     // Get stops in order

@@ -140,50 +140,27 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
         for (int i = 0; i < limit; i++) {
             TransportStop stop = stops.get(i);
-            System.out.println("[Debug] Traitement de l'arrêt : " + stop.getStopId());
-
-            GamaPoint location = stop.getLocation();
-            if (location == null || stop.getStopId() == null || stop.getStopName() == null) {
-                System.err.println("[Error] Données manquantes pour l'arrêt : stopId = " + stop.getStopId() +
-                                   ", location = " + location +
-                                   ", stopName = " + stop.getStopName());
-                continue;
-            }
-
-            // Récupération de departureInfoList
-            IList<IList<Object>> departureInfoList = stop.getDepartureInfoList();
-
-            // Préparation de la structure des données
             Map<String, Object> stopInit = new HashMap<>();
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
-            stopInit.put("location", location);
+            stopInit.put("location", stop.getLocation());
 
-            if (departureInfoList != null && !departureInfoList.isEmpty()) {
-                System.out.println("[Info] DepartureInfoList non vide pour stopId: " + stop.getStopId());
-
-                // Transformation de departureInfoList pour l'initialisation
-                IList<IMap<String, Object>> formattedDepartureInfo = GamaListFactory.create();
-                for (IList<Object> trip : departureInfoList) {
-                    String globalDepartureTime = (String) trip.get(0);
-                    @SuppressWarnings("unchecked")
-                    IList<IMap<String, Object>> stopsForTrip = (IList<IMap<String, Object>>) trip.get(1);
-
-                    // Formatage des informations
-                    IMap<String, Object> tripInfo = GamaMapFactory.create();
-                    tripInfo.put("globalDepartureTime", globalDepartureTime);
-                    tripInfo.put("stopsForTrip", stopsForTrip);
-                    formattedDepartureInfo.add(tripInfo);
-                }
-
-                stopInit.put("departureInfoList", formattedDepartureInfo);
+            // Vérification et ajout de departureInfoList
+            if (stop.hasDepartureInfo()) {
+                IList<IList<Object>> departureInfoList = stop.getDepartureInfoList();
+                stopInit.put("departureInfoList", departureInfoList);
+                System.out.println("[DEBUG] departureInfoList for stopId=" + stop.getStopId() + " has " 
+                                   + departureInfoList.size() + " entries.");
             } else {
-                System.err.println("[Info] DepartureInfoList vide pour stopId: " + stop.getStopId());
                 stopInit.put("departureInfoList", GamaListFactory.create());
+                System.err.println("[ERROR] departureInfoList is empty for stopId=" + stop.getStopId());
             }
 
+            // Ajouter l'initialisation aux inits
             inits.add(stopInit);
-            System.out.println("[Debug] Stop ajouté à inits : " + stopInit);
+
+            // Afficher les détails finaux pour vérifier
+            System.out.println("[CHECK] stopInit added: " + stopInit);
         }
     }
 
@@ -199,7 +176,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             TransportTrip trip = trips.get(i);
 
             // Validation des données du TransportTrip
-            if (trip.getTripId() == 0 || trip.getRouteId() == null || trip.getShapeId() == 0 || trip.getStopsInOrder() == null) {
+            if (trip.getTripId() == 0 || trip.getRouteId() == null || trip.getShapeId() == 0 || trip.getStopDetails() == null) {
                 System.err.println("[Error] Invalid data for TransportTrip: " + trip);
                 continue;
             }
@@ -212,9 +189,9 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             tripInit.put("directionId", trip.getDirectionId());
             tripInit.put("shapeId", trip.getShapeId());
 
-            // Ajouter les stopsInOrder au tripInit
-            IList<String> stopsInOrder = trip.getStopsInOrder();
-            tripInit.put("stopsInOrder", stopsInOrder);
+            // Ajouter les stops (détails) au tripInit
+            IList<IMap<String, Object>> stopDetails = trip.getStopDetails();
+            tripInit.put("stopDetails", stopDetails);
 
             // Ajouter la destination
             String destination = trip.getDestination();
@@ -225,6 +202,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             System.out.println("[Debug] Initialisation ajoutée pour le trip: " + trip.getTripId());
         }
     }
+
 
     
     /**

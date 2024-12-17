@@ -12,14 +12,15 @@ import gama.gaml.types.IType;
 
 /**
  * The skill TransportTripSkill for managing individual transport trips in GAMA.
- * This skill manages attributes like tripId, routeId, stopsInOrder, and destination.
+ * This skill manages attributes like tripId, routeId, stopsInOrder, destination, and stopDetails.
  */
-@skill(name = "TransportTripSkill", doc = @doc("Skill for agents that represent individual transport trips with attributes like tripId, routeId, stopsInOrder, and destination."))
+@skill(name = "TransportTripSkill", doc = @doc("Skill for agents that represent individual transport trips with attributes like tripId, routeId, stopsInOrder, destination, and stopDetails."))
 @vars({
     @variable(name = "tripId", type = IType.INT, doc = @doc("The unique identifier of the transport trip.")),
     @variable(name = "routeId", type = IType.STRING, doc = @doc("The unique identifier of the route associated with the trip.")),
     @variable(name = "stopsInOrder", type = IType.LIST, doc = @doc("The ordered list of stop IDs for this trip.")),
     @variable(name = "destination", type = IType.STRING, doc = @doc("The final stop ID for this trip.")),
+    @variable(name = "stopDetails", type = IType.LIST, doc = @doc("The list of stop details containing stop IDs and their respective departure times.")),
 })
 public class TransportTripSkill extends Skill {
 
@@ -65,5 +66,16 @@ public class TransportTripSkill extends Skill {
     @setter("destination")
     public void setDestination(final IAgent agent, final String destination) {
         agent.setAttribute("destination", destination);
+    }
+
+    // Getter and setter for stopDetails
+    @getter("stopDetails")
+    public Object getStopDetails(final IAgent agent) {
+        return agent.getAttribute("stopDetails");
+    }
+
+    @setter("stopDetails")
+    public void setStopDetails(final IAgent agent, final Object stopDetails) {
+        agent.setAttribute("stopDetails", stopDetails);
     }
 }
