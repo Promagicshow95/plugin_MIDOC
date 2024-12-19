@@ -1,5 +1,7 @@
 package gama.extension.GTFS;
 
+import java.util.Map;
+
 import gama.core.util.GamaListFactory;
 import gama.core.util.GamaMapFactory;
 import gama.core.util.IList;
@@ -103,6 +105,25 @@ public class TransportTrip {
 
     public void setShapeId(int shapeId) {
         this.shapeId = shapeId;
+    }
+    
+    /**
+     * Returns a list of TransportStop objects corresponding to the stop IDs in this trip.
+     * 
+     * @param stopsMap A map containing stop IDs and their corresponding TransportStop objects.
+     * @return A list of TransportStop objects.
+     */
+    public IList<TransportStop> getStops(Map<String, TransportStop> stopsMap) {
+        IList<TransportStop> stops = GamaListFactory.create();
+        for (String stopId : stopIdsInOrder) {
+            TransportStop stop = stopsMap.get(stopId);
+            if (stop != null) {
+                stops.add(stop);
+            } else {
+                System.err.println("[Warning] Stop ID not found in stopsMap: " + stopId);
+            }
+        }
+        return stops;
     }
 
     // Display trip information

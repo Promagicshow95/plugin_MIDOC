@@ -145,15 +145,15 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", stop.getLocation());
 
-            // Vérification et ajout de departureInfoList
+            // Vérification et ajout de departureInfoMap
             if (stop.hasDepartureInfo()) {
-                IList<IList<Object>> departureInfoList = stop.getDepartureInfoList();
-                stopInit.put("departureInfoList", departureInfoList);
-                System.out.println("[DEBUG] departureInfoList for stopId=" + stop.getStopId() + " has " 
-                                   + departureInfoList.size() + " entries.");
+                Map<String, TransportStop> departureInfoMap = stop.getDepartureInfoMap();
+                stopInit.put("departureInfoMap", departureInfoMap);
+                System.out.println("[DEBUG] departureInfoMap for stopId=" + stop.getStopId() + " has " 
+                                   + departureInfoMap.size() + " entries.");
             } else {
-                stopInit.put("departureInfoList", GamaListFactory.create());
-                System.err.println("[ERROR] departureInfoList is empty for stopId=" + stop.getStopId());
+                stopInit.put("departureInfoMap", new HashMap<String, TransportStop>());
+                System.err.println("[ERROR] departureInfoMap is empty for stopId=" + stop.getStopId());
             }
 
             // Ajouter l'initialisation aux inits
@@ -280,12 +280,19 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         IList<IAgent> createdAgents = GamaListFactory.create();
 
         for (Map<String, Object> init : inits) {
-            if (init.get("stopId") != null && init.get("departureInfoList") != null) {
-                if (((IList<?>) init.get("departureInfoList")).isEmpty()) {
-                    System.err.println("[Error] departureInfoList is empty in init: " + init);
+            // Vérification des données d'initialisation pour TransportStop
+            if (init.get("stopId") != null && init.get("departureInfoMap") != null) {
+                Map<String, TransportStop> departureInfoMap = (Map<String, TransportStop>) init.get("departureInfoMap");
+
+                if (departureInfoMap.isEmpty()) {
+                    System.err.println("[Error] departureInfoMap is empty in init: " + init);
+                } else {
+                    System.out.println("[CHECK] departureInfoMap for stopId=" + init.get("stopId") + " contains " 
+                                       + departureInfoMap.size() + " entries.");
                 }
             }
 
+            // Création des agents
             IList<Map<String, Object>> mutableInitList = GamaListFactory.create();
             mutableInitList.add(init);
             IList<? extends IAgent> agents = population.createAgents(scope, 1, mutableInitList, false, true);
@@ -300,5 +307,6 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
         return createdAgents;
     }
+
 
 }

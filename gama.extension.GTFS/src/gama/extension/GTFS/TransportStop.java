@@ -2,49 +2,49 @@ package gama.extension.GTFS;
 
 import gama.core.metamodel.shape.GamaPoint;
 import gama.core.runtime.IScope;
-import gama.core.util.GamaListFactory;
 import gama.core.util.GamaMapFactory;
-import gama.core.util.IList;
 import gama.core.util.IMap;
-import gama.gaml.types.Types;
 import GamaGTFSUtils.SpatialUtils;
+
+import gama.gaml.types.Types;
 
 public class TransportStop {
     private String stopId;
     private String stopName;
     private GamaPoint location;
-    private IList<IList<Object>> departureInfoList;
+    private IMap<String, TransportStop> departureInfoMap; // Map<Time, TransportStop>
 
     @SuppressWarnings("unchecked")
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
         this.stopId = stopId;
         this.stopName = stopName;
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
-        this.departureInfoList = GamaListFactory.create(Types.LIST); // Initialise la liste des trips
+        this.departureInfoMap = GamaMapFactory.create(Types.STRING, Types.get(TransportStop.class)); // Initialize the Map
     }
 
     /**
-     * Ajoute une information de départ pour un trajet.
-     * 
-     * @param departureTime Heure de départ globale pour le trip
-     * @param stopsForTrip  Liste des arrêts associés au trajet
+     * Adds departure information for a trip.
+     *
+     * @param departureTime Global departure time for the trip.
+     * @param stop          The corresponding TransportStop object.
      */
-    public void addDepartureInfo(String departureTime, IList<IMap<String, Object>> stopsForTrip) {
-        IList<Object> tripEntry = GamaListFactory.create();
-        tripEntry.add(departureTime);
-        tripEntry.add(stopsForTrip);
-        departureInfoList.add(tripEntry);
+    public void addDepartureInfo(String departureTime, TransportStop stop) {
+        if (departureTime != null && stop != null) {
+            departureInfoMap.put(departureTime, stop);
+        } else {
+            System.err.println("[ERROR] departureTime or stop is null in addDepartureInfo.");
+        }
     }
 
     /**
-     * Vérifie si la liste des départs est vide.
+     * Checks if the departure map is empty.
      */
     public boolean hasDepartureInfo() {
-        return departureInfoList != null && !departureInfoList.isEmpty();
+        return departureInfoMap != null && !departureInfoMap.isEmpty();
     }
 
-    public IList<IList<Object>> getDepartureInfoList() {
-        return departureInfoList;
+    public IMap<String, TransportStop> getDepartureInfoMap() {
+        return departureInfoMap;
     }
 
     public String getStopId() {
@@ -61,13 +61,25 @@ public class TransportStop {
 
     @Override
     public String toString() {
-        return "TransportStop{id='" + stopId + "', name='" + stopName + "', location=" + location + ", departureInfo=" + departureInfoList + "}";
+        String locationStr = (location != null) ? 
+                             String.format("x=%.2f, y=%.2f", location.getX(), location.getY()) : "null";
+        return "TransportStop{id='" + stopId + 
+               "', name='" + stopName + 
+               "', location={" + locationStr + "}, " +
+               "departureInfoMap=" + (departureInfoMap != null ? departureInfoMap.size() + " entries" : "null") + "}";
     }
 
-    public static IMap<String, Object> createStopEntry(String stopId, String departureTime) {
-        IMap<String, Object> stopEntry = GamaMapFactory.create(Types.STRING, Types.NO_TYPE);
-        stopEntry.put("stopId", stopId);
-        stopEntry.put("departureTime", departureTime);
+
+    /**
+     * Utility method to create a stop entry.
+     *
+     * @param stop          The corresponding TransportStop object.
+     * @param departureTime Departure time.
+     * @return A map representing a stop with the associated stop object.
+     */
+    public static IMap<String, TransportStop> createStopEntry(String departureTime, TransportStop stop) {
+        IMap<String, TransportStop> stopEntry = GamaMapFactory.create(Types.STRING, Types.get(TransportStop.class));
+        stopEntry.put(departureTime, stop);
         return stopEntry;
     }
 }

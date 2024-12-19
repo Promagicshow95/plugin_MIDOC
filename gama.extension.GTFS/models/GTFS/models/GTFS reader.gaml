@@ -44,8 +44,8 @@ species bus_stop skills: [TransportStopSkill] {
     init {
        
        
-       if length(departureInfoList)> 0 {
-       	write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + "," + departureInfoList;
+       if length(departureInfoMap)> 0 {
+       	write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + "," + departureInfoMap;
        }
  
 		

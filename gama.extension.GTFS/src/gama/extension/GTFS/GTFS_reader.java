@@ -71,17 +71,15 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     // Data structure to store GTFS files
     private IMap<String, IList<String>> gtfsData;
     
- // New field to store header mappings for each file
+    // New field to store header mappings for each file
     private IMap<String, IMap<String, Integer>> headerMaps = GamaMapFactory.create(Types.STRING, Types.get(IMap.class));
 
     // Collections for objects created from GTFS files
-//    private IMap<String, TransportRoute> routesMap;
     private IMap<Integer, TransportTrip> tripsMap;
     private IMap<String, TransportStop> stopsMap;
     private IMap<Integer, TransportShape> shapesMap;
     private IMap<String, TransportRoute> routesMap; 
     
-
     /**
      * Constructor for reading GTFS files.
      *
@@ -95,36 +93,29 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     public GTFS_reader(final IScope scope, final String pathName) throws GamaRuntimeException {
         super(scope, pathName);
         
-     // Debug: Print the GTFS path in the GAMA console
+        // Debug: Print the GTFS path in the GAMA console
         if (scope != null && scope.getGui() != null) {
             scope.getGui().getConsole().informConsole("GTFS path used: "  + pathName, scope.getSimulation());
         } else {
             System.out.println("GTFS path used: " + pathName);  // For testing outside of GAMA
         }
-        
 
         // Load GTFS files
         System.out.println("Loading GTFS files...");
         loadGtfsFiles(scope);
         System.out.println("File loading completed.");
         
-     // Create transport objects
+        // Create transport objects
         System.out.println("Creating transport objects...");
         createTransportObjects(scope);
         System.out.println("Transport object creation completed.");
-        
     }
-    
 
-    
-    
-    
     public GTFS_reader(final String pathName) throws GamaRuntimeException {
         super(null, pathName);  // Pass 'null' for IScope as it is not needed here
         checkValidity(null);  // Pass 'null' if IScope is not necessary for this check
         loadGtfsFiles(null);
         createTransportObjects(null);
-
     }
     
     /**
@@ -133,7 +124,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      */
     public List<TransportStop> getStops() {
         List<TransportStop> stopList = new ArrayList<>(stopsMap.values());
-        System.out.println("Number of created stop : " + stopList.size());
+        System.out.println("Number of created stops: " + stopList.size());
         return stopList;
     }
     
@@ -147,43 +138,38 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     
     /**
      * Method to retrieve the list of trips (TransportTrip) from tripsMap.
-     * @return List of transport stops
+     * @return List of transport trips
      */
-    
     public List<TransportTrip> getTrips() {
-    	List<TransportTrip> tripList = new ArrayList<>(tripsMap.values());
-    	System.out.println("Number of created trip : " + tripList.size());
+        List<TransportTrip> tripList = new ArrayList<>(tripsMap.values());
+        System.out.println("Number of created trips: " + tripList.size());
         return tripList;
     }
     
     /**
      * Method to retrieve the list of routes (TransportRoute) from routesMap.
-     * @return List of transport route
+     * @return List of transport routes
      */
     public List<TransportRoute> getRoutes() {
         return new ArrayList<>(routesMap.values());
     }
 
-
     /**
      * Method to verify the directory's validity.
      *
      * @param scope    The simulation context in GAMA.
-     * @param pathName The directory path containing GTFS files.
      * @throws GamaRuntimeException If the directory is invalid or does not contain required files.
      */
     @Override
     protected void checkValidity(final IScope scope) throws GamaRuntimeException {
-    	
-    	 System.out.println("Starting directory validity check...");
+        System.out.println("Starting directory validity check...");
 
-    	File folder = getFile(scope);
-        // Check if the path is valid and is a directory
+        File folder = getFile(scope);
+
         if (!folder.exists() || !folder.isDirectory()) {
             throw GamaRuntimeException.error("The provided path for GTFS files is invalid. Ensure it is a directory containing .txt files.", scope);
         }
 
-        // Check if the required files (e.g., stops.txt, routes.txt) are present in the folder
         Set<String> requiredFilesSet = new HashSet<>(Set.of(REQUIRED_FILES));
         File[] files = folder.listFiles();
         if (files != null) {
@@ -195,13 +181,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-        // If required files are missing, throw an exception
         if (!requiredFilesSet.isEmpty()) {
             throw GamaRuntimeException.error("Missing GTFS files: " + requiredFilesSet, scope);
         }
         System.out.println("Directory validity check completed.");
     }
-
 
     /**
      * Loads GTFS files and verifies if all required files are present.
@@ -220,7 +204,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                         IList<String> fileContent = readCsvFile(file, headerMap);  // Reading the CSV file
                         gtfsData.put(file.getName(), fileContent);
                         IMap<String, Integer> headerIMap = GamaMapFactory.wrap(Types.STRING, Types.INT, headerMap);
-                        headerMaps.put(file.getName(), headerIMap); // Stocker dans headerMaps
+                        headerMaps.put(file.getName(), headerIMap); // Store in headerMaps
                         System.out.println("Headers loaded for file: " + file.getName() + " -> " + headerIMap);
                         System.out.println("Finished reading file: " + file.getName());
                     }
@@ -295,9 +279,9 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
                     // Filter only stop_point stop_ids
                     if (stopId.startsWith("stop_point")) {
-                        TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon, scope);
-                        stopsMap.put(stopId, stop);
-                        System.out.println("Created TransportStop: " + stopId);
+                    	TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon, scope);
+                    	stopsMap.put(stopId, stop);
+                    	System.out.println("TransportStop created: " + stopId + " -> " + stop.getStopName());
                     } else {
                         System.out.println("Skipped non stop_point: " + stopId);
                     }
@@ -327,7 +311,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     double lat = Double.parseDouble(fields[latIndex]);
                     double lon = Double.parseDouble(fields[lonIndex]);
 
-                    // Crée ou récupère un objet TransportShape
+                    // Creates or retrieves a TransportShape object
                     TransportShape shape = shapesMap.get(shapeId);
                     if (shape == null) {
                         shape = new TransportShape(shapeId);
@@ -497,63 +481,16 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         return Types.FILE.of(Types.STRING, Types.STRING);
     }
 
-
     @Override
     public Envelope3D computeEnvelope(final IScope scope) {
-        System.out.println("Calculating envelope for GTFS stops...");
-
-        if (stopsMap == null || stopsMap.isEmpty()) {
-            System.err.println("No stops available to compute the envelope.");
-            return Envelope3D.EMPTY;
-        }
-
-        // Ensure CRS consistency
-        Envelope3D envelope = Envelope3D.create();
-        for (TransportStop stop : stopsMap.values()) {
-            try {
-                GamaPoint location = stop.getLocation();
-                if (location == null) {
-                    System.err.println("Skipping stop with null location: " + stop.getStopId());
-                    continue;
-                }
-                
-                // Transform to match the CRS of the shapefile
-                IShape transformedLocation = SpatialProjections.to_GAMA_CRS(scope, location, "EPSG:4326"); // Replace with shapefile CRS
-                envelope.expandToInclude(transformedLocation.getLocation());
-            } catch (Exception e) {
-                System.err.println("Error adding stop to envelope: " + stop.getStopId() + " -> " + e.getMessage());
-            }
-        }
-
-        System.out.println("Computed envelope: " + envelope);
-        
-        
-        return envelope;
-    }
-    
-    public GamaShape getEnvelopeAsShape(final IScope scope) {
-        Envelope3D envelope = computeEnvelope(scope); // Calculer l'enveloppe
-
-        if (envelope.isNull()) {
-            System.err.println("Envelope is empty. Cannot create shape.");
-            return null;
-        }
-
-        try {
-            // Convertir l'enveloppe en un polygone
-            Polygon polygon = envelope.toGeometry();
-            // Retourner une forme GAMA (GamaShape) pour utilisation dans la simulation
-            return GamaShapeFactory.createFrom(polygon);
-        } catch (Exception e) {
-            System.err.println("Error creating shape from envelope: " + e.getMessage());
-            return null;
-        }
+        // Provide a default implementation or return an empty envelope
+        return Envelope3D.EMPTY;
     }
     
     public void computeDepartureInfo(IScope scope) {
         System.out.println("Starting computeDepartureInfo...");
 
-        // Récupérer les données et les en-têtes du fichier stop_times.txt
+     // Retrieve data and headers from stop_times.txt file
         IList<String> stopTimesData = gtfsData.get("stop_times.txt");
         IMap<String, Integer> stopTimesHeader = headerMaps.get("stop_times.txt");
 
@@ -562,86 +499,82 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             return;
         }
 
-        // Indices des colonnes nécessaires
+     // Necessary column indices
         int tripIdIndex = stopTimesHeader.get("trip_id");
         int stopIdIndex = stopTimesHeader.get("stop_id");
         int departureTimeIndex = stopTimesHeader.get("departure_time");
-        int stopSequenceIndex = stopTimesHeader.get("stop_sequence");
 
-        // Map temporaire pour éviter les doublons
-        Set<Integer> processedTrips = new HashSet<>();
-
-        // Étape 1 : Lecture du fichier stop_times.txt pour remplir tripsMap et stopsMap
+     // Step 1: Reading the stop_times.txt file to enrich tripsMap and stopsMap
         for (String line : stopTimesData) {
             String[] fields = line.split(",");
             try {
                 int tripId = Integer.parseInt(fields[tripIdIndex]);
                 String stopId = fields[stopIdIndex];
                 String departureTime = fields[departureTimeIndex];
-                int stopSequence = Integer.parseInt(fields[stopSequenceIndex]);
 
-                // Récupérer le trip correspondant dans tripsMap
+             // Retrieve the corresponding trip
                 TransportTrip trip = tripsMap.get(tripId);
                 if (trip == null) {
-                    System.err.println("Trip not found for tripId: " + tripId);
+                    System.err.println("[ERROR] Trip not found for tripId: " + tripId);
                     continue;
                 }
 
-                // Ajouter les arrêts et heures de départ au TransportTrip
+             // Add stop details to trip
                 trip.addStop(stopId);
                 trip.addStopDetail(stopId, departureTime);
+
             } catch (Exception e) {
-                System.err.println("Error processing stop_times line: " + line + " -> " + e.getMessage());
+                System.err.println("[ERROR] Error processing stop_times line: " + line + " -> " + e.getMessage());
             }
         }
 
-        // Étape 2 : Mise à jour des TransportStop avec les infos de départ
+     // Step 2: Update the TransportStop with the agents themselves
         for (TransportTrip trip : tripsMap.values()) {
             IList<String> stopsInOrder = trip.getStopsInOrder();
             IList<IMap<String, Object>> stopDetails = trip.getStopDetails();
 
-            // Vérifier que stopsInOrder et stopDetails ne sont pas vides
+         // Check that stopsInOrder and stopDetails are not empty
             if (stopsInOrder.isEmpty() || stopDetails.isEmpty()) {
-                System.err.println("Error: stopsInOrder or stopDetails is empty for tripId: " + trip.getTripId());
+                System.err.println("[ERROR] stopsInOrder or stopDetails is empty for tripId: " + trip.getTripId());
                 continue;
             }
 
-            // Le premier arrêt est le stop de départ
+         // The first stop is the starting stop
             String firstStopId = stopsInOrder.get(0);
             TransportStop stop = stopsMap.get(firstStopId);
 
             if (stop != null) {
                 String globalDepartureTime = stopDetails.get(0).get("departureTime").toString();
-                stop.addDepartureInfo(globalDepartureTime, stopDetails);
-                System.out.println("Departure stop processed: stopId=" + firstStopId + ", tripId=" + trip.getTripId());
 
-                // Vérification : S'assurer que departureInfoList a bien été rempli
-                if (stop.hasDepartureInfo()) {
-                    System.out.println("[CHECK] StopId=" + firstStopId + " has " + stop.getDepartureInfoList().size() + " entries in departureInfoList.");
-                } else {
-                    System.err.println("[CHECK-ERROR] StopId=" + firstStopId + " has an EMPTY departureInfoList after processing.");
+             // Create the departure map to associate the time and the stop object itself
+                for (IMap<String, Object> detail : stopDetails) {
+                    String departureTime = detail.get("departureTime").toString();
+                    String stopId = detail.get("stopId").toString();
+
+                 // Retrieve the TransportStop object
+                    TransportStop currentStop = stopsMap.get(stopId);
+                    if (currentStop != null) {
+                        stop.addDepartureInfo(departureTime, currentStop);
+                    } else {
+                        System.err.println("[ERROR] Stop not found for stopId: " + stopId);
+                    }
                 }
+
+                System.out.println("[CHECK] Departure stop processed: stopId=" + firstStopId + ", tripId=" + trip.getTripId());
+
+             // Check to make sure departureInfoMap is filled correctly
+                if (stop.hasDepartureInfo()) {
+                    System.out.println("[CHECK] StopId=" + firstStopId + " has " + stop.getDepartureInfoMap().size() + " entries in departureInfoMap.");
+                } else {
+                    System.err.println("[CHECK-ERROR] StopId=" + firstStopId + " has an EMPTY departureInfoMap.");
+                }
+
             } else {
-                System.err.println("Stop not found for stopId: " + firstStopId + ", tripId=" + trip.getTripId());
+                System.err.println("[ERROR] Stop not found for stopId: " + firstStopId + ", tripId=" + trip.getTripId());
             }
         }
 
         System.out.println("computeDepartureInfo completed successfully.");
     }
 
-
-
- 
-    public TransportStop getStop(String stopId) {
-        System.out.println("Getting stop with ID: " + stopId);
-        TransportStop stop = stopsMap.get(stopId);
-        if (stop != null) {
-            System.out.println("Stop found: " + stopId);
-        } else {
-            System.out.println("Stop not found: " + stopId);
-        }
-        return stop;
-    }
-    
-    
 }
