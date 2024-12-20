@@ -490,7 +490,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     public void computeDepartureInfo(IScope scope) {
         System.out.println("Starting computeDepartureInfo...");
 
-     // Retrieve data and headers from stop_times.txt file
+        // Retrieve data and headers from stop_times.txt file
         IList<String> stopTimesData = gtfsData.get("stop_times.txt");
         IMap<String, Integer> stopTimesHeader = headerMaps.get("stop_times.txt");
 
@@ -499,12 +499,12 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             return;
         }
 
-     // Necessary column indices
+        // Necessary column indices
         int tripIdIndex = stopTimesHeader.get("trip_id");
         int stopIdIndex = stopTimesHeader.get("stop_id");
         int departureTimeIndex = stopTimesHeader.get("departure_time");
 
-     // Step 1: Reading the stop_times.txt file to enrich tripsMap and stopsMap
+        // Step 1: Reading the stop_times.txt file to enrich tripsMap and stopsMap
         for (String line : stopTimesData) {
             String[] fields = line.split(",");
             try {
@@ -512,14 +512,14 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 String stopId = fields[stopIdIndex];
                 String departureTime = fields[departureTimeIndex];
 
-             // Retrieve the corresponding trip
+                // Retrieve the corresponding trip
                 TransportTrip trip = tripsMap.get(tripId);
                 if (trip == null) {
                     System.err.println("[ERROR] Trip not found for tripId: " + tripId);
                     continue;
                 }
 
-             // Add stop details to trip
+                // Add stop details to trip
                 trip.addStop(stopId);
                 trip.addStopDetail(stopId, departureTime);
 
@@ -528,49 +528,37 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-     // Step 2: Update the TransportStop with the agents themselves
+        // Step 2: Fill ordered stop IDs for first stops
         for (TransportTrip trip : tripsMap.values()) {
             IList<String> stopsInOrder = trip.getStopsInOrder();
-            IList<IMap<String, Object>> stopDetails = trip.getStopDetails();
 
-         // Check that stopsInOrder and stopDetails are not empty
-            if (stopsInOrder.isEmpty() || stopDetails.isEmpty()) {
-                System.err.println("[ERROR] stopsInOrder or stopDetails is empty for tripId: " + trip.getTripId());
-                continue;
-            }
+            if (!stopsInOrder.isEmpty()) {
+                String firstStopId = stopsInOrder.get(0);
+                TransportStop firstStop = stopsMap.get(firstStopId);
 
-         // The first stop is the starting stop
-            String firstStopId = stopsInOrder.get(0);
-            TransportStop stop = stopsMap.get(firstStopId);
-
-            if (stop != null) {
-                String globalDepartureTime = stopDetails.get(0).get("departureTime").toString();
-
-             // Create the departure map to associate the time and the stop object itself
-                for (IMap<String, Object> detail : stopDetails) {
-                    String departureTime = detail.get("departureTime").toString();
-                    String stopId = detail.get("stopId").toString();
-
-                 // Retrieve the TransportStop object
-                    TransportStop currentStop = stopsMap.get(stopId);
-                    if (currentStop != null) {
-                        stop.addDepartureInfo(departureTime, currentStop);
-                    } else {
-                        System.err.println("[ERROR] Stop not found for stopId: " + stopId);
+                if (firstStop != null) {
+                    for (String stopId : stopsInOrder) {
+                        firstStop.addOrderedStopId(stopId);
                     }
-                }
 
-                System.out.println("[CHECK] Departure stop processed: stopId=" + firstStopId + ", tripId=" + trip.getTripId());
-
-             // Check to make sure departureInfoMap is filled correctly
-                if (stop.hasDepartureInfo()) {
-                    System.out.println("[CHECK] StopId=" + firstStopId + " has " + stop.getDepartureInfoMap().size() + " entries in departureInfoMap.");
+                    // Debugging message to confirm `orderedStopIds` for the first stop
+                    System.out.println("[DEBUG] Ordered stop IDs added for first stop: stopId=" + firstStopId);
+                    System.out.println("[DEBUG] orderedStopIds content: " + firstStop.getOrderedStopIds());
                 } else {
-                    System.err.println("[CHECK-ERROR] StopId=" + firstStopId + " has an EMPTY departureInfoMap.");
+                    System.err.println("[ERROR] First stop not found: stopId=" + firstStopId);
                 }
-
             } else {
-                System.err.println("[ERROR] Stop not found for stopId: " + firstStopId + ", tripId=" + trip.getTripId());
+                System.err.println("[ERROR] Trip has no stops in order: tripId=" + trip.getTripId());
+            }
+        }
+
+        // Additional check for departure stops
+        for (TransportStop stop : stopsMap.values()) {
+            if (!stop.getOrderedStopIds().isEmpty()) {
+                System.out.println("[INFO] Departure stop has orderedStopIds: stopId=" + stop.getStopId() 
+                                   + ", count=" + stop.getOrderedStopIds().size());
+            } else {
+                System.out.println("[INFO] Stop has no orderedStopIds: stopId=" + stop.getStopId());
             }
         }
 
