@@ -528,22 +528,48 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-        // Step 2: Fill ordered stop IDs for first stops
+        // Step 2: Fill `departureTripsInfo` with `orderedStops` for first stops
         for (TransportTrip trip : tripsMap.values()) {
             IList<String> stopsInOrder = trip.getStopsInOrder();
+            IList<IMap<String, String>> orderedStops = GamaListFactory.create();
 
             if (!stopsInOrder.isEmpty()) {
                 String firstStopId = stopsInOrder.get(0);
                 TransportStop firstStop = stopsMap.get(firstStopId);
 
                 if (firstStop != null) {
-                    for (String stopId : stopsInOrder) {
-                        firstStop.addOrderedStopId(stopId);
+                    // Create orderedStops with stopId and departureTime
+                    IList<IMap<String, Object>> stopDetails = trip.getStopDetails();
+                    for (int i = 0; i < stopsInOrder.size(); i++) {
+                        String stopId = stopsInOrder.get(i);
+                        String departureTime = stopDetails.get(i).get("departureTime").toString();
+
+                        IMap<String, String> stopEntry = GamaMapFactory.create();
+                        stopEntry.put("stopId", stopId);
+                        stopEntry.put("departureTime", departureTime);
+                        orderedStops.add(stopEntry);
                     }
 
-                    // Debugging message to confirm `orderedStopIds` for the first stop
-                    System.out.println("[DEBUG] Ordered stop IDs added for first stop: stopId=" + firstStopId);
-                    System.out.println("[DEBUG] orderedStopIds content: " + firstStop.getOrderedStopIds());
+                    // Add trip info to departureTripsInfo of the first stop
+                    IMap<String, Object> tripInfo = GamaMapFactory.create();
+                    tripInfo.put("departureTime", stopDetails.get(0).get("departureTime"));
+                    tripInfo.put("orderedStops", orderedStops);
+                    tripInfo.put("convertedStops", GamaListFactory.create()); // Placeholder for later
+
+                    firstStop.addDepartureTripInfo("trip_" + trip.getTripId(), tripInfo);
+
+                    // Debugging messages for orderedStops and departureTripsInfo
+                    if (!orderedStops.isEmpty()) {
+                        System.out.println("[DEBUG] orderedStops successfully filled for tripId=" + trip.getTripId() 
+                                           + ", firstStopId=" + firstStopId 
+                                           + ": " + orderedStops);
+                    } else {
+                        System.err.println("[ERROR] orderedStops is empty for tripId=" + trip.getTripId() 
+                                           + ", firstStopId=" + firstStopId);
+                    }
+
+                    System.out.println("[DEBUG] departureTripsInfo added for stopId=" + firstStopId 
+                                       + " with tripId=" + trip.getTripId());
                 } else {
                     System.err.println("[ERROR] First stop not found: stopId=" + firstStopId);
                 }
@@ -554,15 +580,16 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
         // Additional check for departure stops
         for (TransportStop stop : stopsMap.values()) {
-            if (!stop.getOrderedStopIds().isEmpty()) {
-                System.out.println("[INFO] Departure stop has orderedStopIds: stopId=" + stop.getStopId() 
-                                   + ", count=" + stop.getOrderedStopIds().size());
+            if (!stop.getDepartureTripsInfo().isEmpty()) {
+                System.out.println("[INFO] Departure stop has departureTripsInfo: stopId=" + stop.getStopId() 
+                                   + ", count=" + stop.getDepartureTripsInfo().size());
             } else {
-                System.out.println("[INFO] Stop has no orderedStopIds: stopId=" + stop.getStopId());
+                System.out.println("[INFO] Stop has no departureTripsInfo: stopId=" + stop.getStopId());
             }
         }
 
         System.out.println("computeDepartureInfo completed successfully.");
     }
+
 
 }

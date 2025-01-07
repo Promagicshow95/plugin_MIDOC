@@ -8,20 +8,20 @@ import gama.annotations.precompiler.GamlAnnotations.doc;
 import gama.core.metamodel.agent.IAgent;
 import gama.core.util.GamaMapFactory;
 import gama.core.util.IMap;
+import gama.core.util.IList;
+import gama.core.util.GamaListFactory;
 import gama.gaml.skills.Skill;
 import gama.gaml.types.IType;
-import java.util.List;
 
 /**
  * Skill for managing individual transport stops. Provides access to stopId, stopName,
- * and detailed departure information for each stop using the updated departureInfoMap structure.
+ * and detailed departure information for each stop using the updated departureTripsInfo structure.
  */
-@skill(name = "TransportStopSkill", doc = @doc("Skill for agents representing individual transport stops. Manages stop details, departure times, and trip information using departureInfoMap."))
+@skill(name = "TransportStopSkill", doc = @doc("Skill for agents representing individual transport stops. Manages stop details, departure times, and trip information using departureTripsInfo."))
 @vars({
     @variable(name = "stopId", type = IType.STRING, doc = @doc("The ID of the transport stop.")),
     @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop.")),
-    @variable(name = "departureInfoMap", type = IType.MAP, doc = @doc("A map where keys are departure times and values are IAgent instances for the trips.")),
-    @variable(name = "orderedStopIds", type = IType.LIST, doc = @doc("The ordered list of stop IDs for the departure stop.")),
+    @variable(name = "departureTripsInfo", type = IType.MAP, doc = @doc("A map where keys are trip IDs and values are maps containing departure time, ordered stops, and converted stops.")),
     @variable(name = "hasDepartureInfo", type = IType.BOOL, doc = @doc("Indicates whether the stop has departure information."))
 })
 public class TransportStopSkill extends Skill {
@@ -38,62 +38,61 @@ public class TransportStopSkill extends Skill {
         return (String) agent.getAttribute("stopName");
     }
 
-    // Getter for departureInfoMap
-    @getter("departureInfoMap")
+    // Getter for departureTripsInfo
+    @getter("departureTripsInfo")
     @SuppressWarnings("unchecked")
-    public IMap<String, IAgent> getDepartureInfoMap(final IAgent agent) {
-        return (IMap<String, IAgent>) agent.getAttribute("departureInfoMap");
+    public IMap<String, IMap<String, Object>> getDepartureTripsInfo(final IAgent agent) {
+        return (IMap<String, IMap<String, Object>>) agent.getAttribute("departureTripsInfo");
     }
 
-    // Getter for orderedStopIds
-    @getter("orderedStopIds")
-    @SuppressWarnings("unchecked")
-    public Object getOrderedStopIds(final IAgent agent) {
-        return agent.getAttribute("orderedStopIds");
-    }
-
-    // New: Getter to check if departureInfoMap is not empty
+    // Getter to check if departureTripsInfo is not empty
     @getter("hasDepartureInfo")
     public boolean hasDepartureInfo(final IAgent agent) {
-        IMap<String, IAgent> departureInfoMap = getDepartureInfoMap(agent);
-        return departureInfoMap != null && !departureInfoMap.isEmpty();
+        IMap<String, IMap<String, Object>> departureTripsInfo = getDepartureTripsInfo(agent);
+        return departureTripsInfo != null && !departureTripsInfo.isEmpty();
     }
 
-    // New: Retrieve stop details for a specific departure time
-    @getter("stopDetailsForDepartureTime")
-    public IAgent getStopDetailsForDepartureTime(final IAgent agent, final String departureTime) {
-        IMap<String, IAgent> departureInfoMap = getDepartureInfoMap(agent);
-        if (departureInfoMap == null || !departureInfoMap.containsKey(departureTime)) {
-            System.err.println("[ERROR] No departure info found for departureTime=" + departureTime + " at stopId=" + getStopId(agent));
-            return null;
+    // Retrieve converted stops for a specific trip
+    @getter("convertedStopsForTrip")
+    @SuppressWarnings("unchecked")
+    public IList<IAgent> getConvertedStopsForTrip(final IAgent agent, final String tripId) {
+        IMap<String, IMap<String, Object>> departureTripsInfo = getDepartureTripsInfo(agent);
+        if (departureTripsInfo == null || !departureTripsInfo.containsKey(tripId)) {
+            System.err.println("[ERROR] No trip info found for tripId=" + tripId + " at stopId=" + getStopId(agent));
+            return GamaListFactory.create();
         }
-        return departureInfoMap.get(departureTime);
+        return (IList<IAgent>) departureTripsInfo.get(tripId).get("convertedStops");
     }
 
-    // New: Retrieve all departure times for this stop
-    @getter("allDepartureTimes")
-    public IMap<String, IAgent> getAllDepartureTimes(final IAgent agent) {
-        return getDepartureInfoMap(agent);
-    }
-
-    // Debug: Print the departure info map
-    public void debugDepartureInfoMap(final IAgent agent) {
-        IMap<String, IAgent> departureInfoMap = getDepartureInfoMap(agent);
-        if (departureInfoMap == null || departureInfoMap.isEmpty()) {
-            System.out.println("[DEBUG] departureInfoMap is empty for stopId=" + getStopId(agent));
+    // Debug: Print the departureTripsInfo
+    public void debugDepartureTripsInfo(final IAgent agent) {
+        IMap<String, IMap<String, Object>> departureTripsInfo = getDepartureTripsInfo(agent);
+        if (departureTripsInfo == null || departureTripsInfo.isEmpty()) {
+            System.out.println("[DEBUG] departureTripsInfo is empty for stopId=" + getStopId(agent));
         } else {
-            System.out.println("[DEBUG] departureInfoMap for stopId=" + getStopId(agent) + " has " 
-                               + departureInfoMap.size() + " entries: " + departureInfoMap);
+            System.out.println("[DEBUG] departureTripsInfo for stopId=" + getStopId(agent) + " has " 
+                               + departureTripsInfo.size() + " entries: " + departureTripsInfo);
         }
     }
 
-    // Debug: Print the ordered stop IDs
-    public void debugOrderedStopIds(final IAgent agent) {
-        Object orderedStopIds = getOrderedStopIds(agent);
-        if (orderedStopIds == null || !(orderedStopIds instanceof List) || ((List<?>) orderedStopIds).isEmpty()) {
-            System.out.println("[DEBUG] orderedStopIds is empty or invalid for stopId=" + getStopId(agent));
+    // Debug: Print the ordered stops for a specific trip
+    public void debugOrderedStopsForTrip(final IAgent agent, final String tripId) {
+        IMap<String, IMap<String, Object>> departureTripsInfo = getDepartureTripsInfo(agent);
+        if (departureTripsInfo == null || !departureTripsInfo.containsKey(tripId)) {
+            System.out.println("[DEBUG] No ordered stops found for tripId=" + tripId + " at stopId=" + getStopId(agent));
         } else {
-            System.out.println("[DEBUG] orderedStopIds for stopId=" + getStopId(agent) + ": " + orderedStopIds);
+            IList<IMap<String, String>> orderedStops = (IList<IMap<String, String>>) departureTripsInfo.get(tripId).get("orderedStops");
+            System.out.println("[DEBUG] orderedStops for tripId=" + tripId + " at stopId=" + getStopId(agent) + ": " + orderedStops);
+        }
+    }
+
+    // Debug: Print the converted stops for a specific trip
+    public void debugConvertedStopsForTrip(final IAgent agent, final String tripId) {
+        IList<IAgent> convertedStops = getConvertedStopsForTrip(agent, tripId);
+        if (convertedStops.isEmpty()) {
+            System.out.println("[DEBUG] convertedStops is empty for tripId=" + tripId + " at stopId=" + getStopId(agent));
+        } else {
+            System.out.println("[DEBUG] convertedStops for tripId=" + tripId + " at stopId=" + getStopId(agent) + ": " + convertedStops);
         }
     }
 }
