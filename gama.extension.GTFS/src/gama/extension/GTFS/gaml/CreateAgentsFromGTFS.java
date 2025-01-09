@@ -125,6 +125,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
                                 // Update convertedStops in tripInfo
                                 tripInfo.put("convertedStops", convertedStops);
+                                tripInfo.remove("orderedStops",orderedStops);
                                 System.out.println("[DEBUG] convertedStops updated for trip=" + tripEntry.getKey() 
                                                    + " with " + convertedStops.size() + " entries.");
                             }

@@ -19,6 +19,7 @@ import gama.annotations.precompiler.GamlAnnotations.example;
 import gama.annotations.precompiler.GamlAnnotations.file;
 import gama.annotations.precompiler.IConcept;
 import gama.core.common.geometry.Envelope3D;
+import gama.core.metamodel.agent.IAgent;
 import gama.core.metamodel.shape.GamaPoint;
 import gama.core.metamodel.shape.GamaShape;
 import gama.core.metamodel.shape.GamaShapeFactory;
@@ -528,18 +529,20 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-        // Step 2: Fill `departureTripsInfo` with `orderedStops` for first stops
+        // Step 2: Fill `departureTripsInfo` with `orderedStops` and initialize `convertedStops`
         for (TransportTrip trip : tripsMap.values()) {
             IList<String> stopsInOrder = trip.getStopsInOrder();
             IList<IMap<String, String>> orderedStops = GamaListFactory.create();
+            IMap<IAgent, String> convertedStops = GamaMapFactory.create();
 
             if (!stopsInOrder.isEmpty()) {
                 String firstStopId = stopsInOrder.get(0);
                 TransportStop firstStop = stopsMap.get(firstStopId);
 
                 if (firstStop != null) {
-                    // Create orderedStops with stopId and departureTime
                     IList<IMap<String, Object>> stopDetails = trip.getStopDetails();
+
+                    // Populate orderedStops with stopId and departureTime
                     for (int i = 0; i < stopsInOrder.size(); i++) {
                         String stopId = stopsInOrder.get(i);
                         String departureTime = stopDetails.get(i).get("departureTime").toString();
@@ -548,27 +551,29 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                         stopEntry.put("stopId", stopId);
                         stopEntry.put("departureTime", departureTime);
                         orderedStops.add(stopEntry);
+
+                        // Placeholder for convertedStops (agents will be filled later)
+                        convertedStops.put(null, departureTime); // `null` will be replaced by agent later
                     }
 
                     // Add trip info to departureTripsInfo of the first stop
                     IMap<String, Object> tripInfo = GamaMapFactory.create();
-                    tripInfo.put("departureTime", stopDetails.get(0).get("departureTime"));
                     tripInfo.put("orderedStops", orderedStops);
-                    tripInfo.put("convertedStops", GamaListFactory.create()); // Placeholder for later
+                    tripInfo.put("convertedStops", convertedStops);
 
                     firstStop.addDepartureTripInfo("trip_" + trip.getTripId(), tripInfo);
 
                     // Debugging messages for orderedStops and departureTripsInfo
                     if (!orderedStops.isEmpty()) {
-                        System.out.println("[DEBUG] orderedStops successfully filled for tripId=" + trip.getTripId() 
-                                           + ", firstStopId=" + firstStopId 
+                        System.out.println("[DEBUG] orderedStops successfully filled for tripId=" + trip.getTripId()
+                                           + ", firstStopId=" + firstStopId
                                            + ": " + orderedStops);
                     } else {
-                        System.err.println("[ERROR] orderedStops is empty for tripId=" + trip.getTripId() 
+                        System.err.println("[ERROR] orderedStops is empty for tripId=" + trip.getTripId()
                                            + ", firstStopId=" + firstStopId);
                     }
 
-                    System.out.println("[DEBUG] departureTripsInfo added for stopId=" + firstStopId 
+                    System.out.println("[DEBUG] departureTripsInfo added for stopId=" + firstStopId
                                        + " with tripId=" + trip.getTripId());
                 } else {
                     System.err.println("[ERROR] First stop not found: stopId=" + firstStopId);
@@ -581,7 +586,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         // Additional check for departure stops
         for (TransportStop stop : stopsMap.values()) {
             if (!stop.getDepartureTripsInfo().isEmpty()) {
-                System.out.println("[INFO] Departure stop has departureTripsInfo: stopId=" + stop.getStopId() 
+                System.out.println("[INFO] Departure stop has departureTripsInfo: stopId=" + stop.getStopId()
                                    + ", count=" + stop.getDepartureTripsInfo().size());
             } else {
                 System.out.println("[INFO] Stop has no departureTripsInfo: stopId=" + stop.getStopId());

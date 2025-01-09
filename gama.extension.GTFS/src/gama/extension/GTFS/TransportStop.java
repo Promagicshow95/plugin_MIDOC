@@ -15,9 +15,7 @@ public class TransportStop {
     private String stopId;
     private String stopName;
     private GamaPoint location;
-
-    // Stores trip information: Map<tripId, tripDetails>
-    private IMap<String, IMap<String, Object>> departureTripsInfo;
+    private IMap<String, IMap<String, Object>> departureTripsInfo; // Updated structure
 
     @SuppressWarnings("unchecked")
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
@@ -25,36 +23,6 @@ public class TransportStop {
         this.stopName = stopName;
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
         this.departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.MAP);
-    }
-
-    /**
-     * Adds trip information to departureTripsInfo.
-     *
-     * @param tripId          The trip identifier.
-     * @param departureTime   The departure time for this trip from this stop.
-     * @param orderedStops    Ordered stops for this trip, as Map<stopId, departureTime>.
-     * @param convertedStops  Ordered agents (IAgent) for this trip.
-     */
-    @SuppressWarnings("unchecked")
-	public void addTripInfo(String tripId, String departureTime, IList<IMap<String, String>> orderedStops, IList<IAgent> convertedStops) {
-        if (tripId != null && departureTime != null && orderedStops != null && convertedStops != null) {
-            IMap<String, Object> tripDetails = GamaMapFactory.create(Types.STRING, Types.NO_TYPE);
-            tripDetails.put("departureTime", departureTime);
-            tripDetails.put("orderedStops", orderedStops);
-            tripDetails.put("convertedStops", convertedStops);
-            departureTripsInfo.put(tripId, tripDetails);
-        } else {
-            System.err.println("[ERROR] Invalid data provided to addTripInfo for stopId=" + stopId);
-        }
-    }
-
-    /**
-     * Getter for departureTripsInfo.
-     *
-     * @return The map of trip information for this stop.
-     */
-    public IMap<String, IMap<String, Object>> getDepartureTripsInfo() {
-        return departureTripsInfo;
     }
 
     public String getStopId() {
@@ -69,23 +37,65 @@ public class TransportStop {
         return location;
     }
 
+    public IMap<String, IMap<String, Object>> getDepartureTripsInfo() {
+        return departureTripsInfo;
+    }
+
+    /**
+     * Add ordered stops to the departureTripsInfo structure.
+     * 
+     * @param tripId       Trip ID for which stops are being added.
+     * @param orderedStops List of stop IDs and departure times.
+     */
+    @SuppressWarnings("unchecked")
+    public void addOrderedStops(String tripId, IList<IMap<String, String>> orderedStops) {
+        if (departureTripsInfo.get(tripId) == null) {
+            IMap<String, Object> tripInfo = GamaMapFactory.create();
+            tripInfo.put("orderedStops", orderedStops);
+            tripInfo.put("convertedStops", GamaMapFactory.create(Types.AGENT, Types.STRING));
+            departureTripsInfo.put(tripId, tripInfo);
+        } else {
+            IMap<String, Object> tripInfo = departureTripsInfo.get(tripId);
+            tripInfo.put("orderedStops", orderedStops);
+        }
+    }
+
+    /**
+     * Add converted stops to the departureTripsInfo structure.
+     * 
+     * @param tripId         Trip ID for which stops are being added.
+     * @param convertedStops Map of agent stops and their departure times.
+     */
+    @SuppressWarnings("unchecked")
+    public void addConvertedStops(String tripId, IMap<IAgent, String> convertedStops) {
+        if (departureTripsInfo.get(tripId) == null) {
+            IMap<String, Object> tripInfo = GamaMapFactory.create();
+            tripInfo.put("orderedStops", GamaListFactory.create(Types.MAP));
+            tripInfo.put("convertedStops", convertedStops);
+            departureTripsInfo.put(tripId, tripInfo);
+        } else {
+            IMap<String, Object> tripInfo = departureTripsInfo.get(tripId);
+            tripInfo.put("convertedStops", convertedStops);
+        }
+    }
+    
+    
+
     @Override
     public String toString() {
-        String locationStr = (location != null)
-            ? String.format("x=%.2f, y=%.2f", location.getX(), location.getY())
-            : "null";
-
-        return "TransportStop{id='" + stopId +
-               "', name='" + stopName +
-               "', location={" + locationStr + "}, " +
-               "departureTripsInfo=" + (departureTripsInfo != null ? departureTripsInfo.size() + " entries" : "null") + "}";
+        String locationStr = (location != null) 
+                ? String.format("x=%.2f, y=%.2f", location.getX(), location.getY()) 
+                : "null";
+        return "TransportStop{id='" + stopId + "', name='" + stopName 
+               + "', location={" + locationStr + "}, "
+               + "departureTripsInfo=" + departureTripsInfo + "}";
     }
 
     /**
      * Adds a trip's information to the departureTripsInfo map.
-     *
-     * @param tripId The ID of the trip.
-     * @param tripInfo The trip information map containing orderedStops and other details.
+     * 
+     * @param tripId The unique identifier for the trip.
+     * @param tripInfo The trip information to be added.
      */
     public void addDepartureTripInfo(String tripId, IMap<String, Object> tripInfo) {
         if (tripId != null && tripInfo != null) {
@@ -94,4 +104,5 @@ public class TransportStop {
             System.err.println("[ERROR] tripId or tripInfo is null in addDepartureTripInfo.");
         }
     }
+
 }
