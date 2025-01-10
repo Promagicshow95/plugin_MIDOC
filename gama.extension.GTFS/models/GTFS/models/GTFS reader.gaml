@@ -28,15 +28,28 @@ global {
     	write "Stop envelope: " + stop_envelope;
         
         // Create bus_stop agents from the GTFS data
-       create bus_stop from: gtfs_f  {
+	      create bus_stop from: gtfs_f  {
        	
 				
        }
        
+ 
+       	int count <- 0;
+        loop ok over: bus_stop {
+        	if ok.stopId = "stop_point:SP_1400"{
+        		count <- count + 1;
+        	}
+   		}
+       	write "total count" + count;
+       	
+       	
        
        
     }
 }
+
+
+
 
 // Species representing each transport stop
 species bus_stop skills: [TransportStopSkill] {
@@ -44,9 +57,9 @@ species bus_stop skills: [TransportStopSkill] {
     init {
        
        
-       if length(departureTripsInfo)> 0 {
-       	write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + "," + departureTripsInfo;
-       }
+//       if length(departureTripsInfo)> 0 {
+//       	write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + "," + departureTripsInfo;
+//       }
  
 		
 		

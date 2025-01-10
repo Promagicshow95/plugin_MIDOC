@@ -26,6 +26,7 @@ import gama.gaml.types.IType;
 import gama.gaml.types.Types;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -84,15 +85,54 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
                     // Step 1: Add initializations for stops
                     addStopInits(scope, inits, stops, max);
 
-                    // Step 2: Create agents for stops
-                    IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
+                    // Step 2: Log before creating agents
+                    System.out.println("[LOG] Preparing to create agents for TransportStop. Total inits: " + inits.size());
 
-                    // Step 3: Create mapping stopId -> IAgent
+                    // Step 3: Create agents for stops
+                    IList<? extends IAgent> createdAgents;
+                    try {
+                    	createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
+                    	System.err.println("Number of created agents " + createdAgents.size());
+                    	int numberOfAgents = population.size();
+                    	System.err.println("Number of created agents in population" + numberOfAgents );
+                    	
+                        if (createdAgents.size() != inits.size()) {
+                            System.err.println("[ERROR] Number of created agents (" + createdAgents.size() + 
+                                               ") does not match the number of initializations (" + inits.size() + ").");
+                        } else {
+                            System.out.println("[CHECK] Successfully created " + createdAgents.size() + " agents.");
+                        }
+                    } catch (Exception e) {
+                        System.err.println("[ERROR] Failed to create agents: " + e.getMessage());
+                        return false;
+                    }
+                    
+                    //Remove duplicate agents
+                    removeDuplicateStopAgents(scope, population);
+                    
+                    for (IAgent agent : createdAgents) {
+                        String stopName = (String) agent.getAttribute("stopName");
+                        String stopId = (String) agent.getAttribute("stopId");
+                        if (stopName != null) {
+                            agent.setName(stopName);
+                        } else {
+                        	agent.setName(stopId);
+                        }
+                    }
+
+                    // Step 4: Create mapping stopId -> IAgent
                     IMap<String, IAgent> stopIdToAgentMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
+
                     for (IAgent agent : createdAgents) {
                         String stopId = (String) agent.getAttribute("stopId");
                         if (stopId != null) {
-                            stopIdToAgentMap.put(stopId, agent);
+                            if (stopIdToAgentMap.containsKey(stopId)) {
+                                System.err.println("[ERROR] Duplicate stopId found: " + stopId 
+                                                   + ". An agent for this stopId already exists.");
+                            } else {
+                                stopIdToAgentMap.put(stopId, agent);
+//                                System.out.println("[LOG] Added stopId=" + stopId + " to stopIdToAgentMap.");
+                            }
                         } else {
                             System.err.println("[ERROR] Created agent does not have a stopId.");
                         }
@@ -100,11 +140,9 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
                     System.out.println("[CHECK] stopIdToAgentMap created with " + stopIdToAgentMap.size() + " entries.");
 
-                    // Step 4: Update `convertedStops` in `departureTripsInfo` for each stop
+                    // Step 5: Update `convertedStops` in `departureTripsInfo` for each stop
                     for (TransportStop stop : stops) {
                         if (!stop.getDepartureTripsInfo().isEmpty()) {
-                            System.out.println("[INFO] Updating convertedStops for stopId=" + stop.getStopId());
-                            
                             for (Map.Entry<String, IMap<String, Object>> tripEntry : stop.getDepartureTripsInfo().entrySet()) {
                                 IMap<String, Object> tripInfo = tripEntry.getValue();
 
@@ -125,14 +163,17 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
                                 // Update convertedStops in tripInfo
                                 tripInfo.put("convertedStops", convertedStops);
-                                tripInfo.remove("orderedStops",orderedStops);
-                                System.out.println("[DEBUG] convertedStops updated for trip=" + tripEntry.getKey() 
-                                                   + " with " + convertedStops.size() + " entries.");
+                                tripInfo.remove("orderedStops", orderedStops);
+                     
                             }
                         }
                     }
+                    
+                 // Call the method to remove duplicate agents
+                    System.out.println("[INFO] Checking and removing duplicate agents...");
+                    removeDuplicateStopAgents(scope, population);
 
-                    System.out.println("[INFO] convertedStops successfully updated for all stops.");
+                    System.out.println("[INFO] convertedStops successfully updated for all stops." + stopIdToAgentMap.size());
                 } else {
                     scope.getGui().getConsole().informConsole("No stops found in GTFS data.", scope.getSimulation());
                 }
@@ -169,6 +210,10 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     private void addStopInits(IScope scope, List<Map<String, Object>> inits, List<TransportStop> stops, Integer max) {
         int limit = max != null ? Math.min(max, stops.size()) : stops.size();
 
+
+        
+        System.out.println("[DEBUG] addStopInits called with " + stops.size() + " stops. Preparing inits...");
+
         for (int i = 0; i < limit; i++) {
             TransportStop stop = stops.get(i);
             Map<String, Object> stopInit = new HashMap<>();
@@ -185,14 +230,14 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
                                    + stop.getDepartureTripsInfo().size() + " trips.");
             } else {
                 stopInit.put("departureTripsInfo", GamaMapFactory.create(Types.STRING, Types.MAP));
-                System.err.println("[ERROR] departureTripsInfo is empty for stopId=" + stop.getStopId());
             }
 
             // Add the initialization to the inits list
             inits.add(stopInit);
 
             // Print final details for verification
-            System.out.println("[CHECK] stopInit added for stopId=" + stop.getStopId() + ": " + stopInit);
+            System.out.println("[DEBUG] Total inits prepared: " + inits.size());
+
         }
     }
 
@@ -283,4 +328,40 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     public IType<?> fromFacetType() {
         return Types.FILE; // The source is a GTFS file path
     }
+    
+    private void removeDuplicateStopAgents(IScope scope, IPopulation<? extends IAgent> population) {
+        System.out.println("[INFO] Starting duplicate removal for TransportStop agents...");
+
+        // Mapping for unique stopIds
+        IMap<String, IAgent> uniqueStopIdMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
+
+        // List to store agents marked for deletion
+        IList<IAgent> agentsToDelete = GamaListFactory.create();
+
+        for (IAgent agent : population) {
+            String stopId = (String) agent.getAttribute("stopId");
+
+            if (stopId == null) {
+                System.err.println("[ERROR] Agent without stopId found: " + agent.getName());
+                agentsToDelete.add(agent);
+                continue;
+            }
+
+            if (uniqueStopIdMap.containsKey(stopId)) {
+                System.out.println("[DEBUG] Duplicate agent found for stopId=" + stopId + ". Marking for deletion.");
+                agentsToDelete.add(agent);
+            } else {
+                uniqueStopIdMap.put(stopId, agent);
+            }
+        }
+
+        // Delete the duplicate agents from the population
+        for (IAgent agent : agentsToDelete) {
+            System.out.println("[INFO] Deleting duplicate agent: " + agent.getName());
+            agent.dispose(); // Dispose of the agent
+        }
+
+        System.out.println("[INFO] Duplicate removal completed. Total duplicates removed: " + agentsToDelete.size());
+    }
+
 }
