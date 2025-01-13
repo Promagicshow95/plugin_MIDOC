@@ -117,7 +117,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         // Step 2: Create agents
         IList<? extends IAgent> createdAgents;
         try {
-            createdAgents = population.createAgents(scope, 0, inits, false, true);
+            createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
             System.out.println("[CHECK] Successfully created " + createdAgents.size() + " TransportStop agents.");
         } catch (Exception e) {
             System.err.println("[ERROR] Failed to create agents: " + e.getMessage());
@@ -218,7 +218,6 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", stop.getLocation());
-            
 
             // Add orderedStops from departureTripsInfo if present
             if (!stop.getDepartureTripsInfo().isEmpty()) {
