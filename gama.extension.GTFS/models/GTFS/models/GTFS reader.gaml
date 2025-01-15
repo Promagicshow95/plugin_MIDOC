@@ -32,7 +32,7 @@ global {
        	
 				
        }
-       
+       ask bus_stop{ do customInit;}
  
        	int count <- 0;
         loop ok over: bus_stop {
@@ -54,12 +54,12 @@ global {
 // Species representing each transport stop
 species bus_stop skills: [TransportStopSkill] {
 
-    init {
+    action customInit {
        
        
-//       if length(departureTripsInfo)> 0 {
-//       	write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + "," + departureTripsInfo;
-//       }
+       if length(departureTripsInfo)> 0 {
+       	write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + "," + departureTripsInfo;
+       }
  
 		
 		

@@ -33,7 +33,22 @@ global {
 				
        }
        
-       
+//       list<bus_stop> busStopList <- list<bus_stop>(bus_stop);
+//        list<bus_stop> busStopsToBeDeleted <- [];
+//
+//        loop _busStop_1 over:  busStopList {
+//              loop _busStop_2 over: busStopList{
+//                if( _busStop_1.stopId = _busStop_2.stopId) and not ((busStopsToBeDeleted collect each.stopId )  contains  _busStop_1.stopId){
+//                    add  _busStop_2  to:  busStopsToBeDeleted ;
+//                  }
+//            }
+//        }
+//
+//
+//
+//        ask busStopsToBeDeleted { do die;}
+//       
+//       
        
     }
 }
