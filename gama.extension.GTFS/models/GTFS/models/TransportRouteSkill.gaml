@@ -22,8 +22,6 @@ species transport_route skills: [TransportRouteSkill] {
     init {
         write "Route initialized: " + routeId + ", Short Name: " + shortName + ", Type: " + type;
     }
-
-
 }
 species route_checker skills: [TransportRouteSkill] {
     reflex check_routes {

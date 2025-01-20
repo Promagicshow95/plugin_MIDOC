@@ -23,7 +23,7 @@ global {
 species transport_shape skills: [TransportShapeSkill] {
 
     init {
-        write "Transport shape initialized: " + shapeId + ", points: " + length(points);
+        write "Transport shape initialized: " + shapeId + " location:"+ location +  ", points: " + length(points);
     }
 
     // Aspect to visualize the shape as a polygon
@@ -31,7 +31,6 @@ species transport_shape skills: [TransportShapeSkill] {
         draw polyline (points) color: #green;
     }
 }
-
 // Species for analysis or additional actions
 species shape_analyzer skills: [] {
     reflex check_shapes {

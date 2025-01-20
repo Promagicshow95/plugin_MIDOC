@@ -9,6 +9,7 @@ import gama.core.util.IList;
 import gama.core.util.IMap;
 import GamaGTFSUtils.SpatialUtils;
 
+
 import gama.gaml.types.Types;
 
 public class TransportStop {

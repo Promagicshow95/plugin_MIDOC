@@ -261,41 +261,6 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         return Types.FILE; // The source is a GTFS file path
     }
     
-    private void removeDuplicateStopAgents(IScope scope, IPopulation<? extends IAgent> population) {
-        System.out.println("[INFO] Starting duplicate removal for TransportStop agents...");
-
-        // Mapping for unique stopIds
-        IMap<String, IAgent> uniqueStopIdMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
-
-        // List to store agents marked for deletion
-        IList<IAgent> agentsToDelete = GamaListFactory.create();
-
-        for (IAgent agent : population) {
-            String stopId = (String) agent.getAttribute("stopId");
-
-            if (stopId == null) {
-                System.err.println("[ERROR] Agent without stopId found: " + agent.getName());
-                agentsToDelete.add(agent);
-                continue;
-            }
-
-            if (uniqueStopIdMap.containsKey(stopId)) {
-                System.out.println("[DEBUG] Duplicate agent found for stopId=" + stopId + ". Marking for deletion.");
-                agentsToDelete.add(agent);
-            } else {
-                uniqueStopIdMap.put(stopId, agent);
-            }
-        }
-
-        // Delete the duplicate agents from the population
-        for (IAgent agent : agentsToDelete) {
-            System.out.println("[INFO] Deleting duplicate agent: " + agent.getName());
-            agent.dispose(); // Dispose of the agent
-        }
-
-        System.out.println("[INFO] Duplicate removal completed. Total duplicates removed: " + agentsToDelete.size());
-    }
-    
     @Override
     public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
         System.out.println("[DEBUG] Starting agent creation in createAgents.");
@@ -340,7 +305,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
                     for (IMap<String, String> stopEntry : orderedStops) {
                         String orderedStopId = stopEntry.get("stopId");
-
+                        String departureTime = stopEntry.get("departureTime");
                         // Debugging logs for matching stopId
                        
                         if (!stopIdToAgentMap.containsKey(orderedStopId)) {
@@ -350,10 +315,22 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
                         IAgent stopAgent = stopIdToAgentMap.get(orderedStopId);
                         if (stopAgent != null) {
                             convertedStops.add(stopAgent);
+                            
+                            //Assign departuretime to agent
+                            stopAgent.setAttribute("departureTime", departureTime);
+                            System.out.println("[DEBUG] Assigned departureTime=" + departureTime + " to stopAgent=" + stopAgent.getAttribute("stopId"));
+                            
+                            
                         } else {
                             System.err.println("[ERROR] No agent found for stopId=" + orderedStopId + " in trip=" + tripId);
+                        }                     
+                        for (IAgent agent : convertedStops) {
+                            System.out.println("[DEBUG] Converted stopId=" + agent.getAttribute("stopId") 
+                                               + " has departureTime=" + agent.getAttribute("departureTime"));
                         }
+                        
                     }
+                    
 
                     // Update convertedStops
                     tripInfo.put("convertedStops", convertedStops);

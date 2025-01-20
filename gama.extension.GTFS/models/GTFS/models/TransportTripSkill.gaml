@@ -23,24 +23,6 @@ species bus_trip skills: [TransportTripSkill] {
 	init {
         write "Bus trip initialized: " + tripId + ", " + stopsInOrder;
     }
-    // Attributes for latitude and longitude
-//    float latitude <- 0.0;
-//    float longitude <- 0.0;
-//		--> in the location attribute
-
-//    string stopId <- "";
-//    string stopName <- "";
-//		--> built-in attributes from the skill
-
-
-
-    // Initialization of the stop's attributes
-//    init {
-//        latitude <- attribute("latitude");
-//        longitude <- attribute("longitude");
-//        stopId <- attribute("stopId");
-//        stopName <- attribute("stopName");
-//    }
     
      aspect base {
 		draw circle (100.0)  color:#blue;	
