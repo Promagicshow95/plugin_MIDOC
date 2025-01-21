@@ -33,6 +33,8 @@ global {
 				
        }
        
+       ask bus_stop{ do customInit;}
+       
 //       list<bus_stop> busStopList <- list<bus_stop>(bus_stop);
 //        list<bus_stop> busStopsToBeDeleted <- [];
 //
@@ -56,7 +58,7 @@ global {
 // Species representing each transport stop
 species bus_stop skills: [TransportStopSkill] {
 	
-    init {
+  action customInit  {
     	if length(departureTripsInfo)> 0 {
        		write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + ", departureTripsInfo: " + departureTripsInfo;
        }
