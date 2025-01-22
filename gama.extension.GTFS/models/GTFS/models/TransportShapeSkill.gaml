@@ -14,7 +14,7 @@ global {
         
         // Create transport_shape agents from the GTFS data
         create transport_shape from: gtfs_f {
-            write "Shape created with ID: " + shapeId + " and " + length(points) + " points.";
+            write "Shape created with ID: " + shapeId ;
         }
     }
 }
@@ -23,12 +23,12 @@ global {
 species transport_shape skills: [TransportShapeSkill] {
 
     init {
-        write "Transport shape initialized: " + shapeId + " location:"+ location +  ", points: " + length(points);
+       
     }
 
     // Aspect to visualize the shape as a polygon
     aspect base {
-        draw polyline (points) color: #green;
+       draw shape color: #green;
     }
 }
 // Species for analysis or additional actions

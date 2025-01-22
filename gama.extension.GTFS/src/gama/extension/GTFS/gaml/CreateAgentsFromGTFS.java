@@ -17,6 +17,7 @@ import gama.extension.GTFS.TransportRoute;
 import gama.extension.GTFS.TransportShape;
 import gama.gaml.expressions.IExpression;
 import gama.gaml.operators.Cast;
+import gama.gaml.operators.spatial.SpatialCreation;
 import gama.gaml.species.ISpecies;
 import static gama.core.common.interfaces.IKeyword.SPECIES;
 import gama.gaml.statements.Arguments;
@@ -142,8 +143,6 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     private void addStopInits(IScope scope, List<Map<String, Object>> inits, List<TransportStop> stops, Integer max) {
         int limit = max != null ? Math.min(max, stops.size()) : stops.size();
 
-
-        
         System.out.println("[DEBUG] addStopInits called with " + stops.size() + " stops. Preparing inits...");
 
         for (int i = 0; i < limit; i++) {
@@ -154,6 +153,10 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", stop.getLocation());
+
+            // Assign name for agent (stopName if available, otherwise stopId)
+            String agentName = stop.getStopName() != null ? stop.getStopName() : stop.getStopId();
+            stopInit.put("name", agentName);  // Assigning the name directly
 
             // Add orderedStops from departureTripsInfo if present
             if (!stop.getDepartureTripsInfo().isEmpty()) {
@@ -166,12 +169,10 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
             // Add the initialization to the inits list
             inits.add(stopInit);
-
-            // Print final details for verification
-            System.out.println("[DEBUG] Total inits prepared: " + inits.size());
-
+            System.out.println("[INFO] StopInit added: stopId=" + stop.getStopId() + ", name=" + agentName);
         }
     }
+
 
 
     private void addTripInits(IScope scope, List<Map<String, Object>> inits, List<TransportTrip> trips, Integer max) {
@@ -234,27 +235,41 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         int limit = max != null ? Math.min(max, shapes.size()) : shapes.size();
 
         for (int i = 0; i < limit; i++) {
-            TransportShape shape = shapes.get(i);
+            TransportShape transportShape = shapes.get(i);
 
-            if (shape.getShapeId() == 0 || shape.getPoints() == null || shape.getPoints().isEmpty()) {
-                System.err.println("[Error] Invalid data for TransportShape: " + shape);
+            if (transportShape.getShapeId() == 0 || transportShape.getPoints() == null || transportShape.getPoints().isEmpty()) {
+                System.err.println("[Error] Invalid data for TransportShape: " + transportShape);
                 continue;
             }
 
             Map<String, Object> shapeInit = new HashMap<>();
-            shapeInit.put("shapeId", shape.getShapeId());
-            shapeInit.put("points", shape.getPoints());
-            
+            shapeInit.put("shapeId", transportShape.getShapeId());
+
             try {
-                IShape polyline = shape.toPolyline(scope);
-                shapeInit.put("polyline", polyline);
+                // Convert the list of GamaPoints to IList<IShape>
+                IList<IShape> shapePoints = GamaListFactory.create();
+                for (GamaPoint point : transportShape.getPoints()) {
+                    shapePoints.add(point); // Ajout direct si GamaPoint implémente IShape
+                }
+
+                // Create the polyline shape from the list of points
+                IShape polyline = SpatialCreation.line(scope, shapePoints);
+                shapeInit.put("shape", polyline);
+
+                // Log information about the created shape
+                System.out.println("[INFO] Polyline created for Shape ID " + transportShape.getShapeId());
+                System.out.println("[DEBUG] Shape WKT: " + polyline.serializeToGaml(false));  // Display shape in WKT format
             } catch (Exception e) {
-                System.err.println("Error creating polyline for shape ID " + shape.getShapeId() + ": " + e.getMessage());
+                System.err.println("[ERROR] Failed to create polyline for shape ID " + transportShape.getShapeId() + ": " + e.getMessage());
+                continue;
             }
 
             inits.add(shapeInit);
+            System.out.println("[SUCCESS] Shape with ID " + transportShape.getShapeId() + " added to inits.");
         }
     }
+
+
 
     @Override
     public IType<?> fromFacetType() {
@@ -273,15 +288,6 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         IMap<String, IAgent> stopIdToAgentMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
         for (IAgent agent : createdAgents) {
             String stopId = (String) agent.getAttribute("stopId");
-            String stopName = (String) agent.getAttribute("stopName");
-
-            // Assign a name to the stop agent
-            if (stopName != null) {
-                agent.setName(stopName);
-            } else if (stopId != null) {
-                agent.setName(stopId);
-            }
-
             // Add to mapping stopId -> agent
             if (stopId != null) {
                 stopIdToAgentMap.put(stopId.trim(), agent); // Ensure no extra spaces
@@ -291,61 +297,53 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         }
         System.out.println("[INFO] Created stopIdToAgentMap with " + stopIdToAgentMap.size() + " entries.");
 
-        // Step 3 : Fill convertedStops in departureTripsInfo
+     // Step 3 : Fill convertedStops in departureTripsInfo
         for (Map<String, Object> init : inits) {
-            IMap<String, IMap<String, Object>> departureTripsInfo = (IMap<String, IMap<String, Object>>) init.get("departureTripsInfo");
+            IMap<String, IMap<String, Object>> departureTripsInfo = 
+                (IMap<String, IMap<String, Object>>) init.get("departureTripsInfo");
 
             if (departureTripsInfo != null && !departureTripsInfo.isEmpty()) {
                 for (Map.Entry<String, IMap<String, Object>> tripEntry : departureTripsInfo.entrySet()) {
                     String tripId = tripEntry.getKey();
                     IMap<String, Object> tripInfo = tripEntry.getValue();
 
-                    IList<IMap<String, String>> orderedStops = (IList<IMap<String, String>>) tripInfo.get("orderedStops");
-                    IList<IAgent> convertedStops = GamaListFactory.create();
+                    IList<IMap<String, String>> orderedStops = 
+                        (IList<IMap<String, String>>) tripInfo.get("orderedStops");
+                    
+                    IMap<IAgent, String> convertedStops = GamaMapFactory.create(Types.AGENT, Types.STRING);
 
                     for (IMap<String, String> stopEntry : orderedStops) {
                         String orderedStopId = stopEntry.get("stopId");
                         String departureTime = stopEntry.get("departureTime");
-                        // Debugging logs for matching stopId
-                       
+
                         if (!stopIdToAgentMap.containsKey(orderedStopId)) {
                             System.err.println("[ERROR] stopId=" + orderedStopId + " not found in stopIdToAgentMap.");
+                            continue;  // Skip if stop ID is not found
                         }
 
                         IAgent stopAgent = stopIdToAgentMap.get(orderedStopId);
                         if (stopAgent != null) {
-                            convertedStops.add(stopAgent);
-                            
-                            //Assign departuretime to agent
-                            stopAgent.setAttribute("departureTime", departureTime);
-                            System.out.println("[DEBUG] Assigned departureTime=" + departureTime + " to stopAgent=" + stopAgent.getAttribute("stopId"));
-                            
-                            
+                            convertedStops.put(stopAgent, departureTime);  // Corrected mapping
+                            System.out.println("[DEBUG] Mapped stopId=" + stopAgent.getAttribute("stopId") 
+                                               + " with departureTime=" + departureTime);
                         } else {
                             System.err.println("[ERROR] No agent found for stopId=" + orderedStopId + " in trip=" + tripId);
-                        }                     
-                        for (IAgent agent : convertedStops) {
-                            System.out.println("[DEBUG] Converted stopId=" + agent.getAttribute("stopId") 
-                                               + " has departureTime=" + agent.getAttribute("departureTime"));
                         }
-                        
                     }
-                    
 
-                    // Update convertedStops
+                    // Update convertedStops map within departureTripsInfo
                     tripInfo.put("convertedStops", convertedStops);
                     tripInfo.remove("orderedStops");
+                    
                     if (tripInfo.containsKey("orderedStops")) {
                         System.err.println("[ERROR] orderedStops was not removed from tripInfo for trip=" + tripId);
                     }
-                    
-                    System.out.println("[DEBUG] Converted stops for tripId=" + tripId + ": " + convertedStops);
 
-
-                    System.out.println("[INFO] For tripId=" + tripId + ", added " + convertedStops.size() + " agents to convertedStops.");
+                    System.out.println("[INFO] Successfully added " + convertedStops.size() + " stops to convertedStops for tripId=" + tripId);
                 }
             }
         }
+
 
         System.out.println("[INFO] Successfully filled convertedStops for all trips.");
         return createdAgents;

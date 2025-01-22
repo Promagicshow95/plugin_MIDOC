@@ -7,22 +7,17 @@ import gama.annotations.precompiler.GamlAnnotations.getter;
 import gama.annotations.precompiler.GamlAnnotations.setter;
 import gama.annotations.precompiler.GamlAnnotations.doc;
 import gama.core.metamodel.agent.IAgent;
-import gama.gaml.operators.spatial.SpatialCreation;
+import gama.core.metamodel.shape.IShape;
 import gama.gaml.skills.Skill;
 import gama.gaml.types.IType;
-import gama.core.metamodel.shape.GamaPoint;
-import gama.core.metamodel.shape.IShape;
-import gama.core.runtime.IScope;
-import gama.core.util.GamaListFactory;
-import gama.core.util.IList;
 
-import java.util.List;
-
-@skill(name = "TransportShapeSkill", doc = @doc("Skill for agents representing transport shapes with a list of points."))
+/**
+ * Skill for transport shape agents.
+ */
+@skill(name = "TransportShapeSkill", doc = @doc("Skill for agents representing transport shapes with a polyline representation."))
 @vars({
     @variable(name = "shapeId", type = IType.INT, doc = @doc("The ID of the transport shape.")),
-    @variable(name = "points", type = IType.LIST, of = IType.POINT, doc = @doc("The list of points composing the shape.")),
-    @variable(name = "polyline", type = IType.GEOMETRY, doc = @doc("The polyline representation of the transport shape."))
+    @variable(name = "shape", type = IType.GEOMETRY, doc = @doc("The polyline representing the transport shape."))
 })
 public class TransportShapeSkill extends Skill {
 
@@ -36,40 +31,22 @@ public class TransportShapeSkill extends Skill {
         agent.setAttribute("shapeId", shapeId);
     }
 
-    @getter("points")
-    public List<GamaPoint> getPoints(final IAgent agent) {
-        return (List<GamaPoint>) agent.getAttribute("points");
+    @getter("shape")
+    public IShape getShape(final IAgent agent) {
+        return (IShape) agent.getAttribute("shape");
     }
 
-    @setter("points")
-    public void setPoints(final IAgent agent, final List<GamaPoint> points) {
-        agent.setAttribute("points", points);
+    @setter("shape")
+    public void setShape(final IAgent agent, final IShape shape) {
+        agent.setAttribute("shape", shape);
     }
-    
+
     @getter("length")
     public double getLength(final IAgent agent) {
-        List<GamaPoint> points = getPoints(agent);
-        if (points.size() < 2) return 0;
-        double length = 0;
-        for (int i = 1; i < points.size(); i++) {
-            length += points.get(i - 1).euclidianDistanceTo(points.get(i));
+        IShape shape = getShape(agent);
+        if (shape == null) {
+            return 0;
         }
-        return length;
-    }
-    
-    @getter("polyline")
-    public IShape getPolyline(final IAgent agent) {
-        List<GamaPoint> points = getPoints(agent);
-        if (points == null || points.isEmpty()) return null;
-
-        IScope scope = agent.getScope();
-        try {
-            IList<IShape> shapes = GamaListFactory.create();
-            shapes.addAll(points);
-            return SpatialCreation.line(scope, shapes);
-        } catch (Exception e) {
-            System.err.println("Error generating polyline for agent: " + e.getMessage());
-            return null;
-        }
+        return shape.getPerimeter();
     }
 }

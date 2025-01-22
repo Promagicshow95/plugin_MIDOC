@@ -24,10 +24,10 @@ species bus_stop skills: [TransportStopSkill] {
 
 species transport_shape skills: [TransportShapeSkill] {
     init {
-        write "Transport shape initialized: " + shapeId + " location:"+ location +  ", points: " + length(points);
+       
     }
     aspect base {
-        draw polyline(points) color: #green;
+        draw shape color: #green;
     }
 }
 

@@ -319,7 +319,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                         shapesMap.put(shapeId, shape);
                     }
 
-                    // Add the point to shape
+                    // Add the point to shape and directly update its polyline
                     shape.addPoint(lat, lon, scope);
                 } catch (Exception e) {
                     System.err.println("Error processing shape line: " + line + " -> " + e.getMessage());
@@ -329,18 +329,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         } else {
             System.err.println("shapes.txt data or headers are missing.");
         }
-        
-     // Convert each TransportShape into a polyline
-        for (TransportShape shape : shapesMap.values()) {
-            try {
-                IShape polyline = shape.toPolyline(scope);
-                System.out.println("Polyline created for Shape ID " + shape.getShapeId() + ": " + polyline);
-            } catch (Exception e) {
-                System.err.println("Error converting Shape ID " + shape.getShapeId() + " to polyline: " + e.getMessage());
-            }
-        }
-        
-        
+
         // Create TransportRoute objects from routes.txt
         IList<String> routesData = gtfsData.get("routes.txt");
         IMap<String, Integer> routesheaderMap = headerMaps.get("routes.txt");
