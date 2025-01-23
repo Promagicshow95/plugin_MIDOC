@@ -144,33 +144,14 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     private void addStopInits(IScope scope, List<Map<String, Object>> inits, List<TransportStop> stops, Integer max) {
         int limit = max != null ? Math.min(max, stops.size()) : stops.size();
 
-        System.out.println("[DEBUG] addStopInits called with " + stops.size() + " stops. Preparing inits...");
-
         for (int i = 0; i < limit; i++) {
             TransportStop stop = stops.get(i);
             Map<String, Object> stopInit = new HashMap<>();
-
-            // Initialize the main attributes of the stop
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", stop.getLocation());
-
-            // Assign name for agent (stopName if available, otherwise stopId)
-            String agentName = stop.getStopName() != null ? stop.getStopName() : stop.getStopId();
-            stopInit.put("name", agentName);  // Assigning the name directly
-
-            // Add orderedStops from departureTripsInfo if present
-            if (!stop.getDepartureTripsInfo().isEmpty()) {
-                stopInit.put("departureTripsInfo", stop.getDepartureTripsInfo());
-                System.out.println("[DEBUG] departureTripsInfo for stopId=" + stop.getStopId() + " has " 
-                                   + stop.getDepartureTripsInfo().size() + " trips.");
-            } else {
-                stopInit.put("departureTripsInfo", GamaMapFactory.create(Types.STRING, Types.MAP));
-            }
-
-            // Add the initialization to the inits list
+            stopInit.put("departureTripsInfo", stop.getDepartureTripsInfo());
             inits.add(stopInit);
-            System.out.println("[INFO] StopInit added: stopId=" + stop.getStopId() + ", name=" + agentName);
         }
     }
 
@@ -279,75 +260,31 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     
     @Override
     public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
-        System.out.println("[DEBUG] Starting agent creation in createAgents.");
-
-        // Step 1 : Create agents
         IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
-        System.out.println("[CHECK] Successfully created " + createdAgents.size() + " TransportStop agents.");
-
-        // Step 2 : Map stopId to agents
         IMap<String, IAgent> stopIdToAgentMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
+
         for (IAgent agent : createdAgents) {
             String stopId = (String) agent.getAttribute("stopId");
-            // Add to mapping stopId -> agent
-            if (stopId != null) {
-                stopIdToAgentMap.put(stopId.trim(), agent); // Ensure no extra spaces
-            } else {
-                System.err.println("[ERROR] Created agent does not have a stopId.");
-            }
+            stopIdToAgentMap.put(stopId, agent);
         }
-        System.out.println("[INFO] Created stopIdToAgentMap with " + stopIdToAgentMap.size() + " entries.");
 
-     // Step 3 : Fill convertedStops in departureTripsInfo
-        for (Map<String, Object> init : inits) {
-            IMap<String, IMap<String, Object>> departureTripsInfo = 
-                (IMap<String, IMap<String, Object>>) init.get("departureTripsInfo");
+        for (IAgent agent : createdAgents) {
+            IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
+            IMap<String, IList<GamaPair<String, String>>> departureTripsInfo = (IMap<String, IList<GamaPair<String, String>>>) agent.getAttribute("departureTripsInfo");
+            for (Map.Entry<String, IList<GamaPair<String, String>>> entry : departureTripsInfo.entrySet()) {
+                IList<GamaPair<IAgent, String>> convertedStops = GamaListFactory.create(Types.PAIR);
+                for (GamaPair<String, String> pair : entry.getValue()) {
+                    IAgent stopAgent = stopIdToAgentMap.get(pair.first());
+                    convertedStops.add(new GamaPair<>(stopAgent, pair.getValue(), Types.AGENT, Types.STRING));
 
-            if (departureTripsInfo != null && !departureTripsInfo.isEmpty()) {
-                for (Map.Entry<String, IMap<String, Object>> tripEntry : departureTripsInfo.entrySet()) {
-                    String tripId = tripEntry.getKey();
-                    IMap<String, Object> tripInfo = tripEntry.getValue();
-
-                    IList<IMap<String, String>> orderedStops = 
-                        (IList<IMap<String, String>>) tripInfo.get("orderedStops");
-                    
-                    IList<GamaPair<IAgent, String>> convertedStops = GamaListFactory.create();
-
-                    for (IMap<String, String> stopEntry : orderedStops) {
-                        String orderedStopId = stopEntry.get("stopId");
-                        String departureTime = stopEntry.get("departureTime");
-
-                        if (!stopIdToAgentMap.containsKey(orderedStopId)) {
-                            System.err.println("[ERROR] stopId=" + orderedStopId + " not found in stopIdToAgentMap.");
-                            continue;  // Skip if stop ID is not found
-                        }
-
-                        IAgent stopAgent = stopIdToAgentMap.get(orderedStopId);
-                        if (stopAgent != null) {
-                        	GamaPair<IAgent, String> stopPair = new GamaPair<>(stopAgent, departureTime, Types.AGENT, Types.STRING);
-                        	convertedStops.add(stopPair);
-                        	System.out.println("[DEBUG] Mapped stopId=" + stopAgent.getAttribute("stopId") 
-                            + " with departureTime=" + departureTime);
-                        } else {
-                            System.err.println("[ERROR] No agent found for stopId=" + orderedStopId + " in trip=" + tripId);
-                        }
-                    }
-
-                    // Update convertedStops map within departureTripsInfo
-                    tripInfo.put("convertedStops", convertedStops);
-                    tripInfo.remove("orderedStops");
-                    
-                    if (tripInfo.containsKey("orderedStops")) {
-                        System.err.println("[ERROR] orderedStops was not removed from tripInfo for trip=" + tripId);
-                    }
-
-                    System.out.println("[INFO] Successfully added " + convertedStops.size() + " stops to convertedStops for tripId=" + tripId);
                 }
+                departureStopsInfo.put(entry.getKey(), convertedStops);
             }
+            agent.setAttribute("departureStopsInfo", departureStopsInfo);
+            agent.setDirectVarValue(scope, "departureTripsInfo", null);
+
         }
 
-
-        System.out.println("[INFO] Successfully filled convertedStops for all trips.");
         return createdAgents;
     }
 

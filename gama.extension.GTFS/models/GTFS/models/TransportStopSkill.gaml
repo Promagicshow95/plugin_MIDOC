@@ -59,8 +59,8 @@ global {
 species bus_stop skills: [TransportStopSkill] {
 	
   action customInit  {
-    	if length(departureTripsInfo)> 0 {
-       		write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + ", departureTripsInfo: " + departureTripsInfo;
+    	if length(departureStopsInfo)> 0 {
+       		write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + ", departureStopsInfo: " + departureStopsInfo;
        }
 
 		
