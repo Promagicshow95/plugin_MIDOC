@@ -11,6 +11,7 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import gama.core.util.GamaPair;
 
 import org.locationtech.jts.geom.Polygon;
 
@@ -522,7 +523,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         for (TransportTrip trip : tripsMap.values()) {
             IList<String> stopsInOrder = trip.getStopsInOrder();
             IList<IMap<String, String>> orderedStops = GamaListFactory.create();
-            IMap<IAgent, String> convertedStops = GamaMapFactory.create();
+            IList<GamaPair<IAgent, String>> convertedStops = GamaListFactory.create();
 
             if (!stopsInOrder.isEmpty()) {
                 String firstStopId = stopsInOrder.get(0);
@@ -542,7 +543,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                         orderedStops.add(stopEntry);
 
                         // Placeholder for convertedStops (agents will be filled later)
-                        convertedStops.put(null, departureTime); // `null` will be replaced by agent later
+                        convertedStops.add(new GamaPair<>(null, departureTime, Types.AGENT, Types.STRING));
                     }
 
                     // Add trip info to departureTripsInfo of the first stop

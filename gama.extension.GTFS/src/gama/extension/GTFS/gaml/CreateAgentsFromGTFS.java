@@ -8,6 +8,7 @@ import gama.core.metamodel.shape.GamaPoint;
 import gama.core.metamodel.shape.IShape;
 import gama.core.util.GamaListFactory;
 import gama.core.util.GamaMapFactory;
+import gama.core.util.GamaPair;
 import gama.core.util.IList;
 import gama.core.util.IMap;
 import gama.extension.GTFS.TransportStop;
@@ -310,7 +311,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
                     IList<IMap<String, String>> orderedStops = 
                         (IList<IMap<String, String>>) tripInfo.get("orderedStops");
                     
-                    IMap<IAgent, String> convertedStops = GamaMapFactory.create(Types.AGENT, Types.STRING);
+                    IList<GamaPair<IAgent, String>> convertedStops = GamaListFactory.create();
 
                     for (IMap<String, String> stopEntry : orderedStops) {
                         String orderedStopId = stopEntry.get("stopId");
@@ -323,9 +324,10 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
                         IAgent stopAgent = stopIdToAgentMap.get(orderedStopId);
                         if (stopAgent != null) {
-                            convertedStops.put(stopAgent, departureTime);  // Corrected mapping
-                            System.out.println("[DEBUG] Mapped stopId=" + stopAgent.getAttribute("stopId") 
-                                               + " with departureTime=" + departureTime);
+                        	GamaPair<IAgent, String> stopPair = new GamaPair<>(stopAgent, departureTime, Types.AGENT, Types.STRING);
+                        	convertedStops.add(stopPair);
+                        	System.out.println("[DEBUG] Mapped stopId=" + stopAgent.getAttribute("stopId") 
+                            + " with departureTime=" + departureTime);
                         } else {
                             System.err.println("[ERROR] No agent found for stopId=" + orderedStopId + " in trip=" + tripId);
                         }

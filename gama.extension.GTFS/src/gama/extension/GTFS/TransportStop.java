@@ -5,18 +5,17 @@ import gama.core.metamodel.shape.GamaPoint;
 import gama.core.runtime.IScope;
 import gama.core.util.GamaListFactory;
 import gama.core.util.GamaMapFactory;
+import gama.core.util.GamaPair;
 import gama.core.util.IList;
 import gama.core.util.IMap;
 import GamaGTFSUtils.SpatialUtils;
-
-
 import gama.gaml.types.Types;
 
 public class TransportStop {
     private String stopId;
     private String stopName;
     private GamaPoint location;
-    private IMap<String, IMap<String, Object>> departureTripsInfo; // Updated structure
+    private IMap<String, IMap<String, Object>> departureTripsInfo; 
 
     @SuppressWarnings("unchecked")
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
@@ -53,7 +52,7 @@ public class TransportStop {
         if (departureTripsInfo.get(tripId) == null) {
             IMap<String, Object> tripInfo = GamaMapFactory.create();
             tripInfo.put("orderedStops", orderedStops);
-            tripInfo.put("convertedStops", GamaMapFactory.create(Types.AGENT, Types.STRING));
+            tripInfo.put("convertedStops", GamaListFactory.create(Types.PAIR));
             departureTripsInfo.put(tripId, tripInfo);
         } else {
             IMap<String, Object> tripInfo = departureTripsInfo.get(tripId);
@@ -65,10 +64,10 @@ public class TransportStop {
      * Add converted stops to the departureTripsInfo structure.
      * 
      * @param tripId         Trip ID for which stops are being added.
-     * @param convertedStops Map of agent stops and their departure times.
+     * @param convertedStops List of GamaPair of agent stops and their departure times.
      */
     @SuppressWarnings("unchecked")
-    public void addConvertedStops(String tripId, IMap<IAgent, String> convertedStops) {
+    public void addConvertedStops(String tripId, IList<GamaPair<IAgent, String>> convertedStops) {
         if (departureTripsInfo.get(tripId) == null) {
             IMap<String, Object> tripInfo = GamaMapFactory.create();
             tripInfo.put("orderedStops", GamaListFactory.create(Types.MAP));
@@ -79,8 +78,6 @@ public class TransportStop {
             tripInfo.put("convertedStops", convertedStops);
         }
     }
-    
-    
 
     @Override
     public String toString() {
@@ -105,5 +102,4 @@ public class TransportStop {
             System.err.println("[ERROR] tripId or tripInfo is null in addDepartureTripInfo.");
         }
     }
-
 }
