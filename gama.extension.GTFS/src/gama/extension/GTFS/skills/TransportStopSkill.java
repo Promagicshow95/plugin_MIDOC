@@ -5,7 +5,9 @@ import gama.annotations.precompiler.GamlAnnotations.vars;
 import gama.annotations.precompiler.GamlAnnotations.variable;
 import gama.annotations.precompiler.GamlAnnotations.getter;
 import gama.annotations.precompiler.GamlAnnotations.doc;
+import gama.annotations.precompiler.GamlAnnotations.action;
 import gama.core.metamodel.agent.IAgent;
+import gama.core.runtime.IScope;
 import gama.core.util.GamaMapFactory;
 import gama.core.util.IMap;
 import gama.core.util.IList;
@@ -22,8 +24,7 @@ import gama.gaml.types.IType;
 @vars({
     @variable(name = "stopId", type = IType.STRING, doc = @doc("The unique ID of the transport stop.")),
     @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop.")),
-    @variable(name = "departureStopsInfo", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of GamaPair<IAgent, String> (stop agent and departure time).")),
-    @variable(name = "hasDepartureInfo", type = IType.BOOL, doc = @doc("Indicates whether the stop has departure information."))
+    @variable(name = "departureStopsInfo", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of GamaPair<IAgent, String> (stop agent and departure time)."))
 })
 public class TransportStopSkill extends Skill {
 
@@ -46,12 +47,20 @@ public class TransportStopSkill extends Skill {
         return (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
     }
 
-    // Check if departureStopsInfo is not empty
-    @getter("hasDepartureInfo")
-    public boolean hasDepartureInfo(final IAgent agent) {
-        IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo = getDepartureStopsInfo(agent);
+ // Action to check if departureStopsInfo is not empty
+    @action(name = "isDeparture")
+    public boolean isDeparture(final IScope scope) {
+        IAgent agent = scope.getAgent();
+        IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo =
+            (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
+
         return departureStopsInfo != null && !departureStopsInfo.isEmpty();
     }
+
+
+
+
+
 
     // Retrieve departure stop agents for a specific trip
     @getter("agentsForTrip")
