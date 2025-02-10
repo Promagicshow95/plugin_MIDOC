@@ -227,7 +227,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
             Map<String, Object> shapeInit = new HashMap<>();
             shapeInit.put("shapeId", shape.getShapeId());
-            shapeInit.put("points", shape.getPoints()); // Avant, on passait seulement les points
+            shapeInit.put("shape", shape.getShape()); // Avant, on passait seulement les points
 
             inits.add(shapeInit);
             System.out.println("[INFO] Shape Init added for Shape ID: " + shape.getShapeId());
