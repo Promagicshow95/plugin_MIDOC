@@ -218,40 +218,21 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         int limit = max != null ? Math.min(max, shapes.size()) : shapes.size();
 
         for (int i = 0; i < limit; i++) {
-            TransportShape transportShape = shapes.get(i);
+            TransportShape shape = shapes.get(i);
 
-            if (transportShape.getShapeId() == 0 || transportShape.getPoints() == null || transportShape.getPoints().isEmpty()) {
-                System.err.println("[Error] Invalid data for TransportShape: " + transportShape);
+            if (shape.getShapeId() == 0 || shape.getPoints().isEmpty()) {
+                System.err.println("[ERROR] Invalid data for TransportShape ID: " + shape.getShapeId());
                 continue;
             }
 
             Map<String, Object> shapeInit = new HashMap<>();
-            shapeInit.put("shapeId", transportShape.getShapeId());
-
-            try {
-                // Convert the list of GamaPoints to IList<IShape>
-                IList<IShape> shapePoints = GamaListFactory.create();
-                for (GamaPoint point : transportShape.getPoints()) {
-                    shapePoints.add(point); // Ajout direct si GamaPoint implémente IShape
-                }
-
-                // Create the polyline shape from the list of points
-                IShape polyline = SpatialCreation.line(scope, shapePoints);
-                shapeInit.put("shape", polyline);
-
-                // Log information about the created shape
-                System.out.println("[INFO] Polyline created for Shape ID " + transportShape.getShapeId());
-                System.out.println("[DEBUG] Shape WKT: " + polyline.serializeToGaml(false));  // Display shape in WKT format
-            } catch (Exception e) {
-                System.err.println("[ERROR] Failed to create polyline for shape ID " + transportShape.getShapeId() + ": " + e.getMessage());
-                continue;
-            }
+            shapeInit.put("shapeId", shape.getShapeId());
+            shapeInit.put("points", shape.getPoints()); // Avant, on passait seulement les points
 
             inits.add(shapeInit);
-            System.out.println("[SUCCESS] Shape with ID " + transportShape.getShapeId() + " added to inits.");
+            System.out.println("[INFO] Shape Init added for Shape ID: " + shape.getShapeId());
         }
     }
-
 
 
     @Override
@@ -260,34 +241,56 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     }
     
     @Override
-    public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
+    public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, 
+                                                List<Map<String, Object>> inits, CreateStatement statement, 
+                                                RemoteSequence sequence) {
         IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
         IMap<String, IAgent> stopIdToAgentMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
 
         for (IAgent agent : createdAgents) {
             String stopId = (String) agent.getAttribute("stopId");
-            stopIdToAgentMap.put(stopId, agent);
+            if (stopId != null) {
+                stopIdToAgentMap.put(stopId, agent);
+            }
         }
 
-        for (IAgent agent : createdAgents) {
+        for (int i = 0; i < createdAgents.size(); i++) {
+            IAgent agent = createdAgents.get(i);
+            Map<String, Object> initData = inits.get(i);
+
+            // 🔹 Gestion des bus_stop (inchangé)
             IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
-            IMap<String, IList<GamaPair<String, String>>> departureTripsInfo = (IMap<String, IList<GamaPair<String, String>>>) agent.getAttribute("departureTripsInfo");
-            for (Map.Entry<String, IList<GamaPair<String, String>>> entry : departureTripsInfo.entrySet()) {
-                IList<GamaPair<IAgent, String>> convertedStops = GamaListFactory.create(Types.PAIR);
-                for (GamaPair<String, String> pair : entry.getValue()) {
-                    IAgent stopAgent = stopIdToAgentMap.get(pair.first());
-                    convertedStops.add(new GamaPair<>(stopAgent, pair.getValue(), Types.AGENT, Types.STRING));
+            IMap<String, IList<GamaPair<String, String>>> departureTripsInfo = 
+                    (IMap<String, IList<GamaPair<String, String>>>) agent.getAttribute("departureTripsInfo");
 
+            if (departureTripsInfo != null) {
+                for (Map.Entry<String, IList<GamaPair<String, String>>> entry : departureTripsInfo.entrySet()) {
+                    IList<GamaPair<IAgent, String>> convertedStops = GamaListFactory.create(Types.PAIR);
+                    for (GamaPair<String, String> pair : entry.getValue()) {
+                        IAgent stopAgent = stopIdToAgentMap.get(pair.first());
+                        convertedStops.add(new GamaPair<>(stopAgent, pair.getValue(), Types.AGENT, Types.STRING));
+                    }
+                    departureStopsInfo.put(entry.getKey(), convertedStops);
                 }
-                departureStopsInfo.put(entry.getKey(), convertedStops);
+                agent.setAttribute("departureStopsInfo", departureStopsInfo);
+                agent.setDirectVarValue(scope, "departureTripsInfo", null);
             }
-            agent.setAttribute("departureStopsInfo", departureStopsInfo);
-            agent.setDirectVarValue(scope, "departureTripsInfo", null);
 
+            // 🔹 Gestion des transport_shape → Assignation correcte de la polyline
+            if (initData.containsKey("shape")) {
+                IShape polyline = (IShape) initData.get("shape");
+                if (polyline != null) {
+                    agent.setAttribute("shape", polyline);
+                    System.out.println("[DEBUG] Shape assigned to agent: " + polyline.serializeToGaml(false));
+                } else {
+                    System.err.println("[ERROR] Shape is null for agent " + agent.getAttribute("shapeId"));
+                }
+            }
         }
 
         return createdAgents;
     }
+
 
 
 }

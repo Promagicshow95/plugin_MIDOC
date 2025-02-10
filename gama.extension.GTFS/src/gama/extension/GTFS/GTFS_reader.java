@@ -297,9 +297,10 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
         System.out.println("Finished creating TransportStop objects.");
         
-     // Create TransporShape objects from shapes.txt
+     // Création des objets TransportShape à partir de shapes.txt
         IList<String> shapesData = gtfsData.get("shapes.txt");
         IMap<String, Integer> headerMap = headerMaps.get("shapes.txt");
+
         if (shapesData != null && headerMap != null) {
             System.out.println("Processing shapes.txt...");
             int shapeIdIndex = headerMap.get("shape_id");
@@ -313,56 +314,31 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     double lat = Double.parseDouble(fields[latIndex]);
                     double lon = Double.parseDouble(fields[lonIndex]);
 
-                    // Creates or retrieves a TransportShape object
+                    // Récupération ou création de l'objet TransportShape
                     TransportShape shape = shapesMap.get(shapeId);
                     if (shape == null) {
                         shape = new TransportShape(shapeId);
                         shapesMap.put(shapeId, shape);
                     }
 
-                    // Add the point to shape and directly update its polyline
+                    // Ajouter le point au TransportShape
                     shape.addPoint(lat, lon, scope);
+
                 } catch (Exception e) {
-                    System.err.println("Error processing shape line: " + line + " -> " + e.getMessage());
+                    System.err.println("[ERROR] Processing shape line: " + line + " -> " + e.getMessage());
                 }
             }
+
+            // Générer les polylines pour tous les TransportShape après ajout des points
+            for (TransportShape shape : shapesMap.values()) {
+                shape.generateShape(scope);
+            }
+
             System.out.println("Finished creating TransportShape objects.");
         } else {
             System.err.println("shapes.txt data or headers are missing.");
         }
 
-        // Create TransportRoute objects from routes.txt
-        IList<String> routesData = gtfsData.get("routes.txt");
-        IMap<String, Integer> routesheaderMap = headerMaps.get("routes.txt");
-
-        if (routesData != null && routesheaderMap != null) {
-            System.out.println("Processing routes.txt...");
-
-            int routeIdIndex = routesheaderMap.get("route_id");
-            int shortNameIndex = routesheaderMap.get("route_short_name");
-            int longNameIndex = routesheaderMap.get("route_long_name");
-            int typeIndex = routesheaderMap.get("route_type");
-
-            routesMap = GamaMapFactory.create(Types.STRING, Types.get(TransportRoute.class));
-
-            for (String line : routesData) {
-                try {
-                    String[] fields = line.split(",");
-                    String routeId = fields[routeIdIndex];
-                    String shortName = fields[shortNameIndex];
-                    String longName = fields[longNameIndex];
-                    int type = Integer.parseInt(fields[typeIndex]);
-
-                    TransportRoute route = new TransportRoute(routeId, shortName, longName, type);
-                    routesMap.put(routeId, route);
-                    System.out.println("Created TransportRoute: " + route);
-                } catch (Exception e) {
-                    System.err.println("Error processing route line: " + line + " -> " + e.getMessage());
-                }
-            }
-        } else {
-            System.err.println("routes.txt data or headers are missing.");
-        }
 
      // Create TransportTrip objects from trips.txt
         IList<String> tripsData = gtfsData.get("trips.txt");
@@ -485,7 +461,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         IMap<String, Integer> stopTimesHeader = headerMaps.get("stop_times.txt");
 
         if (stopTimesData == null || stopTimesHeader == null) {
-            System.err.println("Error: stop_times.txt data or headers are missing.");
+            System.err.println("[ERROR] stop_times.txt data or headers are missing.");
             return;
         }
 
@@ -493,6 +469,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         int stopIdIndex = stopTimesHeader.get("stop_id");
         int departureTimeIndex = stopTimesHeader.get("departure_time");
 
+        // Étape 1 : Associate the trips to stops
         for (String line : stopTimesData) {
             String[] fields = line.split(",");
             try {
@@ -513,12 +490,13 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
+        // Étape 2 : Assign only to the first stop in trip
         for (TransportTrip trip : tripsMap.values()) {
             IList<String> stopsInOrder = trip.getStopsInOrder();
             IList<GamaPair<String, String>> stopPairs = GamaListFactory.create(Types.PAIR);
 
             if (!stopsInOrder.isEmpty()) {
-                String firstStopId = stopsInOrder.get(0);
+                String firstStopId = stopsInOrder.get(0); // SEUL le premier arrêt
                 TransportStop firstStop = stopsMap.get(firstStopId);
 
                 if (firstStop != null) {
@@ -528,11 +506,13 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                         String departureTime = stopDetails.get(i).get("departureTime").toString();
                         stopPairs.add(new GamaPair<>(stopId, departureTime, Types.STRING, Types.STRING));
                     }
+
+                    // Add infor only for the first stop
+                    firstStop.ensureDepartureTripsInfo();
                     firstStop.addStopPairs("trip_" + trip.getTripId(), stopPairs);
 
-                    System.out.println("[DEBUG] stopPairs successfully filled for tripId=" + trip.getTripId()
-                            + ", firstStopId=" + firstStopId
-                            + ": " + stopPairs);
+                    System.out.println("[INFO] Departure stop assigned: stopId=" + firstStopId +
+                            " for tripId=" + trip.getTripId() + " with " + stopPairs.size() + " stops.");
                 } else {
                     System.err.println("[ERROR] First stop not found: stopId=" + firstStopId);
                 }
@@ -541,10 +521,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
+        // Étape 3 : Vérification des arrêts avec ou sans départs
         for (TransportStop stop : stopsMap.values()) {
-            if (!stop.getDepartureTripsInfo().isEmpty()) {
+            if (stop.getDepartureTripsInfo() != null && !stop.getDepartureTripsInfo().isEmpty()) {
                 System.out.println("[INFO] Departure stop has departureTripsInfo: stopId=" + stop.getStopId()
-                        + ", count=" + stop.getDepartureTripsInfo().size());
+                        + ", trip count=" + stop.getDepartureTripsInfo().size());
             } else {
                 System.out.println("[INFO] Stop has no departureTripsInfo: stopId=" + stop.getStopId());
             }

@@ -22,7 +22,7 @@ public class TransportStop {
         this.stopId = stopId;
         this.stopName = stopName;
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
-        this.departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
+        this.departureTripsInfo = null;  
     }
 
     public String getStopId() {
@@ -50,6 +50,12 @@ public class TransportStop {
     @SuppressWarnings("unchecked")
     public void addStopPairs(String tripId, IList<GamaPair<String, String>> stopPairs) {
         departureTripsInfo.put(tripId, stopPairs);
+    }
+
+    public void ensureDepartureTripsInfo() {
+        if (this.departureTripsInfo == null) {
+            this.departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
+        }
     }
 
     @Override
