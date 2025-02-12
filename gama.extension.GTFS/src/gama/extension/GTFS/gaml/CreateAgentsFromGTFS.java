@@ -1,6 +1,7 @@
 package gama.extension.GTFS.gaml;
 
 import gama.core.common.interfaces.ICreateDelegate;
+import gama.core.common.interfaces.IKeyword;
 import gama.core.runtime.IScope;
 import gama.core.metamodel.agent.IAgent;
 import gama.core.metamodel.population.IPopulation;
@@ -41,10 +42,10 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     /**
      * Indicates that this delegate handles the complete creation of agents.
      */
-    @Override
-    public boolean handlesCreation() {
-        return true;
-    }
+	@Override
+	public boolean handlesCreation() {
+	    return false; 
+	}
 
     /**
      * Determines if this delegate can accept the provided source (expects a GTFS_reader).
@@ -219,32 +220,24 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
         for (int i = 0; i < limit; i++) {
             TransportShape shape = shapes.get(i);
-            shape.generateShape(scope);
+            IShape polyline = shape.generateShape(scope);
 
-            if (shape.getShapeId() == 0 || shape.getPoints().isEmpty()) {
-                System.err.println("[ERROR] Invalid data for TransportShape ID: " + shape.getShapeId());
-                continue;
-            }
-
-            IShape polyline = shape.getShape();
             if (polyline == null) {
                 System.err.println("[ERROR] Shape generation failed for Shape ID: " + shape.getShapeId());
                 continue;
             }
 
-            // Convertir en String pour éviter la perte de données dans `inits`
-            String shapeString = polyline.serializeToGaml(false);
+            // Utilisation de getAttributes(true) pour ajouter automatiquement shape
+            final Map<String, Object> map = polyline.getAttributes(true);
+            polyline.setAttribute(IKeyword.SHAPE, polyline); // Assigner la polyline comme shape
+            map.put("shapeId", shape.getShapeId());
 
-            Map<String, Object> shapeInit = new HashMap<>();
-            shapeInit.put("shapeId", shape.getShapeId());
-            shapeInit.put("shape", shapeString); // Stocker en String
-
-            inits.add(shapeInit);
+            inits.add(map);
 
             System.out.println("[INFO] Shape Init added for Shape ID: " + shape.getShapeId());
-            System.out.println("[DEBUG] Stored Shape as String -> " + shapeString);
         }
     }
+
 
 
     @Override
@@ -254,34 +247,21 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     
     @Override
     public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
-    	System.out.println("[DEBUG] Before createAgents -> inits size: " + inits.size());
-    	for (Map<String, Object> init : inits) {
-    	    System.out.println("[DEBUG] Shape in inits -> " + init.get("shape"));
-    	}
-    	IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
-    	
-    	System.out.println("[DEBUG] After createAgents -> Created agents: " + createdAgents.size());
-    	for (IAgent agent : createdAgents) {
-    	    System.out.println("[DEBUG] Agent ID: " + agent.getAttribute("shapeId") + ", Shape: " + agent.getAttribute("shape"));
-    	}
-        for (int i = 0; i < createdAgents.size(); i++) {
-            IAgent agent = createdAgents.get(i);
-            Map<String, Object> initData = inits.get(i);
+        System.out.println("[DEBUG] Before createAgents -> inits size: " + inits.size());
+        for (Map<String, Object> init : inits) {
+            System.out.println("[DEBUG] Shape in inits -> " + init.get("shape"));
+        }
 
-            IShape polyline = (IShape) initData.get("shape");
+        IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
 
-            if (polyline != null) {
-                agent.setAttribute("shape", polyline);
-                System.out.println("[DEBUG] Shape assigned to agent: " + agent.getAttribute("shape"));
-            } else {
-                System.err.println("[ERROR] Shape is null for agent " + agent.getAttribute("shapeId"));
-            }
+        System.out.println("[DEBUG] After createAgents -> Created agents: " + createdAgents.size());
+
+        for (IAgent agent : createdAgents) {
+            System.out.println("[DEBUG] Agent ID: " + agent.getAttribute("shapeId") + ", Shape in geometry: " + agent.getGeometry());
         }
 
         return createdAgents;
     }
-
-
 
 
 }

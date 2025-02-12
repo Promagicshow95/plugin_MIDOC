@@ -329,15 +329,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 }
             }
 
-            // Générer les polylines pour tous les TransportShape après ajout des points
-            for (TransportShape shape : shapesMap.values()) {
-                shape.generateShape(scope);
-            }
-
-            System.out.println("Finished creating TransportShape objects.");
+            System.out.println("Finished collecting points for TransportShape objects.");
         } else {
             System.err.println("shapes.txt data or headers are missing.");
         }
+
 
 
      // Create TransportTrip objects from trips.txt

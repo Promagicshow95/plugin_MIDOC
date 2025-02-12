@@ -31,22 +31,4 @@ public class TransportShapeSkill extends Skill {
         agent.setAttribute("shapeId", shapeId);
     }
 
-    @getter("shape")
-    public IShape getShape(final IAgent agent) {
-        return (IShape) agent.getAttribute("shape");
-    }
-
-    @setter("shape")
-    public void setShape(final IAgent agent, final IShape shape) {
-        agent.setAttribute("shape", shape);
-    }
-
-    @getter("length")
-    public double getLength(final IAgent agent) {
-        IShape shape = getShape(agent);
-        if (shape == null) {
-            return 0;
-        }
-        return shape.getPerimeter();
-    }
 }
