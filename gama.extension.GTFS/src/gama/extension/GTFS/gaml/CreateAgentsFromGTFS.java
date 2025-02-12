@@ -42,10 +42,10 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     /**
      * Indicates that this delegate handles the complete creation of agents.
      */
-	@Override
-	public boolean handlesCreation() {
-	    return false; 
-	}
+    @Override
+    public boolean handlesCreation() {
+        return true;
+    }
 
     /**
      * Determines if this delegate can accept the provided source (expects a GTFS_reader).
@@ -240,6 +240,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
 
 
+
     @Override
     public IType<?> fromFacetType() {
         return Types.FILE; // The source is a GTFS file path
@@ -247,17 +248,39 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     
     @Override
     public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
-        System.out.println("[DEBUG] Before createAgents -> inits size: " + inits.size());
-        for (Map<String, Object> init : inits) {
-            System.out.println("[DEBUG] Shape in inits -> " + init.get("shape"));
-        }
-
         IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
-
-        System.out.println("[DEBUG] After createAgents -> Created agents: " + createdAgents.size());
+        IMap<String, IAgent> stopIdToAgentMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
 
         for (IAgent agent : createdAgents) {
-            System.out.println("[DEBUG] Agent ID: " + agent.getAttribute("shapeId") + ", Shape in geometry: " + agent.getGeometry());
+            String stopId = (String) agent.getAttribute("stopId");
+            stopIdToAgentMap.put(stopId, agent);
+        }
+
+        for (IAgent agent : createdAgents) {
+            IMap<String, IList<GamaPair<String, String>>> departureTripsInfo =
+                    (IMap<String, IList<GamaPair<String, String>>>) agent.getAttribute("departureTripsInfo");
+
+            // Vérifie si l'arrêt est un point de départ
+            if (departureTripsInfo == null || departureTripsInfo.isEmpty()) {
+                System.out.println("[INFO] Skipping stopId: " + agent.getAttribute("stopId") + " (no departure trips)");
+                continue; 
+            }
+
+            IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
+            
+            for (Map.Entry<String, IList<GamaPair<String, String>>> entry : departureTripsInfo.entrySet()) {
+                IList<GamaPair<IAgent, String>> convertedStops = GamaListFactory.create(Types.PAIR);
+                for (GamaPair<String, String> pair : entry.getValue()) {
+                    IAgent stopAgent = stopIdToAgentMap.get(pair.first());
+                    if (stopAgent != null) {
+                        convertedStops.add(new GamaPair<>(stopAgent, pair.getValue(), Types.AGENT, Types.STRING));
+                    }
+                }
+                departureStopsInfo.put(entry.getKey(), convertedStops);
+            }
+
+            agent.setAttribute("departureStopsInfo", departureStopsInfo);
+            agent.setDirectVarValue(scope, "departureTripsInfo", null);
         }
 
         return createdAgents;

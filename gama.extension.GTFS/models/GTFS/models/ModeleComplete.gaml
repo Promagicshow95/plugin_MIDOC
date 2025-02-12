@@ -18,7 +18,7 @@ species bus_stop skills: [TransportStopSkill] {
       
     }
     aspect base {
-        draw circle(100.0) at: location color:#blue;
+        draw circle(10) at: location color:#blue;
     }
 }
 
