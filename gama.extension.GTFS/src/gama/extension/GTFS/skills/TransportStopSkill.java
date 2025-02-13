@@ -51,16 +51,12 @@ public class TransportStopSkill extends Skill {
     @action(name = "isDeparture")
     public boolean isDeparture(final IScope scope) {
         IAgent agent = scope.getAgent();
-        IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo =
+        @SuppressWarnings("unchecked")
+		IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo =
             (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
 
         return departureStopsInfo != null && !departureStopsInfo.isEmpty();
     }
-
-
-
-
-
 
     // Retrieve departure stop agents for a specific trip
     @getter("agentsForTrip")
