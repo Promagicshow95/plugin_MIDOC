@@ -201,14 +201,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             if (files != null) {
                 for (File file : files) {
                     if (file.isFile() && file.getName().endsWith(".txt")) {
-                        System.out.println("Reading file: " + file.getName());
                         Map<String, Integer> headerMap = new HashMap<>(); // Map for headers
                         IList<String> fileContent = readCsvFile(file, headerMap);  // Reading the CSV file
                         gtfsData.put(file.getName(), fileContent);
                         IMap<String, Integer> headerIMap = GamaMapFactory.wrap(Types.STRING, Types.INT, headerMap);
                         headerMaps.put(file.getName(), headerIMap); // Store in headerMaps
-                        System.out.println("Headers loaded for file: " + file.getName() + " -> " + headerIMap);
-                        System.out.println("Finished reading file: " + file.getName());
                     }
                 }
             }
@@ -261,10 +258,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
         if (headerIMap == null) {
             System.err.println("headerIMap for stops.txt is null.");
-        } else {
-            System.out.println("Headers for stops.txt: " + headerIMap);
         }
-
         if (stopsData != null && headerIMap != null) {
             int stopIdIndex = headerIMap.get("stop_id");
             int stopNameIndex = headerIMap.get("stop_name");
@@ -283,10 +277,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     if (stopId.startsWith("stop_point")) {
                     	TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon, scope);
                     	stopsMap.put(stopId, stop);
-                    	System.out.println("TransportStop created: " + stopId + " -> " + stop.getStopName());
-                    } else {
-                        System.out.println("Skipped non stop_point: " + stopId);
-                    }
+                    } 
                 } catch (Exception e) {
                     System.err.println("Error processing line: " + line + " -> " + e.getMessage());
                 }
@@ -361,8 +352,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     // Create the TransportTrip object
                     TransportTrip trip = new TransportTrip(routeId, serviceId, tripId, directionId, shapeId);
 
-                    tripsMap.put(tripId, trip);
-                    System.out.println("Created TransportTrip: tripId=" + tripId);
+                    tripsMap.put(tripId, trip);             
                 } catch (Exception e) {
                     System.err.println("Error processing trip line: " + line + " -> " + e.getMessage());
                 }
@@ -390,7 +380,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         if (!file.isFile()) {
             throw new IOException(file.getAbsolutePath() + " is not a valid file.");
         }
-        System.out.println("Reading file: " + file.getAbsolutePath());
         try (BufferedReader br = new BufferedReader(new FileReader(file))) {
             String line;
             // Read the header line
@@ -407,7 +396,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 content.add(line);
             }
         }
-        System.out.println("Finished reading file: " + file.getAbsolutePath());
         return content;
     }
 
@@ -475,7 +463,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
                 TransportTrip trip = tripsMap.get(tripId);
                 if (trip == null) {
-                    System.err.println("[ERROR] Trip not found for tripId: " + tripId);
                     continue;
                 }
                 trip.addStop(stopId);
@@ -506,9 +493,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     // Add infor only for the first stop
                     firstStop.ensureDepartureTripsInfo();
                     firstStop.addStopPairs("trip_" + trip.getTripId(), stopPairs);
-
-                    System.out.println("[INFO] Departure stop assigned: stopId=" + firstStopId +
-                            " for tripId=" + trip.getTripId() + " with " + stopPairs.size() + " stops.");
                 } else {
                     System.err.println("[ERROR] First stop not found: stopId=" + firstStopId);
                 }
@@ -517,15 +501,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-        // Étape 3 : Vérification des arrêts avec ou sans départs
-        for (TransportStop stop : stopsMap.values()) {
-            if (stop.getDepartureTripsInfo() != null && !stop.getDepartureTripsInfo().isEmpty()) {
-                System.out.println("[INFO] Departure stop has departureTripsInfo: stopId=" + stop.getStopId()
-                        + ", trip count=" + stop.getDepartureTripsInfo().size());
-            } else {
-                System.out.println("[INFO] Stop has no departureTripsInfo: stopId=" + stop.getStopId());
-            }
-        }
 
         System.out.println("computeDepartureInfo completed successfully.");
     }

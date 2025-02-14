@@ -9,13 +9,13 @@ import gama.core.util.IMap;
 
 public class TransportTrip {
 
-    private String routeId; // Route identifier
-    private String serviceId; // Service identifier
-    private int tripId; // Trip identifier
-    private int directionId; // Direction identifier
-    private int shapeId; // Shape identifier
-    private IList<String> stopIdsInOrder; // List of stop_ids in sequence
-    private IList<IMap<String, Object>> stopDetails; // List of stop details (stopId and departureTime)
+    private String routeId; 
+    private String serviceId; 
+    private int tripId;
+    private int directionId; 
+    private int shapeId;
+    private IList<String> stopIdsInOrder; 
+    private IList<IMap<String, Object>> stopDetails; 
 
     // Constructor
     public TransportTrip(String routeId, String serviceId, int tripId, int directionId, int shapeId) {

@@ -28,11 +28,13 @@ import java.util.Map;
  * Classe responsable de la création des agents GTFS en délégant la création à des classes spécifiques.
  */
 public class CreateAgentsFromGTFS implements ICreateDelegate {
+	
+	private GTFSAgentCreator agentCreator;
 
-    @Override
-    public boolean handlesCreation() {
-        return true;
-    }
+	 @Override
+	    public boolean handlesCreation() {
+	        return agentCreator != null && agentCreator.handlesCreation();
+	    }
 
     @Override
     public boolean acceptSource(IScope scope, Object source) {
@@ -41,10 +43,6 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
     @Override
     public boolean createFrom(IScope scope, List<Map<String, Object>> inits, Integer max, Object source, Arguments init, CreateStatement statement) {
-        if (!(source instanceof GTFS_reader)) {
-            scope.getGui().getConsole().informConsole("Invalid source: Not a GTFS_reader", scope.getSimulation());
-            return false;
-        }
 
         GTFS_reader gtfsReader = (GTFS_reader) source;
         IExpression speciesExpr = statement.getFacet("species");
@@ -61,14 +59,14 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             return false;
         }
 
-        // Sélection de la classe appropriée pour gérer la création des agents
-        GTFSAgentCreator agentCreator = getAgentCreator(targetSpecies, gtfsReader);
+        // Select the appropriate class to handle the creation of agents
+        agentCreator = getAgentCreator(targetSpecies, gtfsReader);
         if (agentCreator == null) {
             scope.getGui().getConsole().informConsole("Unrecognized skill", scope.getSimulation());
             return false;
         }
 
-        // Génération des initialisations
+     // Generation of initializations
         agentCreator.addInits(scope, inits, max);
         return true;
     }
@@ -85,7 +83,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             return GamaListFactory.create(Types.AGENT); // ✅ Retourne une IList vide avec type AGENT
         }
 
-        // Récupérer le type de l'agent pour sélectionner la bonne classe de création
+        // Retrieve the agent type to select the correct creation class
         IExpression speciesExpr = statement.getFacet("species");
         ISpecies targetSpecies = Cast.asSpecies(scope, speciesExpr.value(scope));
 

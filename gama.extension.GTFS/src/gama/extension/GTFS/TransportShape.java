@@ -10,7 +10,7 @@ import GamaGTFSUtils.SpatialUtils;
 
 public class TransportShape {
     private final int shapeId;
-    private final IList<GamaPoint> points;  // Liste des points
+    private final IList<GamaPoint> points; 
 
     public TransportShape(int shapeId) {
         this.shapeId = shapeId;
@@ -33,20 +33,12 @@ public class TransportShape {
             return null;
         }
 
-        // Conversion en IList<IShape>
         IList<IShape> shapePoints = GamaListFactory.create();
         for (GamaPoint point : points) {
-            shapePoints.add(point);  // GamaPoint implémente IShape
+            shapePoints.add(point);
         }
 
         IShape polyline = SpatialCreation.line(scope, shapePoints);
-
-        if (polyline != null) {
-            System.out.println("[DEBUG] Polyline created for Shape ID " + shapeId);
-        } else {
-            System.err.println("[ERROR] Polyline creation failed for Shape ID " + shapeId);
-        }
-
         return polyline;
     }
 

@@ -35,12 +35,13 @@ public class TransportStopCreator implements GTFSAgentCreator {
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", stop.getLocation());
             stopInit.put("departureTripsInfo", stop.getDepartureTripsInfo());
+            stopInit.put("name", stop.getStopName());
             inits.add(stopInit);
         }
     }
 
     @Override
-    public List<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
+    public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
         IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
         IMap<String, IAgent> stopIdToAgentMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
 
@@ -72,6 +73,11 @@ public class TransportStopCreator implements GTFSAgentCreator {
             agent.setAttribute("departureStopsInfo", departureStopsInfo);
         }
 
-        return createdAgents;
+        return createdAgents; 
     }
+
+	@Override
+	public boolean handlesCreation() {
+		return true;
+	}
 }
