@@ -45,7 +45,7 @@ public class TransportShapeCreator implements GTFSAgentCreator {
 	        inits.add(map);
 	    }
 	}
-
+	//Modification:
 	@Override
 	public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
 	    IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
