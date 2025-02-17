@@ -5,26 +5,17 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import gama.core.util.GamaPair;
-
-import org.locationtech.jts.geom.Polygon;
-
 import gama.annotations.precompiler.GamlAnnotations.doc;
 import gama.annotations.precompiler.GamlAnnotations.example;
 import gama.annotations.precompiler.GamlAnnotations.file;
 import gama.annotations.precompiler.IConcept;
 import gama.core.common.geometry.Envelope3D;
-import gama.core.metamodel.agent.IAgent;
-import gama.core.metamodel.shape.GamaPoint;
-import gama.core.metamodel.shape.GamaShape;
-import gama.core.metamodel.shape.GamaShapeFactory;
-import gama.core.metamodel.shape.IShape;
 import gama.core.runtime.IScope;
 import gama.core.runtime.exceptions.GamaRuntimeException;
 import gama.core.util.GamaListFactory;
@@ -32,23 +23,9 @@ import gama.core.util.GamaMapFactory;
 import gama.core.util.IList;
 import gama.core.util.IMap;
 import gama.core.util.file.GamaFile;
-import gama.core.util.file.GamaGisFile;
-import gama.gaml.operators.spatial.SpatialProjections;
 import gama.gaml.types.IContainerType;
 import gama.gaml.types.IType;
 import gama.gaml.types.Types;
-
-import org.geotools.data.DataUtilities;
-import org.geotools.data.FileDataStore;
-import org.geotools.data.FileDataStoreFinder;
-import org.geotools.data.simple.SimpleFeatureStore;
-import org.geotools.data.simple.SimpleFeatureCollection;
-import org.geotools.feature.simple.SimpleFeatureBuilder;
-import org.geotools.feature.simple.SimpleFeatureTypeBuilder;
-import org.locationtech.jts.geom.Polygon;
-import org.opengis.feature.simple.SimpleFeature;
-
-import java.io.File;
 
 /**
  * Reading and processing GTFS files in GAMA. This class reads multiple GTFS files
@@ -99,7 +76,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         if (scope != null && scope.getGui() != null) {
             scope.getGui().getConsole().informConsole("GTFS path used: "  + pathName, scope.getSimulation());
         } else {
-            System.out.println("GTFS path used: " + pathName);  // For testing outside of GAMA
+            System.out.println("GTFS path used: " + pathName);  
         }
 
         // Load GTFS files

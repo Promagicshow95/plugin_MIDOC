@@ -1,4 +1,12 @@
-model GTFSreader
+/**
+* Name: Cleannetwork
+* Based on the internal empty template. 
+* Author: tiend
+* Tags: 
+*/
+
+
+model Cleannetwork
 
 global {
     // Path to the GTFS file
@@ -8,7 +16,20 @@ global {
     // Geometry of the boundary
     geometry shape <- envelope(boundary_shp);
     
-
+	//clean or not the data
+	bool clean_data <- true;
+	
+	//tolerance for reconnecting nodes
+	float tolerance <- 3.0;
+	
+	//if true, split the lines at their intersection
+	bool split_lines <- true;
+	
+	//if true, keep only the main connected components of the network
+	bool reduce_to_main_connected_components <- true;
+	
+	string legend <- not clean_data ? "Raw data" : ("Clean data : tolerance: " + tolerance + "; split_lines: " + split_lines + " ; reduce_to_main_connected_components:" + reduce_to_main_connected_components );
+	
     // Initialization section
     init {
         write "Loading GTFS contents from: " + gtfs_f;

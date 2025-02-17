@@ -1,9 +1,7 @@
 package gama.extension.GTFS;
 
-import gama.core.metamodel.agent.IAgent;
 import gama.core.metamodel.shape.GamaPoint;
 import gama.core.runtime.IScope;
-import gama.core.util.GamaListFactory;
 import gama.core.util.GamaMapFactory;
 import gama.core.util.GamaPair;
 import gama.core.util.IList;

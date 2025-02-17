@@ -8,13 +8,16 @@ global {
     
     init {
         write "Loading GTFS contents from: " + gtfs_f;
-        create transport_shape from: gtfs_f {};
-        create bus_stop from: gtfs_f {};
+        create transport_shape from: gtfs_f {}
+        create bus_stop from: gtfs_f {}
+        
+        
 
-        road_network <- as_driving_graph(transport_shape, bus_stop);
+//        road_network <- as_driving_graph(transport_shape, bus_stop);
+		  road_network <- as_edge_graph(shape);
 
-        bus_stop start_stop <- one_of(bus_stop) where (each.stopName = "Balma-Gramont");
-        bus_stop end_stop <- one_of(bus_stop) where (each.stopName = "Jolimont");
+        bus_stop start_stop <- (bus_stop first_with (each.stopName = "Balma-Gramont"));
+        bus_stop end_stop <- one_of(bus_stop where (each.stopName = "Jolimont"));
 
         if (start_stop != nil and end_stop != nil) {
             create bus number: 1 with: (location: start_stop.location, target_location: end_stop.location);
@@ -47,7 +50,7 @@ species bus skills: [moving] {
     }
 
     reflex move {
-        if (self.location distance_to target_location > 1) {
+        if (self.location distance_to target_location > 1) { //regarde sur skill moving comment determiner qu'on arrive à des
             do goto target: target_location speed: speed;
         } else {
             write "Bus arrived at destination!";
@@ -60,7 +63,7 @@ species bus skills: [moving] {
     }
 
     action stop_bus {
-        speed <- 0;
+        speed <- 20.0;
         write "Bus has stopped at its destination.";
     }
 

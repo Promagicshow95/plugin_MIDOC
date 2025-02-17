@@ -7,10 +7,6 @@ import gama.core.util.IList;
 import gama.core.metamodel.agent.IAgent;
 import gama.core.metamodel.population.IPopulation;
 import gama.extension.GTFS.GTFS_reader;
-import gama.extension.GTFS.TransportRoute;
-import gama.extension.GTFS.TransportShape;
-import gama.extension.GTFS.TransportStop;
-import gama.extension.GTFS.TransportTrip;
 import gama.gaml.expressions.IExpression;
 import gama.gaml.operators.Cast;
 import gama.gaml.species.ISpecies;
@@ -19,13 +15,11 @@ import gama.gaml.statements.CreateStatement;
 import gama.gaml.statements.RemoteSequence;
 import gama.gaml.types.IType;
 import gama.gaml.types.Types;
-
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 /**
- * Classe responsable de la création des agents GTFS en délégant la création à des classes spécifiques.
+ * Class responsible for creating GTFS agents by delegating their creation to specific classes..
  */
 public class CreateAgentsFromGTFS implements ICreateDelegate {
 	
@@ -80,24 +74,8 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
     public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
         if (inits.isEmpty()) {
             System.out.println("[INFO] No agents to create.");
-            return GamaListFactory.create(Types.AGENT); // ✅ Retourne une IList vide avec type AGENT
+            return GamaListFactory.create(Types.AGENT); 
         }
-
-        // Retrieve the agent type to select the correct creation class
-        IExpression speciesExpr = statement.getFacet("species");
-        ISpecies targetSpecies = Cast.asSpecies(scope, speciesExpr.value(scope));
-
-        if (targetSpecies == null) {
-            System.err.println("[ERROR] No species found in statement.");
-            return GamaListFactory.create(Types.AGENT);
-        }
-
-        GTFSAgentCreator agentCreator = getAgentCreator(targetSpecies, null);
-        if (agentCreator == null) {
-            System.err.println("[ERROR] No matching GTFSAgentCreator found.");
-            return GamaListFactory.create(Types.AGENT);
-        }
-
         List<? extends IAgent> createdAgents = agentCreator.createAgents(scope, population, inits, statement, sequence);
         IList<IAgent> agentList = GamaListFactory.create(Types.AGENT);
         agentList.addAll(createdAgents); 
@@ -108,7 +86,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
 
 
     /**
-     * Sélectionne le bon gestionnaire de création d'agents en fonction du type d'espèce.
+     * Selects the appropriate agent creation handler based on the species type.
      */
     private GTFSAgentCreator getAgentCreator(ISpecies species, GTFS_reader gtfsReader) {
         if (species.implementsSkill("TransportStopSkill")) {

@@ -18,14 +18,14 @@ public class TransportShape {
     }
 
     /**
-     * Ajoute un point converti en CRS à la liste.
+     * Adds a point converted into CRS to the list.
      */
     public void addPoint(double lat, double lon, IScope scope) {
         points.add(SpatialUtils.toGamaCRS(scope, lat, lon));
     }
 
     /**
-     * Génère la polyline sans la stocker.
+     * Generates the polyline without storing it
      */
     public IShape generateShape(IScope scope) {
         if (points.isEmpty()) {

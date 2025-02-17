@@ -4,7 +4,6 @@ import gama.core.metamodel.agent.IAgent;
 import gama.core.metamodel.population.IPopulation;
 import gama.core.metamodel.shape.IShape;
 import gama.core.runtime.IScope;
-import gama.core.util.GamaListFactory;
 import gama.core.util.IList;
 import gama.extension.GTFS.TransportShape;
 import gama.gaml.statements.CreateStatement;
@@ -20,7 +19,7 @@ public class TransportShapeCreator implements GTFSAgentCreator {
 	
 	private List<TransportShape> shapes;
 
-	/** Constructeur avec liste de shapes **/
+	/** Constructor with a list of shapes **/
 	public TransportShapeCreator(List<TransportShape> shapes) {
 		this.shapes = (shapes != null) ? shapes : new ArrayList<>();
 	}
@@ -44,16 +43,14 @@ public class TransportShapeCreator implements GTFSAgentCreator {
 	        map.put("shapeId", shape.getShapeId());
 	        inits.add(map);
 	    }
-	}
-	//Modification:
+	}	
 	@Override
 	public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
-	    IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
-	    return createdAgents;
+	    throw new UnsupportedOperationException("createAgents() should not be called on TransportShapeCreator.");
 	}
-
+	
 	@Override
 	public boolean handlesCreation() {
-	    return true; 
+	    return false; 
 	}
 }
