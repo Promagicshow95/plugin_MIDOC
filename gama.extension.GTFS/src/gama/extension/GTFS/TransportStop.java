@@ -15,7 +15,6 @@ public class TransportStop {
     private GamaPoint location;
     private IMap<String, IList<GamaPair<String, String>>> departureTripsInfo;
 
-    @SuppressWarnings("unchecked")
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
         this.stopId = stopId;
         this.stopName = stopName;
@@ -45,7 +44,6 @@ public class TransportStop {
      * @param tripId       Trip ID for which stops are being added.
      * @param stopPairs    List of GamaPair containing stop IDs and departure times.
      */
-    @SuppressWarnings("unchecked")
     public void addStopPairs(String tripId, IList<GamaPair<String, String>> stopPairs) {
         departureTripsInfo.put(tripId, stopPairs);
     }

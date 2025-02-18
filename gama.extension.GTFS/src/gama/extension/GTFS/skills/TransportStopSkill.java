@@ -8,7 +8,6 @@ import gama.annotations.precompiler.GamlAnnotations.doc;
 import gama.annotations.precompiler.GamlAnnotations.action;
 import gama.core.metamodel.agent.IAgent;
 import gama.core.runtime.IScope;
-import gama.core.util.GamaMapFactory;
 import gama.core.util.IMap;
 import gama.core.util.IList;
 import gama.core.util.GamaListFactory;
@@ -42,7 +41,6 @@ public class TransportStopSkill extends Skill {
 
     // Getter for departureStopsInfo
     @getter("departureStopsInfo")
-    @SuppressWarnings("unchecked")
     public IMap<String, IList<GamaPair<IAgent, String>>> getDepartureStopsInfo(final IAgent agent) {
         return (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
     }
@@ -51,7 +49,6 @@ public class TransportStopSkill extends Skill {
     @action(name = "isDeparture")
     public boolean isDeparture(final IScope scope) {
         IAgent agent = scope.getAgent();
-        @SuppressWarnings("unchecked")
 		IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo =
             (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
 
@@ -60,7 +57,6 @@ public class TransportStopSkill extends Skill {
 
     // Retrieve departure stop agents for a specific trip
     @getter("agentsForTrip")
-    @SuppressWarnings("unchecked")
     public IList<IAgent> getAgentsForTrip(final IAgent agent, final String tripId) {
         IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo = getDepartureStopsInfo(agent);
         if (departureStopsInfo == null || !departureStopsInfo.containsKey(tripId)) {

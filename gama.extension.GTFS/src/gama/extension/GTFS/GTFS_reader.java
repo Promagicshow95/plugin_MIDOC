@@ -402,7 +402,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
     }
 
-    @SuppressWarnings("unchecked")
 	@Override
     public IContainerType<IList<String>> getGamlType() {
     	System.out.println("Returning GAML type for GTFS file.");
