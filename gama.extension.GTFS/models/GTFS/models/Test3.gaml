@@ -1,13 +1,4 @@
-/**
-* Name: Test3
-* Based on the internal empty template. 
-* Author: tiend
-* Tags: 
-*/
-
-
-model Test3
-
+model GTFSreader
 
 global {
     gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");    
@@ -26,12 +17,21 @@ global {
         road_network <- as_edge_graph(transport_shape);
 
 		bus_stop starts_stop <- bus_stop[1017];
-		write starts_stop.departureStopsInfo;
+		write "la listes des bus tops: " + starts_stop.departureStopsInfo;
 		// créer un bus 
 		create bus {
 			departureStopsInfo <- starts_stop.departureStopsInfo['trip_1900861']; 
+			write departureStopsInfo;
+			list<bus_stop> list_bus_stops <- departureStopsInfo collect (each.key);
+			point target_location <- list_bus_stops[1].location;
+			
+			write "target location : " + target_location;
 			location <- departureStopsInfo[0].key.location;
-			write "the next stop" + departureStopsInfo[1].key;
+			write "location : " + location;
+			target <- departureStopsInfo[1].key.location;
+			write "target "+ target;
+			
+			
 		}
 		
 
@@ -70,7 +70,9 @@ species bus skills: [moving] {
     float stop_duration <- 5.0;  
     bool is_stopped <- false;  
     
+    
     list<pair<bus_stop,string>> departureStopsInfo;
+    point target;
     int index_next_stop <- 2;
 
     init {
@@ -134,4 +136,3 @@ experiment GTFSExperiment type: gui {
         }
     }
 }
-

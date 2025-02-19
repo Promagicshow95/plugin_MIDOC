@@ -1,4 +1,12 @@
-model GTFSreader
+/**
+* Name: MovingAB
+* Based on the internal empty template. 
+* Author: tiend
+* Tags: 
+*/
+
+
+model MovingAB
 
 global {
     gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");    
@@ -14,7 +22,7 @@ global {
         
 
 //        road_network <- as_driving_graph(transport_shape, bus_stop);
-		  road_network <- as_edge_graph(shape);
+		  road_network <- as_edge_graph(transport_shape);
 
         bus_stop start_stop <- (bus_stop first_with (each.stopName = "Balma-Gramont"));
         bus_stop end_stop <- one_of(bus_stop where (each.stopName = "Jolimont"));
@@ -43,17 +51,19 @@ species transport_shape skills: [TransportShapeSkill] {
 species bus skills: [moving] {
     rgb color <- #red;
     point target_location;
+    bool has_arrived <- false;
     
     init {
-        speed <- 20.0;
+        speed <- 1.0;
         do move_to_destination;
     }
 
-    reflex move {
-        if (self.location distance_to target_location > 1) { //regarde sur skill moving comment determiner qu'on arrive à des
-            do goto target: target_location speed: speed;
-        } else {
-            write "Bus arrived at destination!";
+      reflex move when: self.location != target_location {
+        do goto target: target_location on: road_network speed: speed;
+
+        if (self.location = target_location and not has_arrived) {
+            write " Bus arrived at destination: " + target_location;
+            has_arrived <- true;
             do stop_bus;
         }
     }
@@ -63,7 +73,7 @@ species bus skills: [moving] {
     }
 
     action stop_bus {
-        speed <- 20.0;
+        speed <- 0.0;
         write "Bus has stopped at its destination.";
     }
 
@@ -71,6 +81,8 @@ species bus skills: [moving] {
         draw rectangle(100, 50) color: #red at: location rotate: heading;
     }
 }
+
+
 
 experiment GTFSExperiment type: gui {
     output {
@@ -81,3 +93,5 @@ experiment GTFSExperiment type: gui {
         }
     }
 }
+
+

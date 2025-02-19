@@ -21,7 +21,7 @@ global {
 		// créer un bus 
 		create bus {
 			departureStopsInfo <- starts_stop.departureStopsInfo['trip_1900861']; 
-			location <- departureStopsInfo[0].key.location;
+			location <- departureStopsInfo[0].key;
 			target  <- departureStopsInfo[1].key.location;
 		}
 		
@@ -66,7 +66,7 @@ species bus skills: [moving] {
     int index_next_stop <- 2;
 
     init {
-        speed <- 20.0;  
+        speed <- 1.0;  
         do move_to_next_stop;
     }
 
