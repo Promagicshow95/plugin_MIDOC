@@ -3,15 +3,16 @@ model GTFSreader
 global {
 	gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");
 	shape_file boundary_shp <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
+	shape_file cleaned_road_shp <- shape_file("../includes/cleaned_network.shp");
 	 geometry shape <- envelope(boundary_shp);
 	 graph road_network;
 	 
 	 init{
-	 	 write "Loading GTFS contents from: " + gtfs_f;
-        create transport_shape from: gtfs_f {}
+	 	write "Loading GTFS contents from: " + gtfs_f;
+        create road from: cleaned_road_shp;
         create bus_stop from: gtfs_f {}
         
-        road_network <- as_edge_graph(transport_shape);
+        road_network <- as_edge_graph(road);
         
         bus_stop starts_stop <- bus_stop[1017];
         
@@ -19,10 +20,12 @@ global {
 			departureStopsInfo <- starts_stop.departureStopsInfo['trip_1900861'];
 			list_bus_stops <- departureStopsInfo collect (each.key);
 			current_stop_index <- 0;
-			start_location <- list_bus_stops[0].location;
+			location <- list_bus_stops[0].location;
 			target_location <- list_bus_stops[1].location; 
-			write "start_location "+ start_location;
+			write "start_location "+ location;
 			write "target_location" + target_location;
+			write departureStopsInfo;
+			write departureStopsInfo collect (each.value);
 			write "Bus créé, suivant le trajet GTFS du trip trip_1900861";			
 		}
         
@@ -35,10 +38,9 @@ species bus_stop skills: [TransportStopSkill] {
     }
 }
 
-
-species transport_shape skills: [TransportShapeSkill] {
-    aspect base {
-        draw shape color: #green;
+species road {
+    aspect default {
+        draw shape color: #black;
     }
 }
 
@@ -49,7 +51,6 @@ species bus skills: [moving] {
     list<bus_stop> list_bus_stops;
 	rgb color <- #red;
 	int current_stop_index <- 0;
-	point start_location;
 	point target_location;
 	bool has_arrived <- false;
 	list<pair<bus_stop,string>> departureStopsInfo;
@@ -76,7 +77,7 @@ species bus skills: [moving] {
             has_arrived <- false;
             write "Bus se dirige vers : " + list_bus_stops[current_stop_index].stopName;
         } else {
-            write "Bus a atteint le dernier arrêt.";
+            target_location <- nil;
         }
     }
     
@@ -99,9 +100,9 @@ species bus skills: [moving] {
 experiment GTFSExperiment type: gui {
     output {
         display "Bus Simulation" {
-            species transport_shape aspect: base;
             species bus_stop aspect: base;
             species bus aspect: base;
+            species road aspect: default;
         }
     }
 }

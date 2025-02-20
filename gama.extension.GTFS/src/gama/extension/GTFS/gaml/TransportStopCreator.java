@@ -43,7 +43,8 @@ public class TransportStopCreator implements GTFSAgentCreator {
     @Override
     public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
         IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
-        IMap<String, IAgent> stopIdToAgentMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
+        @SuppressWarnings("unchecked")
+		IMap<String, IAgent> stopIdToAgentMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
 
         for (IAgent agent : createdAgents) {
             String stopId = (String) agent.getAttribute("stopId");
@@ -51,14 +52,16 @@ public class TransportStopCreator implements GTFSAgentCreator {
         }
 
         for (IAgent agent : createdAgents) {
-            IMap<String, IList<GamaPair<String, String>>> departureTripsInfo =
+            @SuppressWarnings("unchecked")
+			IMap<String, IList<GamaPair<String, String>>> departureTripsInfo =
                     (IMap<String, IList<GamaPair<String, String>>>) agent.getAttribute("departureTripsInfo");
 
             if (departureTripsInfo == null || departureTripsInfo.isEmpty()) {
                 continue;
             }
 
-            IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
+            @SuppressWarnings("unchecked")
+			IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
             for (Map.Entry<String, IList<GamaPair<String, String>>> entry : departureTripsInfo.entrySet()) {
                 IList<GamaPair<IAgent, String>> convertedStops = GamaListFactory.create(Types.PAIR);
                 for (GamaPair<String, String> pair : entry.getValue()) {

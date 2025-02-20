@@ -14,20 +14,20 @@ public class TransportTripCreator implements GTFSAgentCreator {
 
 	@Override
 	public void addInits(IScope scope, List<Map<String, Object>> inits, Integer max) {
-		// TODO Auto-generated method stub
+		
 
 	}
 
 	@Override
 	public boolean handlesCreation() {
-		// TODO Auto-generated method stub
+	
 		return false;
 	}
 
 	@Override
 	public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population,
 			List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
-		// TODO Auto-generated method stub
+		
 		return null;
 	}
 

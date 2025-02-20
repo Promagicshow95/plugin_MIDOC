@@ -40,7 +40,8 @@ public class TransportStopSkill extends Skill {
     }
 
     // Getter for departureStopsInfo
-    @getter("departureStopsInfo")
+    @SuppressWarnings("unchecked")
+	@getter("departureStopsInfo")
     public IMap<String, IList<GamaPair<IAgent, String>>> getDepartureStopsInfo(final IAgent agent) {
         return (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
     }
@@ -49,6 +50,7 @@ public class TransportStopSkill extends Skill {
     @action(name = "isDeparture")
     public boolean isDeparture(final IScope scope) {
         IAgent agent = scope.getAgent();
+		@SuppressWarnings("unchecked")
 		IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo =
             (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
 

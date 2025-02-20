@@ -48,7 +48,8 @@ public class TransportStop {
         departureTripsInfo.put(tripId, stopPairs);
     }
 
-    public void ensureDepartureTripsInfo() {
+    @SuppressWarnings("unchecked")
+	public void ensureDepartureTripsInfo() {
         if (this.departureTripsInfo == null) {
             this.departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
         }

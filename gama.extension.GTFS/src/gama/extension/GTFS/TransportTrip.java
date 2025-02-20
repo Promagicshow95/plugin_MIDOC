@@ -35,7 +35,8 @@ public class TransportTrip {
 
     // Add stop details (stopId and departureTime)
     public void addStopDetail(String stopId, String departureTime) {
-        IMap<String, Object> stopEntry = GamaMapFactory.create();
+        @SuppressWarnings("unchecked")
+		IMap<String, Object> stopEntry = GamaMapFactory.create();
         stopEntry.put("stopId", stopId);
         stopEntry.put("departureTime", departureTime);
         stopDetails.add(stopEntry);

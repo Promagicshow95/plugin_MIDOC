@@ -51,7 +51,8 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     private IMap<String, IList<String>> gtfsData;
     
     // New field to store header mappings for each file
-    private IMap<String, IMap<String, Integer>> headerMaps = GamaMapFactory.create(Types.STRING, Types.get(IMap.class));
+    @SuppressWarnings("unchecked")
+	private IMap<String, IMap<String, Integer>> headerMaps = GamaMapFactory.create(Types.STRING, Types.get(IMap.class));
 
     // Collections for objects created from GTFS files
     private IMap<Integer, TransportTrip> tripsMap;
@@ -169,7 +170,8 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     /**
      * Loads GTFS files and verifies if all required files are present.
      */
-    private void loadGtfsFiles(final IScope scope) throws GamaRuntimeException {
+    @SuppressWarnings("unchecked")
+	private void loadGtfsFiles(final IScope scope) throws GamaRuntimeException {
         gtfsData = GamaMapFactory.create(Types.STRING, Types.LIST); // Use GamaMap for storing GTFS files
         headerMaps = GamaMapFactory.create(Types.STRING, Types.get(IMap.class));
         try {
@@ -201,20 +203,12 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      * @param fileName The name of the file
      * @return The header map
      */
-    private Map<String, Integer> getHeaderMap(String fileName) {
-        IList<String> headers = gtfsData.get(fileName + "_headers");
-        if (headers == null) return null;
-        Map<String, Integer> headerMap = new HashMap<>();
-        for (int i = 0; i < headers.size(); i++) {
-            headerMap.put(headers.get(i), i);
-        }
-        return headerMap;
-    }
-
+   
     /**
      * Creates TransportRoute, TransportTrip, and TransportStop objects from GTFS files.
      */
-    private void createTransportObjects(IScope scope) {
+    @SuppressWarnings("unchecked")
+	private void createTransportObjects(IScope scope) {
     	System.out.println("Starting transport object creation...");
         routesMap = GamaMapFactory.create(Types.STRING, Types.get(TransportRoute.class)); // Using GamaMap for routesMap
         stopsMap = GamaMapFactory.create(Types.STRING, Types.get(TransportStop.class));   // Using GamaMap for stopMap
@@ -402,6 +396,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
     }
 
+	@SuppressWarnings("unchecked")
 	@Override
     public IContainerType<IList<String>> getGamlType() {
     	System.out.println("Returning GAML type for GTFS file.");
