@@ -1,17 +1,9 @@
-/**
-* Name: SaveToSHP
-* Based on the internal empty template. 
-* Author: tiend
-* Tags: 
-*/
-
-
-model SaveToSHP
+model GTFSreader
 
 global {
     // Path to the GTFS file
-    gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");	
-    shape_file boundary_shp <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");	
+    shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
 
     // Geometry of the boundary
     geometry shape <- envelope(boundary_shp);

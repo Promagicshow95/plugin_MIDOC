@@ -1,10 +1,14 @@
 model GTFSreader
 
 global {
-    gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");    
-    shape_file boundary_shp <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");    
+    shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
     geometry shape <- envelope(boundary_shp);
     graph road_network;
+    
+    // Heure de début de la simulation
+    date starting_date <- date("2024-02-21T08:05:00");
+    float step <- 1#mn;
 
     init {
         write "Loading GTFS contents from: " + gtfs_f;
@@ -18,11 +22,57 @@ global {
 
 		bus_stop starts_stop <- bus_stop[1017];
 		write "la listes des bus tops: " + starts_stop.departureStopsInfo;
+			int current_hour <- current_date.hour;
+			int current_minute <- current_date.minute;
+			int current_second <- current_date.second;
+			
+			
+			string current_hour_string;
+			if (current_hour < 10) {
+    		current_hour_string <- "0" + string(current_hour);
+			} else {
+    		current_hour_string <- string(current_hour);
+			}
+
+			string current_minute_string;
+			if (current_minute < 10) {
+    		current_minute_string <- "0" + string(current_minute);
+			} else {
+    		current_minute_string <- string(current_minute);
+			}
+
+			string current_second_string;
+			if (current_second < 10) {
+    		current_second_string <- "0" + string(current_second);
+			} else {
+    		current_second_string <- string(current_second);
+			}
+			
+			string formatted_time <- current_hour_string + ":" + current_minute_string + ":" + current_second_string;
+			write "formatted_time: " + formatted_time; // Affiche l'heure au format "HH:mm:ss"
+			
+			string departure_time <- "20:20:00";
 		// créer un bus 
 		create bus {
 			departureStopsInfo <- starts_stop.departureStopsInfo['trip_1900861']; 
-			write departureStopsInfo;
+			
 			list<bus_stop> list_bus_stops <- departureStopsInfo collect (each.key);
+			write "list_bus_stops: " + list_bus_stops;
+			list<string> list_times <- departureStopsInfo collect (each.value);
+			write "list times: " +list_times;
+			
+			
+			
+			// Comparaison des chaînes "HH:mm:ss"
+			if (formatted_time > departure_time) {
+    		write "L'heure actuelle (" + formatted_time + ") est **après** l'heure de départ (" + departure_time + ").";
+			} else if (formatted_time < departure_time) {
+    		write "L'heure actuelle (" + formatted_time + ") est **avant** l'heure de départ (" + departure_time + ").";
+			} else {
+    		write "L'heure actuelle (" + formatted_time + ") correspond exactement à l'heure de départ (" + departure_time + ").";
+			}
+			
+			
 			point target_location <- list_bus_stops[1].location;
 			
 			write "target location : " + target_location;
@@ -69,7 +119,7 @@ species bus skills: [moving] {
     int current_stop_index <- 0;  
     float stop_duration <- 5.0;  
     bool is_stopped <- false;  
-    
+    int current_hour_string;
     
     list<pair<bus_stop,string>> departureStopsInfo;
     point target;

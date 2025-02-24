@@ -11,9 +11,9 @@ model test
 
 
 global {
-	gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");
-	shape_file boundary_shp <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
-	shape_file cleaned_road_shp <- shape_file("../includes/cleaned_network.shp");
+	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
+	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	 geometry shape <- envelope(boundary_shp);
 	 graph road_network;
 	 
@@ -32,6 +32,7 @@ global {
 			current_stop_index <- 0;
 			location <- list_bus_stops[0].location;
 			target_location <- list_bus_stops[1].location; 
+			
 			write "start_location "+ location;
 			write "target_location" + target_location;
 			write "Bus créé, suivant le trajet GTFS du trip trip_1900861";			
@@ -42,7 +43,7 @@ global {
 
 species bus_stop skills: [TransportStopSkill] {
     aspect base {
-        draw circle(10) at: location color: #blue;
+        draw circle(10) color: #blue;
     }
 }
 
@@ -57,7 +58,6 @@ species bus skills: [moving] {
         draw rectangle(100, 50) color: #red at: location rotate: heading;
     }
     list<bus_stop> list_bus_stops;
-	rgb color <- #red;
 	int current_stop_index <- 0;
 	point target_location;
 	list<pair<bus_stop,string>> departureStopsInfo;

@@ -1,9 +1,9 @@
 model MovingAB
 
 global {
-    gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");    
-    shape_file boundary_shp <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
-    shape_file cleaned_road_shp <- shape_file("../includes/cleaned_network.shp"); 
+    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");    
+    shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
+    shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp"); 
     geometry shape <- envelope(boundary_shp);
     graph road_network;
 
@@ -30,7 +30,7 @@ global {
 
 species bus_stop skills: [TransportStopSkill] {
     aspect base {
-        draw circle(10) at: location color: #blue;
+        draw circle(10) color: #blue;
     }
 }
 
@@ -47,7 +47,7 @@ species bus skills: [moving] {
         speed <- 1.0;
     }
 
-    reflex move when: self.location != target_location {
+    reflex move when: target_location != nil {
         do goto target: target_location on: road_network speed: speed;
 
         if (self.location = target_location) {
