@@ -2,38 +2,23 @@ model GTFSreader
 
 global {
     // Path to the GTFS file
-     gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");	
-	 shape_file boundary_shp <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
-
-	//shape_file boundary_shp <- shape_file("../includes/boundaryHN.shp");
-    //gtfs_file gtfs_f <- gtfs_file("../includes/hanoi_gtfs_am");	
-
-
+    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
+	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	geometry shape <- envelope(boundary_shp);
-//	geometry shape <- envelope(gtfs_f);
-	
-	
-//	geometry shape <- polygon([{0, 20688.512012230232}, {24854.298367634357, 20688.512012230232}, {24854.298367634357, 0}, {0,0}]);
-//	geometry shape <- polygon([{0, 116161.06372411549}, {99901.35871416889 ,116161.06372411549}, {99901.35871416889, 0}, {0,0}]);
- 
+
     // Initialization section
-    init {
-        write "Loading GTFS contents from: " + gtfs_f;
-        
-        // Log the boundary envelope by stops
-    	write "Boundary envelope: " + shape;
-    	
-    	// Check envelope of shape file
-    	geometry stop_envelope <- envelope(gtfs_f);
-    	write "Stop envelope: " + stop_envelope;
-        
+    init {     
         // Create bus_stop agents from the GTFS data
        create bus_stop from: gtfs_f  {
-       	
+    
+      
+
 				
        }
        
-       ask bus_stop{ do customInit;}
+       
+       
        
 //       list<bus_stop> busStopList <- list<bus_stop>(bus_stop);
 //        list<bus_stop> busStopsToBeDeleted <- [];
@@ -53,14 +38,16 @@ global {
 //       
        
     }
+    
 }
 
 // Species representing each transport stop
 species bus_stop skills: [TransportStopSkill] {
 	
+	
   action customInit  {
     	if length(departureStopsInfo)> 0 {
-       		write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + ", departureStopsInfo: " + departureStopsInfo;
+       
        }
 
 		

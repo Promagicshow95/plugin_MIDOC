@@ -16,6 +16,8 @@ global {
 	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	 geometry shape <- envelope(boundary_shp);
 	 graph road_network;
+	  list<string> trips_id;
+      map<string,string> trips_id_time;
 	 
 	 init{
 	 	write "Loading GTFS contents from: " + gtfs_f;
@@ -25,17 +27,39 @@ global {
         road_network <- as_edge_graph(road);
         
         bus_stop starts_stop <- bus_stop[1017];
-        
         create bus {
-			departureStopsInfo <- starts_stop.departureStopsInfo['trip_1900861'];
-			list_bus_stops <- departureStopsInfo collect (each.key);
-			current_stop_index <- 0;
+        	trips_id <- keys(starts_stop.departureStopsInfo);
+        	
+        	map<string, string> trip_first_departure_time;
+       
+        	write "list of trip: " + trips_id;
+        	
+        
+        	
+        	
+        	loop trip_id over: trips_id{
+        		list<pair<bus_stop, string>> departureStopsInfo_trip <- starts_stop.departureStopsInfo[trip_id];
+        		list<string> list_times <- departureStopsInfo_trip collect (each.value);
+        		trips_id_time[trip_id] <- list_times[0];
+        		
+        		 write "Map des trips avec heures de départ : " + trips_id_time;
+        		
+        		list_bus_stops <- departureStopsInfo_trip collect (each.key);
+        		
+        		
+        		
+        		
+        	}
+        	
+        	
+        	// Trier les trips par heure de départ (ordre croissant)
+			list<string> sorted_trip_ids <- trips_id sort_by (trips_id_time[each]);
+			write "Trips triés par heure de départ : " + sorted_trip_ids;
+		
 			location <- list_bus_stops[0].location;
 			target_location <- list_bus_stops[1].location; 
 			
-			write "start_location "+ location;
-			write "target_location" + target_location;
-			write "Bus créé, suivant le trajet GTFS du trip trip_1900861";			
+					
 		}
         
 	 }
@@ -61,6 +85,7 @@ species bus skills: [moving] {
 	int current_stop_index <- 0;
 	point target_location;
 	list<pair<bus_stop,string>> departureStopsInfo;
+	
 	
 	init {
         speed <- 0.5;

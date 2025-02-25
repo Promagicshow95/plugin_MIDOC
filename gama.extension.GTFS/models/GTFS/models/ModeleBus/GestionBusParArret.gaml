@@ -24,18 +24,10 @@ global {
 	 	write "Loading GTFS contents from: " + gtfs_f;
         create road from: cleaned_road_shp;
         create bus_stop from: gtfs_f {}
-        
-        
         road_network <- as_edge_graph(road);
         starts_stop <- bus_stop[1017];
-        
-        
-        
-        
 	 }
-	 
-	 
-	 
+
 	 reflex update_formatted_time{
 	 	int current_hour <- current_date.hour;
         int current_minute <- current_date.minute;
