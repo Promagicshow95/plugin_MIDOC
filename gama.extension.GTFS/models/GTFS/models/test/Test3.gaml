@@ -7,7 +7,7 @@ global {
     graph road_network;
     
     // Heure de début de la simulation
-    date starting_date <- date("2024-02-21T08:05:00");
+    date starting_date <- date("2024-02-21T20:05:00");
     float step <- 1#mn;
 
     init {
@@ -22,35 +22,16 @@ global {
 
 		bus_stop starts_stop <- bus_stop[1017];
 		write "la listes des bus tops: " + starts_stop.departureStopsInfo;
-			int current_hour <- current_date.hour;
-			int current_minute <- current_date.minute;
-			int current_second <- current_date.second;
-			
-			
-			string current_hour_string;
-			if (current_hour < 10) {
-    		current_hour_string <- "0" + string(current_hour);
-			} else {
-    		current_hour_string <- string(current_hour);
-			}
+		int current_hour <- current_date.hour;
+        int current_minute <- current_date.minute;
+        int current_second <- current_date.second;
 
-			string current_minute_string;
-			if (current_minute < 10) {
-    		current_minute_string <- "0" + string(current_minute);
-			} else {
-    		current_minute_string <- string(current_minute);
-			}
+        string current_hour_string <- (current_hour < 10 ? "0" + string(current_hour) : string(current_hour));
+        string current_minute_string <- (current_minute < 10 ? "0" + string(current_minute) : string(current_minute));
+        string current_second_string <- (current_second < 10 ? "0" + string(current_second) : string(current_second));
 
-			string current_second_string;
-			if (current_second < 10) {
-    		current_second_string <- "0" + string(current_second);
-			} else {
-    		current_second_string <- string(current_second);
-			}
-			
-			string formatted_time <- current_hour_string + ":" + current_minute_string + ":" + current_second_string;
-			write "formatted_time: " + formatted_time; // Affiche l'heure au format "HH:mm:ss"
-			
+        string formatted_time <- current_hour_string + ":" + current_minute_string + ":" + current_second_string;
+        write "formatted_time: " + formatted_time;
 			string departure_time <- "20:20:00";
 		// créer un bus 
 		create bus {

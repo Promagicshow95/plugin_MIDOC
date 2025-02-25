@@ -1,9 +1,9 @@
 model GTFSreader
 
 global {
-	gtfs_file gtfs_f <- gtfs_file("../includes/tisseo_gtfs_v2");
-	shape_file boundary_shp <- shape_file("../includes/boundaryTLSE-WGS84PM.shp");
-	shape_file cleaned_road_shp <- shape_file("../includes/cleaned_network.shp");
+	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
+	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	 geometry shape <- envelope(boundary_shp);
 	 graph road_network;
 	 
