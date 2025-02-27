@@ -36,11 +36,14 @@ public class TransportShapeCreator implements GTFSAgentCreator {
 	            System.err.println("[ERROR] Shape generation failed for Shape ID: " + shape.getShapeId());
 	            continue;
 	        }
+	        
+	        int routeType = shape.getRouteType();
 
 	        // Automatic addition of the shape via its attributes
 	        final Map<String, Object> map = polyline.getAttributes(true);
 	        polyline.setAttribute(IKeyword.SHAPE, polyline); 
 	        map.put("shapeId", shape.getShapeId());
+	        map.put("routeType", routeType);
 	        inits.add(map);
 	    }
 	}	

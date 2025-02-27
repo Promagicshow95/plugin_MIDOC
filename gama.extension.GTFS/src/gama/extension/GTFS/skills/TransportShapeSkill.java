@@ -16,6 +16,7 @@ import gama.gaml.types.IType;
 @skill(name = "TransportShapeSkill", doc = @doc("Skill for agents representing transport shapes with a polyline representation."))
 @vars({
     @variable(name = "shapeId", type = IType.INT, doc = @doc("The ID of the transport shape.")),
+    @variable(name = "routeType", type = IType.INT, doc = @doc("The transport type associated with this shape (bus, tram, metro, etc.)."))
 })
 public class TransportShapeSkill extends Skill {
 
@@ -27,6 +28,16 @@ public class TransportShapeSkill extends Skill {
     @setter("shapeId")
     public void setShapeId(final IAgent agent, final int shapeId) {
         agent.setAttribute("shapeId", shapeId);
+    }
+    
+    @getter("routeType")
+    public int getRouteType(final IAgent agent) {
+        return (int) agent.getAttribute("routeType");
+    }
+
+    @setter("routeType")
+    public void setRouteType(final IAgent agent, final int routeType) {
+        agent.setAttribute("routeType", routeType);
     }
 
 }

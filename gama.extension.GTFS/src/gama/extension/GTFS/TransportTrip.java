@@ -14,6 +14,7 @@ public class TransportTrip {
     private int tripId;
     private int directionId; 
     private int shapeId;
+    private int routeType = -1;
     private IList<String> stopIdsInOrder; 
     private IList<IMap<String, Object>> stopDetails; 
 
@@ -26,6 +27,15 @@ public class TransportTrip {
         this.shapeId = shapeId;
         this.stopIdsInOrder = GamaListFactory.create(); // Initialize list
         this.stopDetails = GamaListFactory.create();    // Initialize stop details
+    }
+    
+    public int getRouteType() {  
+        return routeType;
+    }
+
+    public void setRouteType(int routeType) {
+        this.routeType = routeType;
+        System.out.println("[DEBUG] Trip ID " + tripId + " assigned routeType: " + routeType);
     }
 
     // Add a stop_id in sequence order

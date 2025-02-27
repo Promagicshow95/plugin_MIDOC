@@ -11,6 +11,7 @@ import GamaGTFSUtils.SpatialUtils;
 public class TransportShape {
     private final int shapeId;
     private final IList<GamaPoint> points; 
+    private int routeType = -1;
 
     public TransportShape(int shapeId) {
         this.shapeId = shapeId;
@@ -52,6 +53,15 @@ public class TransportShape {
 
     @Override
     public String toString() {
-        return "Shape ID: " + shapeId + ", Points: " + points.size();
+        return "Shape ID: " + shapeId + ", Route Type: " + routeType + ", Points: " + points.size();
+    }
+
+    public void setRouteType(int routeType) {
+        this.routeType = routeType;
+        System.out.println("[DEBUG] Shape ID " + shapeId + " assigned routeType: " + routeType);
+    }
+    
+	public int getRouteType() {
+        return routeType;
     }
 }

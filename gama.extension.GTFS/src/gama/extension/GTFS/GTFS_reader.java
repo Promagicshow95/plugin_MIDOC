@@ -59,6 +59,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     private IMap<String, TransportStop> stopsMap;
     private IMap<Integer, TransportShape> shapesMap;
     private IMap<String, TransportRoute> routesMap; 
+    private IMap<Integer, Integer> shapeRouteTypeMap;
     
     /**
      * Constructor for reading GTFS files.
@@ -214,8 +215,28 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         stopsMap = GamaMapFactory.create(Types.STRING, Types.get(TransportStop.class));   // Using GamaMap for stopMap
         tripsMap = GamaMapFactory.create(Types.INT, Types.get(TransportTrip.class));      // Using GamaMap for tripMap
         shapesMap = GamaMapFactory.create(Types.INT, Types.get(TransportShape.class));
+        shapeRouteTypeMap = GamaMapFactory.create();
         
+      // Associate `route_id` to `route_type` via routes.txt
+        IMap<String, Integer> routeTypeMap = GamaMapFactory.create(Types.STRING, Types.INT);
+        IList<String> routesData = gtfsData.get("routes.txt");
+        IMap<String, Integer> routesHeader = headerMaps.get("routes.txt");
         
+        if (routesData != null && routesHeader != null) {
+            int routeIdIndex = routesHeader.get("route_id");
+            int routeTypeIndex = routesHeader.get("route_type");
+            
+            for (String line : routesData) {
+                String[] fields = line.split(",");
+                try {
+                    String routeId = fields[routeIdIndex];
+                    int routeType = Integer.parseInt(fields[routeTypeIndex]);
+                    routeTypeMap.put(routeId, routeType);
+                } catch (Exception e) {
+                    System.err.println("[ERROR] Invalid routeType in routes.txt: " + line + " -> " + e.getMessage());
+                }
+            }
+        }
      // Create TransportStop objects from stops.txt
         IList<String> stopsData = gtfsData.get("stops.txt");
         // Use header map stored in gtfsData
@@ -303,36 +324,76 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         IMap<String, Integer> tripsHeaderMap = headerMaps.get("trips.txt");
 
         if (tripsData != null && tripsHeaderMap != null) {
-            System.out.println("Processing trips.txt...");
-
             int routeIdIndex = tripsHeaderMap.get("route_id");
-            int serviceIdIndex = tripsHeaderMap.get("service_id");
             int tripIdIndex = tripsHeaderMap.get("trip_id");
-            int directionIdIndex = tripsHeaderMap.get("direction_id");
             int shapeIdIndex = tripsHeaderMap.get("shape_id");
 
             for (String line : tripsData) {
                 String[] fields = line.split(",");
                 try {
                     String routeId = fields[routeIdIndex];
-                    String serviceId = fields[serviceIdIndex];
                     int tripId = Integer.parseInt(fields[tripIdIndex]);
-                    int directionId = Integer.parseInt(fields[directionIdIndex]);
                     int shapeId = Integer.parseInt(fields[shapeIdIndex]);
 
-                    // Create the TransportTrip object
-                    TransportTrip trip = new TransportTrip(routeId, serviceId, tripId, directionId, shapeId);
-
-                    tripsMap.put(tripId, trip);             
+                    TransportTrip trip = new TransportTrip(routeId, "", tripId, 0, shapeId);
+                    tripsMap.put(tripId, trip);
+                    
+                    // Associate routeType to shapeId
+                    if (routeTypeMap.containsKey(routeId)) {
+                        int routeType = routeTypeMap.get(routeId);
+                        shapeRouteTypeMap.put(shapeId, routeType);
+                    }
                 } catch (Exception e) {
-                    System.err.println("Error processing trip line: " + line + " -> " + e.getMessage());
+                    System.err.println("[ERROR] Invalid trip line in trips.txt: " + line + " -> " + e.getMessage());
                 }
             }
-            System.out.println("Finished creating TransportTrip objects. Total trips: " + tripsMap.size());
-        } else {
-            System.err.println("trips.txt data or headers are missing.");
         }
 
+        System.out.println("Finished creating TransportTrip objects.");
+        
+        
+        
+       //Assign `routeType` to `TransportShape`        
+        for (TransportShape shape : shapesMap.values()) {
+            int shapeId = shape.getShapeId();
+            if (shapeRouteTypeMap.containsKey(shapeId)) {
+                shape.setRouteType(shapeRouteTypeMap.get(shapeId));
+                System.out.println("[INFO] Shape ID " + shapeId + " assigned routeType " + shape.getRouteType());
+            } else {
+                System.err.println("[ERROR] No routeType found for Shape ID " + shapeId);
+            }
+        }
+        
+        //Assign `routeType` to `TransportTrip`
+        for (TransportTrip trip : tripsMap.values()) {
+            int shapeId = trip.getShapeId();
+            if (shapeRouteTypeMap.containsKey(shapeId)) {
+                trip.setRouteType(shapeRouteTypeMap.get(shapeId));
+                System.out.println("[INFO] Trip ID " + trip.getTripId() + " assigned routeType " + trip.getRouteType());
+            } else {
+                System.err.println("[ERROR] No routeType found for Trip ID " + trip.getTripId());
+            }
+        }
+        
+        System.out.println("[DEBUG] Vérification des assignations de routeType...");
+
+        for (TransportShape shape : shapesMap.values()) {
+            if (shape.getRouteType() == -1) {
+                System.err.println("[ERROR] No routeType assigned to Shape ID " + shape.getShapeId());
+            } else {
+                System.out.println("[INFO] Shape ID " + shape.getShapeId() + " -> routeType: " + shape.getRouteType());
+            }
+        }
+
+        for (TransportTrip trip : tripsMap.values()) {
+            if (trip.getRouteType() == -1) {
+                System.err.println("[ERROR] No routeType assigned to Trip ID " + trip.getTripId());
+            } else {
+                System.out.println("[INFO] Trip ID " + trip.getTripId() + " -> routeType: " + trip.getRouteType());
+            }
+        }
+        
+        System.out.println("Assigned routeType to all TransportShape and TransportTrip objects.");
         System.out.println("Calling computeDepartureInfo to enrich TransportTrips and TransportStops...");
         computeDepartureInfo(scope);
         System.out.println("computeDepartureInfo completed.");

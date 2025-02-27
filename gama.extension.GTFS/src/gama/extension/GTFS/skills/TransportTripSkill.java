@@ -21,6 +21,7 @@ import gama.gaml.types.IType;
     @variable(name = "stopsInOrder", type = IType.LIST, doc = @doc("The ordered list of stop IDs for this trip.")),
     @variable(name = "destination", type = IType.STRING, doc = @doc("The final stop ID for this trip.")),
     @variable(name = "stopDetails", type = IType.LIST, doc = @doc("The list of stop details containing stop IDs and their respective departure times.")),
+    @variable(name = "routeType", type = IType.INT, doc = @doc("The type of transport associated with this trip (bus, tram, metro, etc.)."))
 })
 public class TransportTripSkill extends Skill {
 
@@ -77,5 +78,16 @@ public class TransportTripSkill extends Skill {
     @setter("stopDetails")
     public void setStopDetails(final IAgent agent, final Object stopDetails) {
         agent.setAttribute("stopDetails", stopDetails);
+    }
+    
+ // Getter and setter for routeType
+    @getter("routeType")
+    public int getRouteType(final IAgent agent) {
+        return (Integer) agent.getAttribute("routeType");
+    }
+
+    @setter("routeType")
+    public void setRouteType(final IAgent agent, final int routeType) {
+        agent.setAttribute("routeType", routeType);
     }
 }
