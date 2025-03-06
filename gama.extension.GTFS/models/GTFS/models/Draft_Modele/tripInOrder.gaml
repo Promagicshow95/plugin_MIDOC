@@ -16,8 +16,8 @@ global {
 	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	 geometry shape <- envelope(boundary_shp);
 	 graph road_network;
-	  list<string> trips_id;
-      map<string,string> trips_id_time;
+	 list<string> trips_id;
+     map<string,string> trips_id_time;
 	 
 	 init{
 	 	write "Loading GTFS contents from: " + gtfs_f;
@@ -36,7 +36,7 @@ global {
         	
         
         	
-        	
+        
         	loop trip_id over: trips_id{
         		list<pair<bus_stop, string>> departureStopsInfo_trip <- starts_stop.departureStopsInfo[trip_id];
         		list<string> list_times <- departureStopsInfo_trip collect (each.value);
@@ -75,6 +75,7 @@ species road {
     aspect default {
         draw shape color: #black;
     }
+    int routeType; 
 }
 
 species bus skills: [moving] {

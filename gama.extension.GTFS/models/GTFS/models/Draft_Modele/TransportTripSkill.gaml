@@ -21,7 +21,7 @@ global {
 // Species representing each transport stop
 species bus_trip skills: [TransportTripSkill] {
 	init {
-        write "Bus trip initialized: " + tripId + ", " + stopsInOrder;
+        write "Bus trip initialized: " + tripId ;
     }
     
      aspect base {

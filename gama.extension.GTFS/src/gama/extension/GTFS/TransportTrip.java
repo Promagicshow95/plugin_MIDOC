@@ -12,7 +12,6 @@ public class TransportTrip {
     private String routeId; 
     private String serviceId; 
     private int tripId;
-    private int directionId; 
     private int shapeId;
     private int routeType = -1;
     private IList<String> stopIdsInOrder; 
@@ -23,7 +22,6 @@ public class TransportTrip {
         this.routeId = routeId;
         this.serviceId = serviceId;
         this.tripId = tripId;
-        this.directionId = directionId;
         this.shapeId = shapeId;
         this.stopIdsInOrder = GamaListFactory.create(); // Initialize list
         this.stopDetails = GamaListFactory.create();    // Initialize stop details
@@ -67,11 +65,6 @@ public class TransportTrip {
         return stopIdsInOrder;
     }
 
-    // Get the last stop (destination)
-    public String getDestination() {
-        return stopIdsInOrder.isEmpty() ? null : stopIdsInOrder.get(stopIdsInOrder.size() - 1);
-    }
-
     // Set the entire list of stop_ids
     public void setStopIdsInOrder(IList<String> stopIdsInOrder) {
         this.stopIdsInOrder = stopIdsInOrder;
@@ -102,13 +95,6 @@ public class TransportTrip {
         this.tripId = tripId;
     }
 
-    public int getDirectionId() {
-        return directionId;
-    }
-
-    public void setDirectionId(int directionId) {
-        this.directionId = directionId;
-    }
 
     public int getShapeId() {
         return shapeId;

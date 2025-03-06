@@ -23,8 +23,10 @@ global {
 		bus_stop starts_stop <- bus_stop[1017];
 		write "la listes des bus tops: " + starts_stop.departureStopsInfo;
 		int current_hour <- current_date.hour;
-        int current_minute <- current_date.minute;
-        int current_second <- current_date.second;
+      	int current_minute <- current_date.minute;
+      	int current_second <- current_date.second;
+      	
+      	int current_time_in_seconds <- current_hour * 3600 + current_minute * 60 + current_second;
 
         string current_hour_string <- (current_hour < 10 ? "0" + string(current_hour) : string(current_hour));
         string current_minute_string <- (current_minute < 10 ? "0" + string(current_minute) : string(current_minute));
@@ -32,7 +34,8 @@ global {
 
         string formatted_time <- current_hour_string + ":" + current_minute_string + ":" + current_second_string;
         write "formatted_time: " + formatted_time;
-			string departure_time <- "20:20:00";
+        
+		string departure_time <- "20:20:00";
 		// créer un bus 
 		create bus {
 			departureStopsInfo <- starts_stop.departureStopsInfo['trip_1900861']; 
@@ -41,6 +44,7 @@ global {
 			write "list_bus_stops: " + list_bus_stops;
 			list<string> list_times <- departureStopsInfo collect (each.value);
 			write "list times: " +list_times;
+			
 			
 			
 			
@@ -77,6 +81,7 @@ global {
             write "Erreur: pas assez d'arrêts trouvés.";
         }
     }
+
 }
 
 

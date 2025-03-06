@@ -36,17 +36,21 @@ public class TransportShapeCreator implements GTFSAgentCreator {
 	            System.err.println("[ERROR] Shape generation failed for Shape ID: " + shape.getShapeId());
 	            continue;
 	        }
-	        
-	        int routeType = shape.getRouteType();
 
-	        // Automatic addition of the shape via its attributes
+	        int routeType = shape.getRouteType();
+	        String routeId = shape.getRouteId(); // Vérifier routeId ici
+
+	        System.out.println("[DEBUG] Adding to inits: ShapeId=" + shape.getShapeId() + " RouteId=" + routeId);
+
 	        final Map<String, Object> map = polyline.getAttributes(true);
 	        polyline.setAttribute(IKeyword.SHAPE, polyline); 
 	        map.put("shapeId", shape.getShapeId());
 	        map.put("routeType", routeType);
+	        map.put("routeId", shape.getRouteId()); 
 	        inits.add(map);
 	    }
-	}	
+	}
+
 	@Override
 	public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
 	    throw new UnsupportedOperationException("createAgents() should not be called on TransportShapeCreator.");

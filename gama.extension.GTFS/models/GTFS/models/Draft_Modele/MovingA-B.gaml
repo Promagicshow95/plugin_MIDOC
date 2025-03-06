@@ -3,16 +3,34 @@ model MovingAB
 global {
     gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");    
     shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
-    shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp"); 
     geometry shape <- envelope(boundary_shp);
     graph road_network;
+    
+      //tolerance for reconnecting nodes
+	float tolerance <- 1.0;
+	
+	//if true, split the lines at their intersection
+	bool split_lines <- true;
+	
+	//if true, keep only the main connected components of the network
+	bool reduce_to_main_connected_components <- true;
 
     init {
         write "Loading GTFS contents from: " + gtfs_f;
 
         create bus_stop from: gtfs_f {}
+        
+        create transport_shape from: gtfs_f {}
+        
+        list<geometry> clean_lines <- clean_network(transport_shape collect each.shape, tolerance, split_lines, reduce_to_main_connected_components) ;
 
-        create road from: cleaned_road_shp;
+        create road from: clean_lines{
+        	if(self.shape intersects world.shape){}
+        	else {
+        		do die;
+        	}
+      
+        }
         
         road_network <- as_edge_graph(road);
 
@@ -34,12 +52,18 @@ species bus_stop skills: [TransportStopSkill] {
     }
 }
 
+species transport_shape skills: [TransportShapeSkill] {
+
+
+}
+
 species road {
     aspect default {
-        draw shape color: #black;
+        if (routeType = 1)  { draw shape color: #yellow; }
+        if (routeType != 1)  { draw shape color: #black; }
     }
-    
     int routeType; 
+    int shapeId;
 }
 
 species bus skills: [moving] {

@@ -15,7 +15,7 @@ import gama.gaml.statements.RemoteSequence;
 
 public class TransportTripCreator implements GTFSAgentCreator {
 	
-	@SuppressWarnings("unused")
+
 	private List<TransportTrip> trips;
 	
 	public TransportTripCreator(List<TransportTrip> trips) {
@@ -29,15 +29,12 @@ public class TransportTripCreator implements GTFSAgentCreator {
 
 	    for (int i = 0; i < limit; i++) {
 	        TransportTrip trip = trips.get(i);
-	        
+	        System.out.println("[DEBUG] Creating agent for tripId=" + trip.getTripId() + " with shapeId=" + trip.getShapeId());
 	        Map<String, Object> tripInit = new HashMap<>();
 	        tripInit.put("tripId", trip.getTripId());
 	        tripInit.put("routeId", trip.getRouteId());
-	        tripInit.put("stopsInOrder", trip.getStopsInOrder());
-	        tripInit.put("destination", trip.getDestination());
-	        tripInit.put("stopDetails", trip.getStopDetails());
-	        tripInit.put("routeType", trip.getRouteType()); // ✅ Ajout de routeType
-
+	        tripInit.put("shapeId", trip.getShapeId());
+	        tripInit.put("routeType", trip.getRouteType());
 	        inits.add(tripInit);
 	    }
 	}
@@ -45,7 +42,7 @@ public class TransportTripCreator implements GTFSAgentCreator {
 	@Override
 	public boolean handlesCreation() {
 	
-		return false;
+		return true;
 	}
 
 	@Override

@@ -10,24 +10,20 @@ import GamaGTFSUtils.SpatialUtils;
 
 public class TransportShape {
     private final int shapeId;
+    private String routeId;  
     private final IList<GamaPoint> points; 
     private int routeType = -1;
 
-    public TransportShape(int shapeId) {
+    public TransportShape(int shapeId, String routeId) {  // Modifié pour inclure routeId
         this.shapeId = shapeId;
+        this.routeId = routeId;
         this.points = GamaListFactory.create();
     }
 
-    /**
-     * Adds a point converted into CRS to the list.
-     */
     public void addPoint(double lat, double lon, IScope scope) {
         points.add(SpatialUtils.toGamaCRS(scope, lat, lon));
     }
 
-    /**
-     * Generates the polyline without storing it
-     */
     public IShape generateShape(IScope scope) {
         if (points.isEmpty()) {
             System.err.println("[ERROR] No points found for shapeId=" + shapeId);
@@ -39,8 +35,7 @@ public class TransportShape {
             shapePoints.add(point);
         }
 
-        IShape polyline = SpatialCreation.line(scope, shapePoints);
-        return polyline;
+        return SpatialCreation.line(scope, shapePoints);
     }
 
     public int getShapeId() {
@@ -51,17 +46,26 @@ public class TransportShape {
         return points;
     }
 
-    @Override
-    public String toString() {
-        return "Shape ID: " + shapeId + ", Route Type: " + routeType + ", Points: " + points.size();
+    public String getRouteId() {
+        return routeId;
+    }
+
+    public void setRouteId(String routeId) {
+        System.out.println("[DEBUG] Setting routeId for ShapeId=" + shapeId + " -> " + routeId);
+        this.routeId = routeId;
+    }
+
+
+    public int getRouteType() {
+        return routeType;
     }
 
     public void setRouteType(int routeType) {
         this.routeType = routeType;
-        System.out.println("[DEBUG] Shape ID " + shapeId + " assigned routeType: " + routeType);
     }
-    
-	public int getRouteType() {
-        return routeType;
+
+    @Override
+    public String toString() {
+        return "Shape ID: " + shapeId + ", Route ID: " + routeId + ", Route Type: " + routeType + ", Points: " + points.size();
     }
 }

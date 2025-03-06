@@ -18,10 +18,8 @@ import gama.gaml.types.IType;
 @vars({
     @variable(name = "tripId", type = IType.INT, doc = @doc("The unique identifier of the transport trip.")),
     @variable(name = "routeId", type = IType.STRING, doc = @doc("The unique identifier of the route associated with the trip.")),
-    @variable(name = "stopsInOrder", type = IType.LIST, doc = @doc("The ordered list of stop IDs for this trip.")),
-    @variable(name = "destination", type = IType.STRING, doc = @doc("The final stop ID for this trip.")),
-    @variable(name = "stopDetails", type = IType.LIST, doc = @doc("The list of stop details containing stop IDs and their respective departure times.")),
-    @variable(name = "routeType", type = IType.INT, doc = @doc("The type of transport associated with this trip (bus, tram, metro, etc.)."))
+    @variable(name = "routeType", type = IType.INT, doc = @doc("The type of transport associated with this trip (bus, tram, metro, etc.).")),
+    @variable(name = "shapeId", type = IType.INT, doc = @doc("The unique indentifier of shape"))
 })
 public class TransportTripSkill extends Skill {
 
@@ -36,50 +34,28 @@ public class TransportTripSkill extends Skill {
         agent.setAttribute("tripId", tripId);
     }
 
+    // Getter and setter for shapeId
+    @getter("shapeId")
+    public int getShapeId(final IAgent agent) {
+        return (int) agent.getAttribute("shapeId");
+    }
+    
+    @setter("shapeId")
+    public void setShapeId(final IAgent agent, final int shapeId) {
+        agent.setAttribute("shapeId", shapeId);
+    }
+    
+
+    @setter("routeId")
+    public void setRouteId(final IAgent agent, final String routeId) {
+        agent.setAttribute("routeId", routeId);
+    }
     // Getter and setter for routeId
     @getter("routeId")
     public String getRouteId(final IAgent agent) {
         return (String) agent.getAttribute("routeId");
     }
 
-    @setter("routeId")
-    public void setRouteId(final IAgent agent, final String routeId) {
-        agent.setAttribute("routeId", routeId);
-    }
-
-    // Getter and setter for stopsInOrder
-    @getter("stopsInOrder")
-    public Object getStopsInOrder(final IAgent agent) {
-        return agent.getAttribute("stopsInOrder");
-    }
-
-    @setter("stopsInOrder")
-    public void setStopsInOrder(final IAgent agent, final Object stopsInOrder) {
-        agent.setAttribute("stopsInOrder", stopsInOrder);
-    }
-
-    // Getter and setter for destination
-    @getter("destination")
-    public String getDestination(final IAgent agent) {
-        return (String) agent.getAttribute("destination");
-    }
-
-    @setter("destination")
-    public void setDestination(final IAgent agent, final String destination) {
-        agent.setAttribute("destination", destination);
-    }
-
-    // Getter and setter for stopDetails
-    @getter("stopDetails")
-    public Object getStopDetails(final IAgent agent) {
-        return agent.getAttribute("stopDetails");
-    }
-
-    @setter("stopDetails")
-    public void setStopDetails(final IAgent agent, final Object stopDetails) {
-        agent.setAttribute("stopDetails", stopDetails);
-    }
-    
  // Getter and setter for routeType
     @getter("routeType")
     public int getRouteType(final IAgent agent) {

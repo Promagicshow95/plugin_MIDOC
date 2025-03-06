@@ -36,13 +36,13 @@ global {
         }
         
          // Nettoyage du réseau de transport
-        list<geometry> clean_lines <- clean_network(transport_shape collect each.shape, tolerance, split_lines, reduce_to_main_connected_components) ;
+        list<geometry> clean_lines <- clean_network(transport_shape collect each.shape, tolerance, split_lines, reduce_to_main_connected_components)  ;
         
          // Création des routes à partir des géométries nettoyées
         create road from: clean_lines;
         
 		//save building geometry into the shapefile: add the attribute TYPE which value is set by the type variable of the building agent and the attribute ID 
-		save road to:"../includes/cleaned_network.shp" format:"shp"; 
+		 save road to:"../../includes/cleaned_network.shp" format:"shp" attributes: ["ID":: int(self), "routeType"::int(self.routeType), "shapeId"::int(self.shapeId), "routeId"::string(self.routeId)];
         write "Cleaned road network saved successfully!";
         
     }
@@ -65,6 +65,10 @@ species road {
 	aspect default {
 		draw shape color: #black;
 	}
+	
+	int routeType; 
+	int shapeId;
+	string routeId;
 	
 
 }

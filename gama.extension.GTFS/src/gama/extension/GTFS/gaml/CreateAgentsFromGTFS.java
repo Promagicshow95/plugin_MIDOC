@@ -76,10 +76,17 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             System.out.println("[INFO] No agents to create.");
             return GamaListFactory.create(Types.AGENT); 
         }
+        
+        System.out.println("[DEBUG] Checking trip inits before creating agents...");
+        for (Map<String, Object> init : inits) {
+            System.out.println("[DEBUG] tripId in inits: " + init.get("tripId"));
+        }
         List<? extends IAgent> createdAgents = agentCreator.createAgents(scope, population, inits, statement, sequence);
         IList<IAgent> agentList = GamaListFactory.create(Types.AGENT);
         agentList.addAll(createdAgents); 
-
+        
+        System.out.println("[DEBUG] Created " + agentList.size() + " agents.");
+        
         return agentList;
     }
 
@@ -93,7 +100,8 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
             return new TransportStopCreator(gtfsReader != null ? gtfsReader.getStops() : null);
         } else if (species.implementsSkill("TransportShapeSkill")) {
             return new TransportShapeCreator(gtfsReader != null ? gtfsReader.getShapes() : null);
-        
+        } else if (species.implementsSkill("TransportTripSkill")) {
+        	return new TransportTripCreator(gtfsReader != null ? gtfsReader.getTrips() : null);
         }
         return null;
     }
