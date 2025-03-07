@@ -10,11 +10,12 @@ import GamaGTFSUtils.SpatialUtils;
 
 public class TransportShape {
     private final int shapeId;
-    private String routeId;  
+    private String routeId;
+    private int tripId = -1;
     private final IList<GamaPoint> points; 
     private int routeType = -1;
 
-    public TransportShape(int shapeId, String routeId) {  // Modifié pour inclure routeId
+    public TransportShape(int shapeId, String routeId) {  
         this.shapeId = shapeId;
         this.routeId = routeId;
         this.points = GamaListFactory.create();
@@ -62,6 +63,15 @@ public class TransportShape {
 
     public void setRouteType(int routeType) {
         this.routeType = routeType;
+    }
+    
+    public int getTripId() {
+        return tripId;
+    }
+
+    public void setTripId(int tripId) {
+        System.out.println("[DEBUG] Setting tripId for ShapeId=" + shapeId + " -> " + tripId);
+        this.tripId = tripId;
     }
 
     @Override

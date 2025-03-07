@@ -18,15 +18,12 @@ global {
 	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	 geometry shape <- envelope(boundary_shp);
 	 graph other_network;
-	 
 	 graph tram_network;
-	 
 	 graph metro_network;
-	 
-	 graph bus_network;
-	 
-	 graph real_network;
-	 
+	 graph bus_network;	 
+	 graph real_network; 
+	 graph shape_network; 
+	 list<bus_stop> list_bus_stops;
 
 	 init{
 	 	write "Loading GTFS contents from: " + gtfs_f;
@@ -36,49 +33,47 @@ global {
         		
         		do die;
         	}
-      
         }
-        create bus_stop from: gtfs_f {}
-        
+        create bus_stop from: gtfs_f {
+        }
         create transport_trip from: gtfs_f{
-        	
         }
-        
         create transport_shape from: gtfs_f{
-        	
         }
-        
         other_network <- as_edge_graph(road where (not (each.routeType in [1,3,0])));
         bus_network <- as_edge_graph(road where (each.routeType = 3));
         tram_network <- as_edge_graph(road where (each.routeType = 0));
         metro_network <- as_edge_graph(road where (each.routeType = 1));
-        real_network <- as_edge_graph(transport_shape where (each.routeId = 'line:176'));
-      
+        real_network <- as_edge_graph(road where (each.routeId = 'line:17'));
+     	shape_network <- as_edge_graph(transport_shape where (each.shapeId = 12722));
+     	  
+        bus_stop starts_stop <- bus_stop[32];
         
         
-        
-        bus_stop starts_stop <- bus_stop[23];
         
         create bus {
-			departureStopsInfo <- starts_stop.departureStopsInfo['trip_1983234'];
+			departureStopsInfo <- starts_stop.departureStopsInfo['trip_1981346'];
 			list_bus_stops <- departureStopsInfo collect (each.key);
+			write "list of bus:" + list_bus_stops;
 			current_stop_index <- 0;
 			location <- list_bus_stops[0].location;
-			target_location <- list_bus_stops[1].location;
-		  	
+			target_location <- list_bus_stops[1].location;	  	
 			list<point> route_points;
-			
 			write "start_location "+ location;
-			write "target_location" + target_location;
-				 
+			write "target_location" + target_location;		 
 		}
-        
+		
+
 	 }
+	 
+    
 }
 
 species bus_stop skills: [TransportStopSkill] {
+    rgb customColor <- rgb(0,0,255); 
+	
     aspect base {
-        draw circle(10) color: #blue;
+       if(bus_stop in list_bus_stops) {draw circle(20) color: customColor;}
     }
 }
 
@@ -94,7 +89,7 @@ species transport_shape skills: [TransportShapeSkill]{
      
     }
 	aspect default {
-         if (routeId ='line:176'){draw shape color: #black;}
+        if (shapeId = 12722){draw shape color: #green;}
 
     }
    
@@ -103,9 +98,11 @@ species transport_shape skills: [TransportShapeSkill]{
 
 species road {
     aspect default {
-         if (not (routeType in [0,3]))  { draw shape color: #white; }
-         if (routeType = 3)  { draw shape color: #blue; }
-         if (routeType = 0){ draw shape color: #white; }
+//         if (not (routeType in [0,3]))  { draw shape color: #white; }
+//         if (routeType = 3)  { draw shape color: #green; }
+//         if (routeType = 0){ draw shape color: #white; }
+         if (routeType = 1)  { draw shape color: #black; }
+         
          
     
          
@@ -123,6 +120,8 @@ species bus skills: [moving] {
 	 aspect base {
         draw rectangle(200, 100) color: #red rotate: heading;
     }
+
+
     list<bus_stop> list_bus_stops;
 	int current_stop_index <- 0;
 	point target_location;
@@ -131,10 +130,10 @@ species bus skills: [moving] {
 	
 	
 	init {
-        speed <- 0.7;
+        speed <- 3.0;
        	 // 1. Récupérer le shapeId correspondant à ce trip
-       	 int shape_id <- (transport_trip first_with (each.tripId = 1983234)).shapeId;
-       	 write "shape id pour trip 1983234: " + shape_id ;
+       	 int shape_id <- (transport_trip first_with (each.tripId = 1981346)).shapeId;
+       	 write "shape id pour trip 1981346: " + shape_id ;
 //       	 
 //       	  // 2. Récupérer la polyline associée à ce shapeId
        	 
@@ -143,10 +142,12 @@ species bus skills: [moving] {
        
     }
     
+    
+    
      // Déplacement du bus vers le prochain arrêt
      // Reflexe pour déplacer le bus vers target_location
-    reflex move when: self.location != target_location and current_stop_index < length(list_bus_stops) {
-        do goto target: target_location on: real_network speed: speed;
+    reflex move when: self.location != target_location  {
+        do goto target: target_location on: shape_network speed: speed;
     }
     
    // Reflexe pour vérifier l'arrivée et mettre à jour le prochain arrêt
@@ -168,7 +169,7 @@ species bus skills: [moving] {
 experiment GTFSExperiment type: gui {
     output {
         display "Bus Simulation" {
-            species bus_stop aspect: base;
+            species bus_stop aspect: base refresh: true;
             species bus aspect: base;
             species road aspect: default;
             species transport_shape aspect:default;

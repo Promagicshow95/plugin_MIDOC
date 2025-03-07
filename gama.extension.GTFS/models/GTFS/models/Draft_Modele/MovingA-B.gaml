@@ -34,8 +34,8 @@ global {
         
         road_network <- as_edge_graph(road);
 
-        bus_stop start_stop <- bus_stop first_with (each.stopName = "Balma-Gramont");
-        bus_stop end_stop <- one_of(bus_stop where (each.stopName = "Jolimont"));
+        bus_stop start_stop <- bus_stop first_with (each.stopName = "Sept Deniers - Salvador Dali");
+        bus_stop end_stop <- one_of(bus_stop where (each.stopName = "Fonsegrives Entiore"));
 
         if (start_stop != nil and end_stop != nil) {
             create bus number: 1 with: (location: start_stop.location, target_location: end_stop.location);
@@ -59,8 +59,8 @@ species transport_shape skills: [TransportShapeSkill] {
 
 species road {
     aspect default {
-        if (routeType = 1)  { draw shape color: #yellow; }
-        if (routeType != 1)  { draw shape color: #black; }
+        if (routeType = 3)  { draw shape color: #yellow; }
+        if (routeType != 3)  { draw shape color: #black; }
     }
     int routeType; 
     int shapeId;

@@ -331,6 +331,15 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     }
 
                     shapeRouteMap.put(shapeId, routeId);
+                    
+                 // Ajouter tripId à TransportShape correspondant
+                    if (shapesMap.containsKey(shapeId)) {
+                        TransportShape shape = shapesMap.get(shapeId);
+                        shape.setTripId(tripId);
+                        System.out.println("[DEBUG] Assigned tripId=" + tripId + " to shapeId=" + shapeId);
+                    } else {
+                        System.err.println("[ERROR] No shape found for shapeId=" + shapeId);
+                    }
                     System.out.println("[DEBUG] Stored in shapeRouteMap: ShapeId=" + shapeId + " -> RouteId=" + routeId);
                 } catch (Exception e) {
                     System.err.println("[ERROR] Invalid trip line in trips.txt: " + line + " -> " + e.getMessage());

@@ -46,7 +46,9 @@ public class TransportShapeCreator implements GTFSAgentCreator {
 	        polyline.setAttribute(IKeyword.SHAPE, polyline); 
 	        map.put("shapeId", shape.getShapeId());
 	        map.put("routeType", routeType);
-	        map.put("routeId", shape.getRouteId()); 
+	        map.put("routeId", shape.getRouteId());
+	        map.put("tripId", shape.getTripId());
+
 	        inits.add(map);
 	    }
 	}

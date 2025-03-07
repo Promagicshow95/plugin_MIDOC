@@ -17,7 +17,8 @@ import gama.gaml.types.IType;
 @vars({
     @variable(name = "shapeId", type = IType.INT, doc = @doc("The ID of the transport shape.")),
     @variable(name = "routeType", type = IType.INT, doc = @doc("The transport type associated with this shape (bus, tram, metro, etc.).")),
-    @variable(name = "routeId", type = IType.STRING, doc = @doc("The route ID associated with this shape."))
+    @variable(name = "routeId", type = IType.STRING, doc = @doc("The route ID associated with this shape.")),
+    @variable(name = "tripId", type = IType.INT, doc = @doc("The trip ID associated with this shape."))
 
 })
 public class TransportShapeSkill extends Skill {
@@ -54,6 +55,16 @@ public class TransportShapeSkill extends Skill {
     public void setRouteId(final IAgent agent, final String routeId) {
         System.out.println("[DEBUG] Storing routeId in agent: " + routeId);
         agent.setAttribute("routeId", routeId);
+    }
+    
+    @getter("tripId")
+    public int getTripId(final IAgent agent) {
+        return (int) agent.getAttribute("tripId");
+    }
+
+    @setter("tripId")
+    public void setTripId(final IAgent agent, final int tripId) {
+        agent.setAttribute("tripId", tripId);
     }
 
 
