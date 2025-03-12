@@ -1,12 +1,14 @@
-
-model Moving_Trip
-
 /**
-* Name: test
+* Name: NewModel1
 * Based on the internal empty template. 
 * Author: tiend
 * Tags: 
 */
+
+
+model shapeIdDynamique
+
+/* Insert your model definition here */
 
 global {
 	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
@@ -55,6 +57,7 @@ global {
         
         create bus {
 			departureStopsInfo <- starts_stop.departureStopsInfo['' + selected_trip_id];
+			//departureStopsInfo <- starts_stop.departureStopsInfo['1900861'];
 			list_bus_stops <- departureStopsInfo collect (each.key);
 			write "list of bus:" + list_bus_stops;
 			current_stop_index <- 0;
@@ -160,12 +163,6 @@ experiment GTFSExperiment type: gui {
         }
     }
 }
-
-
-
-
-
-
 
 
 

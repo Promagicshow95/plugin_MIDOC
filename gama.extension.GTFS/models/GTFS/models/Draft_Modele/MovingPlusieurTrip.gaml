@@ -1,12 +1,12 @@
-
-model Moving_Trip
-
 /**
-* Name: test
+* Name: MovingPlusieurTrip
 * Based on the internal empty template. 
 * Author: tiend
 * Tags: 
 */
+
+
+model MovingPlusieurTrip
 
 global {
 	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
@@ -17,9 +17,15 @@ global {
 	 list<bus_stop> list_bus_stops;
 	 int shape_id;
 	 int routeType_selected;
-	 int selected_trip_id <- 1900861;
 	 list<pair<bus_stop,string>> departureStopsInfo;
+	 bool is_bus_running <- false; 
+	 list<string> trips_id;
+	 list<int> trip_list;
+	 int current_trip_index <- 0;
+	 int trip_id;
 	 bus_stop starts_stop;
+	
+
 	 
 
 	 init{
@@ -38,34 +44,50 @@ global {
         create transport_shape from: gtfs_f{
         }
         
-        //Récupérer le shapeId correspondant à ce trip
-        shape_id <- (transport_trip first_with (each.tripId = selected_trip_id)).shapeId;
-        
-    
-        
+
 		//Creation le réseaux pour faire bouger l'agent bus
      	shape_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id));
      	
      	//Le bus_stop choisit
         starts_stop <- bus_stop[1017];
         
-        
-        
-        
-        
-        create bus {
-			departureStopsInfo <- starts_stop.departureStopsInfo['' + selected_trip_id];
-			list_bus_stops <- departureStopsInfo collect (each.key);
-			write "list of bus:" + list_bus_stops;
-			current_stop_index <- 0;
-			location <- list_bus_stops[0].location;
-			target_location <- list_bus_stops[1].location;	  	
-				 
-		}
+        trips_id <- keys(starts_stop.departureStopsInfo);
+        trip_list <- trips_id collect int(each);
 		
+		
+		// Lancer le premier trip
+        if (length(trip_list) > 0) {
+            do launch_next_trip;
+        }
 
 	 }
 	 
+	  action launch_next_trip{
+        	if (current_trip_index < length(trip_list) and not is_bus_running){
+        		is_bus_running <- true;  // Bloque le lancement de plusieurs bus en même temps
+        		int selected_trip_id <- trip_list[current_trip_index];
+        		
+        		
+        		 // Récupérer le shapeId correspondant au trip en cours
+        		 shape_id <- (transport_trip first_with (each.tripId = selected_trip_id)).shapeId;
+        		 shape_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id));
+        		 
+        		  // Récupérer les arrêts associés à ce trip
+        		 list<pair<bus_stop, string>> departureStopsInfo_trip <- starts_stop.departureStopsInfo[selected_trip_id];
+        		 list_bus_stops <- departureStopsInfo_trip collect (each.key);
+        		 
+        		 // Créer un bus pour ce trip
+            	create bus {
+                	departureStopsInfo <- departureStopsInfo_trip;
+                	list_bus_stops <- list_bus_stops;
+                	current_stop_index <- 0;
+                	location <- list_bus_stops[0].location;
+                	target_location <- list_bus_stops[1].location;
+                	trip_id <- selected_trip_id;  // Stocke l'ID du trip
+                	write "🚍 Bus lancé pour le trip: " + selected_trip_id;
+            	}
+        	}
+       }
     
 }
 
@@ -98,7 +120,7 @@ species transport_shape skills: [TransportShapeSkill]{
 
 species road {
     aspect default {
-         if (routeType = routeType_selected)  { draw shape color: #black; } 
+         if (routeType = 1)  { draw shape color: #black; } 
     }
   
     int routeType; 
@@ -116,14 +138,13 @@ species bus skills: [moving] {
 	int current_stop_index <- 0;
 	point target_location;
 	list<pair<bus_stop,string>> departureStopsInfo;
+	int trip_id;
 	
 	
 	
 	init {
         speed <- 3.0;
-       	 routeType_selected <- (transport_trip first_with (each.tripId = selected_trip_id)).routeType;
-       	 write "route type selected: "+ routeType_selected;
-
+		
     }
     
     
@@ -145,8 +166,12 @@ species bus skills: [moving] {
         } else {
             write "Bus a atteint le dernier arrêt.";
             target_location <- nil;
+           
         }
     }
+    
+     // Fin du trip, lancer le prochain trip
+  
 }
 
 // Expérience GUI pour visualiser la simulation
@@ -160,15 +185,6 @@ experiment GTFSExperiment type: gui {
         }
     }
 }
-
-
-
-
-
-
-
-
-
 
 
 

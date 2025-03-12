@@ -17,13 +17,14 @@ global {
 	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
 	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	 geometry shape <- envelope(boundary_shp);
-	 graph other_network;
-	 graph tram_network;
-	 graph metro_network;
-	 graph bus_network;	 
+
+	 graph metro_network;	 
 	 graph real_network; 
 	 graph shape_network; 
 	 list<bus_stop> list_bus_stops;
+	 int shape_id;
+	 int routeType_selected;
+	 int selected_trip_id <-1900861;
 
 	 init{
 	 	write "Loading GTFS contents from: " + gtfs_f;
@@ -40,12 +41,9 @@ global {
         }
         create transport_shape from: gtfs_f{
         }
-        other_network <- as_edge_graph(road where (not (each.routeType in [1,3,0])));
-        bus_network <- as_edge_graph(road where (each.routeType = 3));
-        tram_network <- as_edge_graph(road where (each.routeType = 0));
+        
         metro_network <- as_edge_graph(road where (each.routeType = 1));
-        real_network <- as_edge_graph(road where (each.routeId = 'line:17'));
-     	shape_network <- as_edge_graph(transport_shape where (each.shapeId = 12722));
+     	shape_network <- as_edge_graph(transport_shape where (each.shapeId =12722));
      	  
         bus_stop starts_stop <- bus_stop[32];
         
@@ -98,17 +96,8 @@ species transport_shape skills: [TransportShapeSkill]{
 
 species road {
     aspect default {
-//         if (not (routeType in [0,3]))  { draw shape color: #white; }
-//         if (routeType = 3)  { draw shape color: #green; }
-//         if (routeType = 0){ draw shape color: #white; }
-         if (routeType = 1)  { draw shape color: #black; }
-         
-         
-    
-         
-         
-         
-         
+         if (routeType = routeType_selected)  { draw shape color: #black; }
+   
     }
    
     int routeType; 
@@ -131,14 +120,11 @@ species bus skills: [moving] {
 	
 	init {
         speed <- 3.0;
-       	 // 1. Récupérer le shapeId correspondant à ce trip
-       	 int shape_id <- (transport_trip first_with (each.tripId = 1981346)).shapeId;
-       	 write "shape id pour trip 1981346: " + shape_id ;
-//       	 
-//       	  // 2. Récupérer la polyline associée à ce shapeId
-       	 
-
-       	 
+//       	 // 1. Récupérer le shapeId correspondant à ce trip
+//       	 shape_id <- (transport_trip first_with (each.tripId = 1981346)).shapeId;
+       	 routeType_selected <- (transport_trip first_with (each.tripId = selected_trip_id)).routeType;
+       	 write "route type selected: "+ routeType_selected;
+		 
        
     }
     

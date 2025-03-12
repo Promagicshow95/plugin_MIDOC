@@ -47,6 +47,11 @@ public class TransportStop {
     public void addStopPairs(String tripId, IList<GamaPair<String, String>> stopPairs) {
         departureTripsInfo.put(tripId, stopPairs);
     }
+    
+    public void setDepartureTripsInfo(IMap<String, IList<GamaPair<String, String>>> departureTripsInfo) {
+        this.departureTripsInfo = departureTripsInfo;
+    }
+
 
     @SuppressWarnings("unchecked")
 	public void ensureDepartureTripsInfo() {

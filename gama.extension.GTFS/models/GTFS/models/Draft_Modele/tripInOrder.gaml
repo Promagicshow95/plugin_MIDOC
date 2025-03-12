@@ -18,31 +18,39 @@ global {
 	 graph road_network;
 	 list<string> trips_id;
      map<string,string> trips_id_time;
+     bus_stop starts_stop;
+     
 	 
 	 init{
 	 	write "Loading GTFS contents from: " + gtfs_f;
         create road from: cleaned_road_shp;
-        create bus_stop from: gtfs_f {}
+        create bus_stop from: gtfs_f {
+        	
+        }
         
         road_network <- as_edge_graph(road);
         
-        bus_stop starts_stop <- bus_stop[1017];
+        starts_stop <- bus_stop[1017];
+        
         create bus {
         	trips_id <- keys(starts_stop.departureStopsInfo);
+        	write "on va voir: " +trips_id ;
         	
         	map<string, string> trip_first_departure_time;
        
-        	write "list of trip: " + trips_id;
+       		//write "list of trip: " + trips_id;
         	
         
         	
         
         	loop trip_id over: trips_id{
         		list<pair<bus_stop, string>> departureStopsInfo_trip <- starts_stop.departureStopsInfo[trip_id];
+        		
+     
         		list<string> list_times <- departureStopsInfo_trip collect (each.value);
         		trips_id_time[trip_id] <- list_times[0];
         		
-        		 write "Map des trips avec heures de départ : " + trips_id_time;
+        		//write "Map des trips avec heures de départ : " + trips_id_time;
         		
         		list_bus_stops <- departureStopsInfo_trip collect (each.key);
         		
@@ -54,7 +62,7 @@ global {
         	
         	// Trier les trips par heure de départ (ordre croissant)
 			list<string> sorted_trip_ids <- trips_id sort_by (trips_id_time[each]);
-			write "Trips triés par heure de départ : " + sorted_trip_ids;
+			//write "Trips triés par heure de départ : " + sorted_trip_ids;
 		
 			location <- list_bus_stops[0].location;
 			target_location <- list_bus_stops[1].location; 
@@ -69,6 +77,8 @@ species bus_stop skills: [TransportStopSkill] {
     aspect base {
         draw circle(10) color: #blue;
     }
+    
+    
 }
 
 species road {
