@@ -13,6 +13,7 @@ public class TransportStop {
     private String stopId;
     private String stopName;
     private GamaPoint location;
+    private int routeType = -1;
     private IMap<String, IList<GamaPair<String, String>>> departureTripsInfo;
 
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
@@ -68,5 +69,13 @@ public class TransportStop {
         return "TransportStop{id='" + stopId + "', name='" + stopName
                 + "', location={" + locationStr + "}, "
                 + "departureTripsInfo=" + departureTripsInfo + "}";
+    }
+
+    public int getRouteType() {
+        return routeType;
+    }
+
+    public void setRouteType(int routeType) {
+        this.routeType = routeType;
     }
 }

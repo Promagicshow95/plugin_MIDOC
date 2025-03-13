@@ -21,6 +21,9 @@ global {
 	 list<pair<bus_stop,string>> departureStopsInfo;
 	 bus_stop starts_stop;
 	 
+	 
+	 
+	 
 
 	 init{
 	 	write "Loading GTFS contents from: " + gtfs_f;
@@ -41,7 +44,7 @@ global {
         //Récupérer le shapeId correspondant à ce trip
         shape_id <- (transport_trip first_with (each.tripId = selected_trip_id)).shapeId;
         
-    
+    	
         
 		//Creation le réseaux pour faire bouger l'agent bus
      	shape_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id));

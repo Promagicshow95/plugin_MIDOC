@@ -32,6 +32,7 @@ global {
 	 	int current_hour <- current_date.hour;
         int current_minute <- current_date.minute;
         int current_second <- current_date.second;
+        
 
         string current_hour_string <- (current_hour < 10 ? "0" + string(current_hour) : string(current_hour));
         string current_minute_string <- (current_minute < 10 ? "0" + string(current_minute) : string(current_minute));
@@ -54,7 +55,7 @@ species bus_stop skills: [TransportStopSkill] {
   
   reflex check_departure_time when: length(departureStopsInfo) > 0{
   		
-  		list<pair<bus_stop, string>> departureStopsInfo_trip <- starts_stop.departureStopsInfo['trip_1900861'];
+  		list<pair<bus_stop, string>> departureStopsInfo_trip <- starts_stop.departureStopsInfo['1900861'];
         list<bus_stop> list_bus_stops <- departureStopsInfo_trip collect (each.key);
         list<string> list_times <- departureStopsInfo_trip collect (each.value);
         

@@ -51,11 +51,14 @@ global {
      	//Le bus_stop choisit
         starts_stop <- bus_stop[1017];
         
+        list<pair<bus_stop, string>> departureStopsInfo_trip <- starts_stop.departureStopsInfo[1900861];
+        write "departureStopsInfo_trip est: " + departureStopsInfo_trip;
         
         
         
         
-        create bus {
+        
+        create bus number: 1 {
 			departureStopsInfo <- starts_stop.departureStopsInfo['' + selected_trip_id];
 			//departureStopsInfo <- starts_stop.departureStopsInfo['1900861'];
 			list_bus_stops <- departureStopsInfo collect (each.key);
@@ -123,7 +126,7 @@ species bus skills: [moving] {
 	
 	
 	init {
-        speed <- 3.0;
+        	 speed <- 3.0;
        	 routeType_selected <- (transport_trip first_with (each.tripId = selected_trip_id)).routeType;
        	 write "route type selected: "+ routeType_selected;
 

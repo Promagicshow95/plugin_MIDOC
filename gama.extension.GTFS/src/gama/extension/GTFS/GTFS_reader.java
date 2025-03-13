@@ -512,25 +512,25 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 continue;
             }
 
-            // 📌 Récupérer l'heure de départ du premier stop
+            //  Récupérer l'heure de départ du premier stop
             String firstDepartureTime = stopDetails.get(0).get("departureTime").toString();
             if (firstDepartureTime == null || firstDepartureTime.isEmpty()) {
                 System.err.println("[ERROR] No departure time found for Trip ID " + trip.getTripId());
                 continue;
             }
 
-            // 🏷️ Ajouter les stops à la liste
+            //  Ajouter les stops à la liste
             for (int i = 0; i < stopsInOrder.size(); i++) {
                 String stopId = stopsInOrder.get(i);
                 String departureTime = stopDetails.get(i).get("departureTime").toString();
                 stopPairs.add(new GamaPair<>(stopId, departureTime, Types.STRING, Types.STRING));
             }
 
-            // ✅ Ajouter les trips dans `departureTripsInfo` avec leur heure de départ
+            //  Ajouter les trips dans `departureTripsInfo` avec leur heure de départ
             departureTripsInfo.put(String.valueOf(trip.getTripId()), stopPairs);
         }
 
-        // 🔹 Étape 3 : Trier les trips par ordre croissant d'heure de départ
+        //  Étape 3 : Trier les trips par ordre croissant d'heure de départ
         System.out.println("[DEBUG] Sorting trips by departure time...");
         IList<String> sortedTripIds = GamaListFactory.create();
 
@@ -551,7 +551,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 continue;
             }
 
-            // 📌 Récupérer le premier arrêt
+            //  Récupérer le premier arrêt
             String firstStopId = stopPairs.get(0).key;
             TransportStop firstStop = stopsMap.get(firstStopId);
 
