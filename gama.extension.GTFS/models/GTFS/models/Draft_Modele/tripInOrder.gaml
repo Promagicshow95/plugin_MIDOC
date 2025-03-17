@@ -45,7 +45,7 @@ global {
         
         	loop trip_id over: trips_id{
         		list<pair<bus_stop, string>> departureStopsInfo_trip <- starts_stop.departureStopsInfo[trip_id];
-        		
+        		write "departureStopsInfo_trip: "+ departureStopsInfo_trip;
      
         		list<string> list_times <- departureStopsInfo_trip collect (each.value);
         		trips_id_time[trip_id] <- list_times[0];

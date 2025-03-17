@@ -24,6 +24,7 @@ global {
 	 int current_trip_index <- 0;
 	 int trip_id;
 	 bus_stop starts_stop;
+	
 	 
 	
 

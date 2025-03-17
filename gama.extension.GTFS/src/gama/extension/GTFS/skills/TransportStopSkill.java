@@ -17,12 +17,13 @@ import gama.gaml.types.IType;
 
 /**
  * Skill for managing individual transport stops. Provides access to stopId, stopName,
- * and detailed departure information for each stop using the departureStopsInfo structure.
+ * routeType, and detailed departure information for each stop using the departureStopsInfo structure.
  */
-@skill(name = "TransportStopSkill", doc = @doc("Skill for agents representing transport stops. Manages stop details and departure information."))
+@skill(name = "TransportStopSkill", doc = @doc("Skill for agents representing transport stops. Manages stop details, routeType, and departure information."))
 @vars({
     @variable(name = "stopId", type = IType.STRING, doc = @doc("The unique ID of the transport stop.")),
     @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop.")),
+    @variable(name = "routeType", type = IType.INT, doc = @doc("The type of transport route associated with the stop.")),
     @variable(name = "departureStopsInfo", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of GamaPair<IAgent, String> (stop agent and departure time)."))
 })
 public class TransportStopSkill extends Skill {
@@ -39,20 +40,26 @@ public class TransportStopSkill extends Skill {
         return (String) agent.getAttribute("stopName");
     }
 
+    // Getter for routeType
+    @getter("routeType")
+    public int getRouteType(final IAgent agent) {
+        return (int) agent.getAttribute("routeType");
+    }
+
     // Getter for departureStopsInfo
     @SuppressWarnings("unchecked")
-	@getter("departureStopsInfo")
+    @getter("departureStopsInfo")
     public IMap<String, IList<GamaPair<IAgent, String>>> getDepartureStopsInfo(final IAgent agent) {
         return (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
     }
 
- // Action to check if departureStopsInfo is not empty
+    // Action to check if departureStopsInfo is not empty
     @action(name = "isDeparture")
     public boolean isDeparture(final IScope scope) {
         IAgent agent = scope.getAgent();
-		@SuppressWarnings("unchecked")
-		IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo =
-            (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
+        @SuppressWarnings("unchecked")
+        IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo =
+                (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
 
         return departureStopsInfo != null && !departureStopsInfo.isEmpty();
     }
@@ -71,26 +78,5 @@ public class TransportStopSkill extends Skill {
             agentsList.add(pair.getKey());
         }
         return agentsList;
-    }
-
-    // Debug: Print the departureStopsInfo
-    public void debugDepartureStopsInfo(final IAgent agent) {
-        IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo = getDepartureStopsInfo(agent);
-        if (departureStopsInfo == null || departureStopsInfo.isEmpty()) {
-            System.out.println("[DEBUG] departureStopsInfo is empty for stopId=" + getStopId(agent));
-        } else {
-            System.out.println("[DEBUG] departureStopsInfo for stopId=" + getStopId(agent) + " has " 
-                               + departureStopsInfo.size() + " entries: " + departureStopsInfo);
-        }
-    }
-
-    // Debug: Print the stop agents for a specific trip
-    public void debugAgentsForTrip(final IAgent agent, final String tripId) {
-        IList<IAgent> agentsForTrip = getAgentsForTrip(agent, tripId);
-        if (agentsForTrip.isEmpty()) {
-            System.out.println("[DEBUG] No agents found for tripId=" + tripId + " at stopId=" + getStopId(agent));
-        } else {
-            System.out.println("[DEBUG] agents for tripId=" + tripId + " at stopId=" + getStopId(agent) + ": " + agentsForTrip);
-        }
     }
 }
