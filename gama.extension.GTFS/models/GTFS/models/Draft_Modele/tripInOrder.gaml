@@ -45,12 +45,12 @@ global {
         
         	loop trip_id over: trips_id{
         		list<pair<bus_stop, string>> departureStopsInfo_trip <- starts_stop.departureStopsInfo[trip_id];
-        		write "departureStopsInfo_trip: "+ departureStopsInfo_trip;
+        		//write "departureStopsInfo_trip: "+ departureStopsInfo_trip;
      
         		list<string> list_times <- departureStopsInfo_trip collect (each.value);
         		trips_id_time[trip_id] <- list_times[0];
         		
-        		//write "Map des trips avec heures de départ : " + trips_id_time;
+        		write "Map des trips avec heures de départ : " + trips_id_time;
         		
         		list_bus_stops <- departureStopsInfo_trip collect (each.key);
         		
@@ -62,7 +62,7 @@ global {
         	
         	// Trier les trips par heure de départ (ordre croissant)
 			list<string> sorted_trip_ids <- trips_id sort_by (trips_id_time[each]);
-			//write "Trips triés par heure de départ : " + sorted_trip_ids;
+			write "Trips triés par heure de départ : " + sorted_trip_ids;
 		
 			location <- list_bus_stops[0].location;
 			target_location <- list_bus_stops[1].location; 
@@ -74,6 +74,8 @@ global {
 }
 
 species bus_stop skills: [TransportStopSkill] {
+	list<pair<string,string>> sortedTripDeparturesTimes;
+	
     aspect base {
         draw circle(10) color: #blue;
     }
