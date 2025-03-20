@@ -32,13 +32,16 @@ global {
         
         starts_stop <- bus_stop[1017];
         
+        
         create bus {
         	trips_id <- keys(starts_stop.departureStopsInfo);
-        	write "on va voir: " +trips_id ;
+        	//write "on va voir: " +trips_id ;
         	
         	map<string, string> trip_first_departure_time;
        
        		//write "list of trip: " + trips_id;
+       		
+       		
         	
         
         	
@@ -48,21 +51,21 @@ global {
         		//write "departureStopsInfo_trip: "+ departureStopsInfo_trip;
      
         		list<string> list_times <- departureStopsInfo_trip collect (each.value);
+        		//write "list_time: " + list_times;
         		trips_id_time[trip_id] <- list_times[0];
         		
-        		write "Map des trips avec heures de départ : " + trips_id_time;
+        		//write "Map des trips avec heures de départ : " + trips_id_time;
         		
         		list_bus_stops <- departureStopsInfo_trip collect (each.key);
-        		
-        		
-        		
-        		
+      		
         	}
+        	
+        	write "trip_id_time: " + trips_id_time;
         	
         	
         	// Trier les trips par heure de départ (ordre croissant)
 			list<string> sorted_trip_ids <- trips_id sort_by (trips_id_time[each]);
-			write "Trips triés par heure de départ : " + sorted_trip_ids;
+			//write "Trips triés par heure de départ : " + sorted_trip_ids;
 		
 			location <- list_bus_stops[0].location;
 			target_location <- list_bus_stops[1].location; 

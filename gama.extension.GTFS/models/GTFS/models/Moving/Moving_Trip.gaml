@@ -16,10 +16,12 @@ global {
 	 graph shape_network; 
 	 list<bus_stop> list_bus_stops;
 	 int shape_id;
+	 int shape_id_test;
 	 int routeType_selected;
 	 int selected_trip_id <- 1900861;
 	 list<pair<bus_stop,string>> departureStopsInfo;
 	 bus_stop starts_stop;
+	 
 	 
 	 
 	 
@@ -34,15 +36,23 @@ global {
         		do die;
         	}
         }
+        
         create bus_stop from: gtfs_f {
+	    
         }
+        
         create transport_trip from: gtfs_f{
         }
         create transport_shape from: gtfs_f{
         }
-        
+
         //Récupérer le shapeId correspondant à ce trip
         shape_id <- (transport_trip first_with (each.tripId = selected_trip_id)).shapeId;
+        write "shape id is: " + shape_id;
+        //shape_id_test <- (bus_stop first_with (each.tripShapeMap = selected_trip_id)).tripShapeMap[selected_trip_id];
+        //write "shape id is: " + shape_id_test;
+       	
+		
         
     	
         
@@ -51,6 +61,10 @@ global {
      	
      	//Le bus_stop choisit
         starts_stop <- bus_stop[1017];
+        
+      
+        
+       
         
         
         
@@ -74,6 +88,7 @@ global {
 
 species bus_stop skills: [TransportStopSkill] {
     rgb customColor <- rgb(0,0,255); 
+	map<string,string> trip_shape_map;
 	
     aspect base {
       draw circle(20) color: customColor;

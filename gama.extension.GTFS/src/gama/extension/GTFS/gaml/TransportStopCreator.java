@@ -34,8 +34,9 @@ public class TransportStopCreator implements GTFSAgentCreator {
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", stop.getLocation());
-            stopInit.put("routeType", stop.getRouteType()); // ✅ Ajout du routeType
+            stopInit.put("routeType", stop.getRouteType()); 
             stopInit.put("departureTripsInfo", stop.getDepartureTripsInfo());
+            stopInit.put("tripShapeMap", stop.getTripShapeMap());
             stopInit.put("name", stop.getStopName());
             inits.add(stopInit);
         }

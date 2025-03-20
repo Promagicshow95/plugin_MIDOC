@@ -17,6 +17,7 @@ global {
     int shape_id;
     int routeType_selected;
     list<pair<bus_stop,string>> departureStopsInfo;
+    list<string> trips_to_launch;
     bool is_bus_running <- false;
     int current_trip_index <- 0;
     
@@ -39,10 +40,14 @@ global {
      	 	create busManager {
      	 	stop_reference <- bs;
             trips_to_launch <- keys(bs.departureStopsInfo);
-            write "trip to lauch pour chaque stop: " + stop_reference + trips_to_launch;
+           //write "🟢 BusManager créé pour stop: " + stop_reference.name + " avec trips: " + trips_to_launch;
+           write "Nombre de trips pour " + stop_reference.name + ": " + length(trips_to_launch);
+        	
      	 }
      	 
      	 }
+     	 
+     	 
      	 
   
 
@@ -88,12 +93,13 @@ species busManager {
                 target_location <- list_bus_stops[1].location;
                 trip_id <- int(selected_trip_id);
                 manager <- busManager[0];
-                //local_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id));
+                local_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id));
             }
 		}
 	}
 	
-	reflex deploy_bus when: cycle/2 = 0{
+	int launch_delay <- (index of self) * 5; 
+	reflex deploy_bus when: cycle = launch_delay{
 		// given time and the start schedule of each bus
 		do launch_next_trip;
 	}
@@ -155,7 +161,7 @@ species bus skills: [moving] {
     busManager manager;
     
     reflex move when: self.location != target_location {
-        do goto target: target_location on: shape_network speed: 40.0;
+        do goto target: target_location on: local_network speed: 100.00;
     }
     
      reflex check_arrival when: self.location = target_location {

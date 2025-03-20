@@ -35,6 +35,18 @@ global {
        
        ask bus_stop{ do customInit;}
        
+       bus_stop starts_stop <- bus_stop[1017];
+       
+      
+       list<string> list_tripId <- starts_stop.departureStopsInfo.keys();
+       
+       write "list of tripId in departureStopsInfo: " + list_tripId;
+       
+       list<string> list_tripId_shape <- starts_stop.tripShapeMap.keys();
+       
+       write "list of tripId in tripShapeMap: " + list_tripId; 
+       
+       
 //       list<bus_stop> busStopList <- list<bus_stop>(bus_stop);
 //        list<bus_stop> busStopsToBeDeleted <- [];
 //

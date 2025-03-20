@@ -170,7 +170,7 @@ species bus skills: [moving] {
 	
 	
 	init {
-        speed <- 3.0;
+        speed <- 30.0;
         
 		
     }

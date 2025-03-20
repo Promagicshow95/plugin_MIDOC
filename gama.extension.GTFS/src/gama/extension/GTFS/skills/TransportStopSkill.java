@@ -24,7 +24,8 @@ import gama.gaml.types.IType;
     @variable(name = "stopId", type = IType.STRING, doc = @doc("The unique ID of the transport stop.")),
     @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop.")),
     @variable(name = "routeType", type = IType.INT, doc = @doc("The type of transport route associated with the stop.")),
-    @variable(name = "departureStopsInfo", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of GamaPair<IAgent, String> (stop agent and departure time)."))
+    @variable(name = "departureStopsInfo", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of GamaPair<IAgent, String> (stop agent and departure time).")),
+    @variable(name = "tripShapeMap", type = IType.MAP, doc = @doc("Mape where keys are trip IDS and values are shape IDS"))
 })
 public class TransportStopSkill extends Skill {
 
@@ -52,6 +53,14 @@ public class TransportStopSkill extends Skill {
     public IMap<String, IList<GamaPair<IAgent, String>>> getDepartureStopsInfo(final IAgent agent) {
         return (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
     }
+    
+ // Getter for tripShapeMap
+    @SuppressWarnings("unchecked")
+    @getter("tripShapeMap")
+    public IMap<String, Integer> tripShapeMap(final IAgent agent) {
+        return (IMap<String, Integer>) agent.getAttribute("tripShapeMap");
+    }
+
 
     // Action to check if departureStopsInfo is not empty
     @action(name = "isDeparture")
