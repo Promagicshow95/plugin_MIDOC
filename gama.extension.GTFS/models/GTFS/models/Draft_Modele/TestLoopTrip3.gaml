@@ -13,7 +13,11 @@ global{
 	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
 	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	geometry shape <- envelope(boundary_shp);
-	graph shape_network; 
+	graph local_network; 
+	graph shape_network;
+	graph road_network;
+	graph metro_network;
+	
 	int shape_id;
 	int routeType_selected;
 	
@@ -26,6 +30,9 @@ global{
 	map<string, string> sorted_trips_id_time;
 	map<string,string>trips_id_time;
 	string formatted_time;
+	map<string, bool> trips_launched;
+	list<string> launched_trips;
+	
 	 
 	date starting_date <- date("2024-02-21T20:55:00");
 	float step <- 1#mn;
@@ -35,7 +42,6 @@ global{
 			if (self.shape intersects world.shape) {} else { do die; }
 		}
 		create bus_stop from: gtfs_f {}
-		create transport_trip from: gtfs_f {}
 		create transport_shape from: gtfs_f {}
 		
 		// Liste des bus_stop départ
@@ -49,22 +55,23 @@ global{
 		all_trips_to_launch <- keys(global_departure_info);
 		write "all trip to launch: "+ all_trips_to_launch;
 		
-		loop trip_id over: all_trips_to_launch{
+		loop trip_id over: all_trips_to_launch {
 			list<pair<bus_stop, string>> all_trip_global <- global_departure_info[trip_id];
 			//write "all trip global: " + all_trip_global;
 			list<string> list_times <- all_trip_global collect (each.value);
 			trips_id_time[trip_id] <- list_times[0];
-	
+			trips_launched[trip_id] <- false; 
 		}
 	
-		//write "list of trip with time: "+trips_id_time;
+		write "list of trip with time: "+trips_id_time;
 		
 		list<pair<string, string>> pairs_list <- trips_id_time.pairs;
 		pairs_list <- pairs_list sort_by each.value;
 		sorted_trips_id_time <- pairs_list as_map (each.key::each.value);
 		//write "Map trié : " + sorted_trips_id_time;
 		
-		
+		metro_network <- as_edge_graph(transport_shape where (each.routeType = 1));
+		road_network <- as_edge_graph(road);
 		
 		
 	}
@@ -84,8 +91,8 @@ global{
 	 }
 	 
 	 reflex launch_buses_dynamic{
-	 	 loop trip_id over: all_trips_to_launch{
-	 	 	if(formatted_time = sorted_trips_id_time[trip_id]){
+	 	 loop trip_id over: all_trips_to_launch  {
+	 	 	if (formatted_time = sorted_trips_id_time[trip_id] and not trips_launched[trip_id]){
 	 	 		write "Lancement du bus pour trip: " + trip_id + " à l'heure: " + formatted_time;
 	 	 		
 	 	 		int shape_found <- -1;
@@ -95,7 +102,7 @@ global{
 				}
 				
 				shape_id_test <- shape_found;
-				shape_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id_test));
+				local_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id_test));
 				
 				list<pair<bus_stop, string>> departureStopsInfo_trip <- global_departure_info[trip_id];
 				list_bus_stops <- departureStopsInfo_trip collect (each.key);
@@ -108,7 +115,7 @@ global{
 					target_location <- list_bus_stops[1].location;
 					trip_id <- int(trip_id);
 				}
-				
+				trips_launched[trip_id] <- true;
 	 	 	}
 	 	 }
 	 }
@@ -119,28 +126,43 @@ species bus_stop skills: [TransportStopSkill] {
 	aspect base { draw circle(20) color: customColor; }
 }
 
-species transport_trip skills: [TransportTripSkill]{ }
 species transport_shape skills: [TransportShapeSkill] {
 	
-	aspect default { if (shapeId = shape_id_test){ draw shape color: #green; } }
+	//aspect default { if (shapeId = shape_id_test){ draw shape color: #green; } }
+	 aspect default {draw shape color: #black;}
 }
 
 species road {
-	aspect default { if (routeType = routeType_selected) { draw shape color: #black; } }
+	aspect default { if (routeType = routeType_selected) { draw shape color: #grey; } }
 	int routeType; 
 	int shapeId;
 	string routeId;
 }
 
 species bus skills: [moving] {
-	aspect base { draw rectangle(200, 100) color: #red rotate: heading; }
+	aspect base { draw rectangle(50, 50) color: #red rotate: heading; }
 	list<bus_stop> list_bus_stops;
 	int current_stop_index <- 0;
 	point target_location;
 	list<pair<bus_stop,string>> departureStopsInfo;
 	int trip_id;
 	
-	init { speed <- 15.5; }
+	init { speed <- 0.5; }
+	
+	reflex move when: self.location != target_location {
+		do goto target: target_location on: shape_id_test speed: speed;
+	}
+	
+	reflex check_arrival when: self.location = target_location {
+		write "\ud83d\udd38 Bus arrivé à: " + list_bus_stops[current_stop_index].stopName;
+		if (current_stop_index < length(list_bus_stops) - 1) {
+			current_stop_index <- current_stop_index + 1;
+			target_location <- list_bus_stops[current_stop_index].location;
+		} else {
+			write "\u2705 Bus terminé trip " + trip_id;
+			do die;
+		}
+	}
 }
 
 experiment GTFSExperiment type: gui {
