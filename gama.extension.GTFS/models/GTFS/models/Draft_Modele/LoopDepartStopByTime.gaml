@@ -28,7 +28,7 @@ global {
     
     
     init{
-    	 write "📥 Chargement des données GTFS...";
+    	write "📥 Chargement des données GTFS...";
         create road from: cleaned_road_shp {
             if(self.shape intersects world.shape) {} else { do die; }
         }

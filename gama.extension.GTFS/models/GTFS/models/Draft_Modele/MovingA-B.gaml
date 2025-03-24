@@ -36,12 +36,16 @@ global {
 
         bus_stop start_stop <- bus_stop first_with (each.stopName = "Sept Deniers - Salvador Dali");
         bus_stop end_stop <- one_of(bus_stop where (each.stopName = "Fonsegrives Entiore"));
+        
+        bus_stop choisir_stop <- bus_stop[32];
+        string first_time <- choisir_stop.departureStopsInfo.values()[0][0];
+        write "premier l'heure départ: "+first_time;
 
         if (start_stop != nil and end_stop != nil) {
             create bus number: 1 with: (location: start_stop.location, target_location: end_stop.location);
-            write "Bus created at: " + start_stop.location + " going to " + end_stop.location;
+            //write "Bus created at: " + start_stop.location + " going to " + end_stop.location;
         } else {
-            write "Error: Could not find start or destination stop.";
+            //write "Error: Could not find start or destination stop.";
         }
     }
 }

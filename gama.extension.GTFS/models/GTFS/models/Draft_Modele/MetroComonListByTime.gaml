@@ -6,12 +6,11 @@
 */
 
 
-model TestLoopTrip3
+model MetroComonListByTime
 
 global{
 	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
 	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
-	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network; 
 	graph shape_network;
@@ -30,7 +29,7 @@ global{
 	map<string, string> sorted_trips_id_time;
 	map<string,string>trips_id_time;
 	string formatted_time;
-	map<string, bool> trips_launched;
+	map<string, bool> trips_already_launched;
 	list<string> launched_trips;
 	
 	 
@@ -38,9 +37,7 @@ global{
 	float step <- 1#mn;
 	
 	init{
-		create road from: cleaned_road_shp {
-			if (self.shape intersects world.shape) {} else { do die; }
-		}
+
 		create bus_stop from: gtfs_f {}
 		create transport_shape from: gtfs_f {}
 		
@@ -53,25 +50,26 @@ global{
 			global_departure_info <- global_departure_info + info;
 		}
 		all_trips_to_launch <- keys(global_departure_info);
-		write "all trip to launch: "+ all_trips_to_launch;
+		//write "all trip to launch: "+ all_trips_to_launch;
+		//write "longueur des trips: " + length(all_trips_to_launch);
 		
 		loop trip_id over: all_trips_to_launch {
 			list<pair<bus_stop, string>> all_trip_global <- global_departure_info[trip_id];
 			//write "all trip global: " + all_trip_global;
 			list<string> list_times <- all_trip_global collect (each.value);
 			trips_id_time[trip_id] <- list_times[0];
-			trips_launched[trip_id] <- false; 
+			trips_already_launched[trip_id] <- false; 
 		}
 	
-		write "list of trip with time: "+trips_id_time;
+		//write "list of trip with time: "+trips_id_time;
 		
 		list<pair<string, string>> pairs_list <- trips_id_time.pairs;
 		pairs_list <- pairs_list sort_by each.value;
 		sorted_trips_id_time <- pairs_list as_map (each.key::each.value);
-		//write "Map trié : " + sorted_trips_id_time;
+		write "Map trié : " + sorted_trips_id_time;
 		
 		metro_network <- as_edge_graph(transport_shape where (each.routeType = 1));
-		road_network <- as_edge_graph(road);
+	
 		
 		
 	}
@@ -92,11 +90,11 @@ global{
 	 
 	 reflex launch_buses_dynamic{
 	 	 loop trip_id over: all_trips_to_launch  {
-	 	 	if (formatted_time = sorted_trips_id_time[trip_id] and not trips_launched[trip_id]){
+	 	 	if (formatted_time = sorted_trips_id_time[trip_id] and not trips_already_launched[trip_id]){
 	 	 		write "Lancement du bus pour trip: " + trip_id + " à l'heure: " + formatted_time;
 	 	 		
 	 	 		int shape_found <- -1;
-				ask bus_stop where (each.departureStopsInfo != nil) {
+				ask bus_stop where (length(each.departureStopsInfo) > 0 and each.routeType = 1) {
 					shape_found <- self.tripShapeMap[trip_id] as int;
 					if (shape_found != 0) { break; }
 				}
@@ -115,7 +113,7 @@ global{
 					target_location <- list_bus_stops[1].location;
 					trip_id <- int(trip_id);
 				}
-				trips_launched[trip_id] <- true;
+				trips_already_launched[trip_id] <- true;
 	 	 	}
 	 	 }
 	 }
@@ -132,12 +130,6 @@ species transport_shape skills: [TransportShapeSkill] {
 	 aspect default {draw shape color: #black;}
 }
 
-species road {
-	aspect default { if (routeType = routeType_selected) { draw shape color: #grey; } }
-	int routeType; 
-	int shapeId;
-	string routeId;
-}
 
 species bus skills: [moving] {
 	aspect base { draw rectangle(50, 50) color: #red rotate: heading; }
@@ -170,7 +162,6 @@ experiment GTFSExperiment type: gui {
 		display "Bus Simulation" {
 			species bus_stop aspect: base refresh: true;
 			species bus aspect: base;
-			species road aspect: default;
 			species transport_shape aspect: default;
 		}
 	}

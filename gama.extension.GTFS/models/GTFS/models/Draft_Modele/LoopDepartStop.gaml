@@ -6,7 +6,7 @@
 */
 
 
-model GTFSTest
+model LoopDepartStop
 
 global {
 	 gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
