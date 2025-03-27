@@ -13,14 +13,12 @@ global{
 	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network; 
-	graph shape_network;
-	graph road_network;
 	graph metro_network;
 	
 	int shape_id;
 	int routeType_selected;
 	
-	map<string, list<pair<bus_stop, string>>> global_departure_info; 
+	map<string, list<pair<bus_stop, string>>> global_metro_departure_info; 
 	list<string> all_trips_to_launch;
 	int current_trip_index <- 0;
 	int shape_id_test;
@@ -42,19 +40,19 @@ global{
 		create transport_shape from: gtfs_f {}
 		
 		// Liste des bus_stop départ
-		list<bus_stop> departure_stops <- bus_stop where (length(each.departureStopsInfo) > 0 and each.routeType = 1);
-		write "🚏 Départ stops trouvés: " + departure_stops;
+		list<bus_stop> departure_metro_stops <- bus_stop where (length(each.departureStopsInfo) > 0 and each.routeType = 1);
+		write "🚏 Départ stops trouvés: " + departure_metro_stops;
 		
-		loop bs over: departure_stops {
+		loop bs over: departure_metro_stops {
 			map<string, list<pair<bus_stop, string>>> info <- bs.departureStopsInfo;
-			global_departure_info <- global_departure_info + info;
+			global_metro_departure_info <- global_metro_departure_info + info;
 		}
-		all_trips_to_launch <- keys(global_departure_info);
+		all_trips_to_launch <- keys(global_metro_departure_info);
 		//write "all trip to launch: "+ all_trips_to_launch;
 		//write "longueur des trips: " + length(all_trips_to_launch);
 		
 		loop trip_id over: all_trips_to_launch {
-			list<pair<bus_stop, string>> all_trip_global <- global_departure_info[trip_id];
+			list<pair<bus_stop, string>> all_trip_global <- global_metro_departure_info[trip_id];
 			//write "all trip global: " + all_trip_global;
 			list<string> list_times <- all_trip_global collect (each.value);
 			trips_id_time[trip_id] <- list_times[0];
@@ -88,7 +86,7 @@ global{
         
 	 }
 	 
-	 reflex launch_buses_dynamic{
+	 reflex launch_bus_dynamic{
 	 	 loop trip_id over: all_trips_to_launch  {
 	 	 	if (formatted_time = sorted_trips_id_time[trip_id] and not trips_already_launched[trip_id]){
 	 	 		write "Lancement du bus pour trip: " + trip_id + " à l'heure: " + formatted_time;
@@ -100,9 +98,9 @@ global{
 				}
 				
 				shape_id_test <- shape_found;
-				local_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id_test));
 				
-				list<pair<bus_stop, string>> departureStopsInfo_trip <- global_departure_info[trip_id];
+				
+				list<pair<bus_stop, string>> departureStopsInfo_trip <- global_metro_departure_info[trip_id];
 				list_bus_stops <- departureStopsInfo_trip collect (each.key);
 				
 				create bus {
@@ -126,8 +124,8 @@ species bus_stop skills: [TransportStopSkill] {
 
 species transport_shape skills: [TransportShapeSkill] {
 	
-	//aspect default { if (shapeId = shape_id_test){ draw shape color: #green; } }
-	 aspect default {draw shape color: #black;}
+	aspect default { if (shapeId = shape_id_test){ draw shape color: #green; } }
+	 //aspect default {draw shape color: #black;}
 }
 
 
@@ -138,11 +136,14 @@ species bus skills: [moving] {
 	point target_location;
 	list<pair<bus_stop,string>> departureStopsInfo;
 	int trip_id;
+	graph local_network;
 	
-	init { speed <- 0.5; }
+	init { 	speed <- 0.5; 
+			local_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id_test));
+	}
 	
 	reflex move when: self.location != target_location {
-		do goto target: target_location on: shape_id_test speed: speed;
+		do goto target: target_location on: metro_network speed: speed;
 	}
 	
 	reflex check_arrival when: self.location = target_location {

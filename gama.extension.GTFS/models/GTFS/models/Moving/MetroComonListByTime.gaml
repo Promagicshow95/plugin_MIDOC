@@ -13,6 +13,7 @@ global{
 	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network; 
+	graph metro_network;
 
 	int shape_id;
 	int routeType_selected;
@@ -20,7 +21,7 @@ global{
 	map<string, list<pair<bus_stop, string>>> global_departure_info; 
 	list<string> all_trips_to_launch;
 	int current_trip_index <- 0;
-	int shape_id_test;
+	int shape_id_metro;
 	list<bus_stop> list_bus_stops;
 	map<string, string> sorted_trips_id_time;
 	map<string,string>trips_id_time;
@@ -36,6 +37,7 @@ global{
 
 		create bus_stop from: gtfs_f {}
 		create transport_shape from: gtfs_f {}
+		metro_network <- as_edge_graph(transport_shape where (each.routeType =1));
 		
 		// Liste des bus_stop départ
 		list<bus_stop> departure_stops <- bus_stop where (length(each.departureStopsInfo) > 0 and each.routeType = 1);
@@ -91,8 +93,8 @@ global{
 					if (shape_found != 0) { break; }
 				}
 				
-				shape_id_test <- shape_found;
-				local_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id_test));
+				shape_id_metro <- shape_found;
+				
 				
 				list<pair<bus_stop, string>> departureStopsInfo_trip <- global_departure_info[trip_id];
 				list_bus_stops <- departureStopsInfo_trip collect (each.key);
@@ -118,8 +120,8 @@ species bus_stop skills: [TransportStopSkill] {
 
 species transport_shape skills: [TransportShapeSkill] {
 	
-	//aspect default { if (shapeId = shape_id_test){ draw shape color: #green; } }
-	 aspect default {draw shape color: #black;}
+	aspect default { if (shapeId = shape_id_metro){ draw shape color: #green; } }
+	 //aspect default {draw shape color: #black;}
 }
 
 
@@ -130,11 +132,15 @@ species bus skills: [moving] {
 	point target_location;
 	list<pair<bus_stop,string>> departureStopsInfo;
 	int trip_id;
+	graph local_network;
+	graph metro_network;
 	
-	init { speed <- 0.5; }
+	init { 	speed <- 0.5; 
+			local_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id_metro));
+	}
 	
 	reflex move when: self.location != target_location {
-		do goto target: target_location on: shape_id_test speed: speed;
+		do goto target: target_location on: local_network speed: speed;
 	}
 	
 	reflex check_arrival when: self.location = target_location {

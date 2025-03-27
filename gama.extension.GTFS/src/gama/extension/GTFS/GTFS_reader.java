@@ -490,9 +490,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 trip.addStop(stopId);
                 trip.addStopDetail(stopId, departureTime);
 
-                trip.addStop(stopId);
-                trip.addStopDetail(stopId, departureTime);
-
                 TransportStop stop = stopsMap.get(stopId);
                 if (stop != null) {
                     int tripRouteType = trip.getRouteType();

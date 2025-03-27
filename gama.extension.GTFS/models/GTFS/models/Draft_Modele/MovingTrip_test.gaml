@@ -1,5 +1,5 @@
 
-model MovingTriptest
+model Moving_Trip
 
 /**
 * Name: test
@@ -8,23 +8,24 @@ model MovingTriptest
 * Tags: 
 */
 
-
-
-
-
 global {
 	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
 	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
 	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	 geometry shape <- envelope(boundary_shp);
-
-	 graph metro_network;	 
-	 graph real_network; 
 	 graph shape_network; 
 	 list<bus_stop> list_bus_stops;
 	 int shape_id;
+	 int shape_id_test;
 	 int routeType_selected;
-	 int selected_trip_id <-1900861;
+	 int selected_trip_id <- 1900861;
+	 list<pair<bus_stop,string>> departureStopsInfo;
+	 bus_stop starts_stop;
+	 
+	 
+	 
+	 
+	 
 
 	 init{
 	 	write "Loading GTFS contents from: " + gtfs_f;
@@ -35,30 +36,49 @@ global {
         		do die;
         	}
         }
+        
         create bus_stop from: gtfs_f {
+	    
         }
+        
         create transport_trip from: gtfs_f{
         }
         create transport_shape from: gtfs_f{
         }
+
+        //Récupérer le shapeId correspondant à ce trip
+        shape_id <- (transport_trip first_with (each.tripId = selected_trip_id)).shapeId;
+        //write "shape id is: " + shape_id;
+        //shape_id_test <- (bus_stop first_with (each.tripShapeMap = selected_trip_id)).tripShapeMap[selected_trip_id];
+        //write "shape id is: " + shape_id_test;
+       	
+		
         
-        metro_network <- as_edge_graph(road where (each.routeType = 1));
-     	shape_network <- as_edge_graph(transport_shape where (each.shapeId =12722));
-     	  
-        bus_stop starts_stop <- bus_stop[32];
+    	
+        
+		//Creation le réseaux pour faire bouger l'agent bus
+     	shape_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id));
+     	
+     	//Le bus_stop choisit
+        starts_stop <- bus_stop[1017];
+        
+      
+       list<pair<bus_stop,string>> list_bus_time <- starts_stop.departureStopsInfo['' + selected_trip_id];
+       write "list_bus_time" + list_bus_time;
+       
+        
+        
         
         
         
         create bus {
-			departureStopsInfo <- starts_stop.departureStopsInfo['trip_1981346'];
+			departureStopsInfo <- starts_stop.departureStopsInfo['' + selected_trip_id];
 			list_bus_stops <- departureStopsInfo collect (each.key);
-			write "list of bus:" + list_bus_stops;
+			//write "list of bus:" + list_bus_stops;
 			current_stop_index <- 0;
 			location <- list_bus_stops[0].location;
 			target_location <- list_bus_stops[1].location;	  	
-			list<point> route_points;
-			write "start_location "+ location;
-			write "target_location" + target_location;		 
+				 
 		}
 		
 
@@ -69,9 +89,10 @@ global {
 
 species bus_stop skills: [TransportStopSkill] {
     rgb customColor <- rgb(0,0,255); 
+	map<string,string> trip_shape_map;
 	
     aspect base {
-       if(bus_stop in list_bus_stops) {draw circle(20) color: customColor;}
+      draw circle(20) color: customColor;
     }
 }
 
@@ -87,7 +108,7 @@ species transport_shape skills: [TransportShapeSkill]{
      
     }
 	aspect default {
-        if (shapeId = 12722){draw shape color: #green;}
+        if (shapeId = shape_id){draw shape color: #green;}
 
     }
    
@@ -96,10 +117,9 @@ species transport_shape skills: [TransportShapeSkill]{
 
 species road {
     aspect default {
-         if (routeType = routeType_selected)  { draw shape color: #black; }
-   
+         if (routeType = routeType_selected)  { draw shape color: #black; } 
     }
-   
+  
     int routeType; 
     int shapeId;
     string routeId;
@@ -120,12 +140,9 @@ species bus skills: [moving] {
 	
 	init {
         speed <- 3.0;
-//       	 // 1. Récupérer le shapeId correspondant à ce trip
-//       	 shape_id <- (transport_trip first_with (each.tripId = 1981346)).shapeId;
        	 routeType_selected <- (transport_trip first_with (each.tripId = selected_trip_id)).routeType;
-       	 write "route type selected: "+ routeType_selected;
-		 
-       
+       	 //write "route type selected: "+ routeType_selected;
+
     }
     
     
@@ -138,14 +155,14 @@ species bus skills: [moving] {
     
    // Reflexe pour vérifier l'arrivée et mettre à jour le prochain arrêt
     reflex check_arrival when: self.location = target_location {
-        write "Bus arrivé à : " + list_bus_stops[current_stop_index].stopName;
+        //write "Bus arrivé à : " + list_bus_stops[current_stop_index].stopName;
         
         if (current_stop_index < length(list_bus_stops) - 1) {
             current_stop_index <- current_stop_index + 1;
             target_location <- list_bus_stops[current_stop_index].location;
             write "Prochain arrêt : " + list_bus_stops[current_stop_index].stopName;
         } else {
-            write "Bus a atteint le dernier arrêt.";
+            //write "Bus a atteint le dernier arrêt.";
             target_location <- nil;
         }
     }
@@ -162,6 +179,12 @@ experiment GTFSExperiment type: gui {
         }
     }
 }
+
+
+
+
+
+
 
 
 
