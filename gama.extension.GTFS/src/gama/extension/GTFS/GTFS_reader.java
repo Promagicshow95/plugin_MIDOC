@@ -533,13 +533,17 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
 
             // 🔹 Associer `tripId` à `firstDepartureTime`
-            tripDepartureTimes.put(String.valueOf(trip.getTripId()), firstDepartureTime);
+            tripDepartureTimes.put(String.valueOf(trip.getTripId()), convertTimeToSeconds(firstDepartureTime));
 
             // 🔹 Ajouter les stops et horaires au trip
             for (int i = 0; i < stopsInOrder.size(); i++) {
                 String stopId = stopsInOrder.get(i);
                 String departureTime = stopDetails.get(i).get("departureTime").toString();
-                stopPairs.add(new GamaPair<>(stopId, departureTime, Types.STRING, Types.STRING));
+
+                // ✅ Convertir en secondes sur 24h
+                String departureInSeconds = convertTimeToSeconds(departureTime);
+
+                stopPairs.add(new GamaPair<>(stopId, departureInSeconds, Types.STRING, Types.STRING));
             }
 
             departureTripsInfo.put(String.valueOf(trip.getTripId()), stopPairs);
@@ -604,6 +608,20 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
         System.out.println("computeDepartureInfo completed successfully.");
     }
-
+    
+    // Method to convert departureTime of stops into seconds
+    private String convertTimeToSeconds(String timeStr) {
+        try {
+            String[] parts = timeStr.split(":");
+            int hours = Integer.parseInt(parts[0]);
+            int minutes = Integer.parseInt(parts[1]);
+            int seconds = Integer.parseInt(parts[2]);
+            int totalSeconds = (hours * 3600 + minutes * 60 + seconds) % 86400;
+            return String.valueOf(totalSeconds);
+        } catch (Exception e) {
+            System.err.println("[ERROR] Failed to convert time: " + timeStr + " -> " + e.getMessage());
+            return "0";  // fallback
+        }
+    }
 
 }

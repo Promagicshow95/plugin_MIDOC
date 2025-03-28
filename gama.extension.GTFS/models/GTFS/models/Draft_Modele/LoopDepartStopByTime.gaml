@@ -10,6 +10,7 @@ global {
 	int shape_id;
 	map<int, graph> shape_graphs;
 	string formatted_time;
+	int current_seconds_mod;
 
 	date starting_date <- date("2024-02-21T20:55:00");
 	float step <- 1 #mn;
@@ -27,16 +28,17 @@ global {
 	}
 
 	reflex update_formatted_time {
-		int current_hour <- current_date.hour;
-		int current_minute <- current_date.minute;
-		int current_second <- current_date.second;
+	int current_hour <- current_date.hour;
+	int current_minute <- current_date.minute;
+	int current_second <- current_date.second;
 
-		string current_hour_string <- (current_hour < 10 ? "0" + string(current_hour) : string(current_hour));
-		string current_minute_string <- (current_minute < 10 ? "0" + string(current_minute) : string(current_minute));
-		string current_second_string <- (current_second < 10 ? "0" + string(current_second) : string(current_second));
+	// Convertir l'heure actuelle en secondes
+	int current_total_seconds <- current_hour * 3600 + current_minute * 60 + current_second;
 
-		formatted_time <- current_hour_string + ":" + current_minute_string + ":" + current_second_string;
-	}
+	// Ramener l'heure sur 24h avec modulo
+	current_seconds_mod <- current_total_seconds mod 86400;
+
+}
 }
 
 species bus_stop skills: [TransportStopSkill] {
@@ -47,11 +49,6 @@ species bus_stop skills: [TransportStopSkill] {
 	bool initialized <- false;
 
 	init {
-		loop trip_id over: keys(departureStopsInfo) {
-			trips_launched[trip_id] <- false;
-		}
-		
-		
 	}  
 	
 	reflex init_test when: cycle =1{
@@ -65,16 +62,14 @@ species bus_stop skills: [TransportStopSkill] {
 	
 	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids)){
 		string trip_id <- ordered_trip_ids[current_trip_index];
-		//write "trip id: " + trip_id ;
 		list<pair<bus_stop, string>> trip_info <- departureStopsInfo[trip_id];
 		string departure_time <- trip_info[0].value;
-		if departure_time = "24:00:00"{departure_time <- "00:00:00";}
 		
 		if (routeType = 1) {
-			write "formatted_time: " + formatted_time;
+			write "current_seconds_mod: " + current_seconds_mod;
 			write "departure_time: " + departure_time;}
 		
-		if (formatted_time = departure_time ){
+		if (current_seconds_mod >= int(departure_time) ){
 		
 			int shape_found <- tripShapeMap[trip_id] as int;
 			
@@ -90,8 +85,8 @@ species bus_stop skills: [TransportStopSkill] {
 					route_type <- myself.routeType;
 					local_network <- shape_graphs[shape_id];// Utilise le graphe préchargé
 				}
-				
 				current_trip_index <- (current_trip_index + 1) mod length(ordered_trip_ids);
+				trips_launched[trip_id] <- true;
 			}
 		}
 	}

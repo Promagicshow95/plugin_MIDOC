@@ -8,7 +8,7 @@ global {
 	graph local_network;
 	graph metro_network;
 	int shape_id;
-	string formatted_time;
+	int current_seconds_mod;
 	
 	date starting_date <- date("2024-02-21T20:55:00");
 	float step <- 10 #mn;
@@ -28,12 +28,13 @@ global {
 		int current_minute <- current_date.minute;
 		int current_second <- current_date.second;
 
-		string current_hour_string <- (current_hour < 10 ? "0" + string(current_hour) : string(current_hour));
-		string current_minute_string <- (current_minute < 10 ? "0" + string(current_minute) : string(current_minute));
-		string current_second_string <- (current_second < 10 ? "0" + string(current_second) : string(current_second));
+	// Convertir l'heure actuelle en secondes
+	int current_total_seconds <- current_hour * 3600 + current_minute * 60 + current_second;
 
-		formatted_time <- current_hour_string + ":" + current_minute_string + ":" + current_second_string;
-	}
+	// Ramener l'heure sur 24h avec modulo
+	current_seconds_mod <- current_total_seconds mod 86400;
+
+}
 }
 
 species bus_stop skills: [TransportStopSkill] {
@@ -49,8 +50,6 @@ species bus_stop skills: [TransportStopSkill] {
 			trips_launched[trip_id] <- false;
 		}
 		
-		ordered_trip_ids <- keys(departureStopsInfo);
-		if (ordered_trip_ids !=nil) {write "ordered_trip_ids: " + ordered_trip_ids;}
 	}
 	
 
@@ -59,11 +58,11 @@ species bus_stop skills: [TransportStopSkill] {
 			list<pair<bus_stop, string>> trip_info <- departureStopsInfo[trip_id];
 			string departure_time <- trip_info[0].value;
 
-			if (formatted_time = departure_time and not trips_launched[trip_id]) {
+			if (current_seconds_mod = int(departure_time) and not trips_launched[trip_id]) {
 				int shape_found <- tripShapeMap[trip_id] as int;
 				if shape_found != 0 {
 					write "🚍 Lancement du " + (routeType = 1 ? "métro" : "bus") + 
-					      " trip " + trip_id + " à " + formatted_time + " depuis " + name;
+					      " trip " + trip_id + " à " + current_seconds_mod + " depuis " + name;
 
 					list<bus_stop> bs_list <- trip_info collect (each.key);
 					shape_id <- shape_found;

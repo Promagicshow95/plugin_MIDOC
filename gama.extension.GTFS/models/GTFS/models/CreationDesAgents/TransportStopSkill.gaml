@@ -4,6 +4,9 @@ global {
     // Path to the GTFS file
      gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");	
 	 shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
+	 string formatted_time;
+
+	date starting_date <- date("2024-02-21T20:55:00");
 
 	//shape_file boundary_shp <- shape_file("../includes/boundaryHN.shp");
     //gtfs_file gtfs_f <- gtfs_file("../includes/hanoi_gtfs_am");	
@@ -18,14 +21,14 @@ global {
  
     // Initialization section
     init {
-        write "Loading GTFS contents from: " + gtfs_f;
+       // write "Loading GTFS contents from: " + gtfs_f;
         
         // Log the boundary envelope by stops
-    	write "Boundary envelope: " + shape;
+    	//write "Boundary envelope: " + shape;
     	
     	// Check envelope of shape file
     	geometry stop_envelope <- envelope(gtfs_f);
-    	write "Stop envelope: " + stop_envelope;
+    	//write "Stop envelope: " + stop_envelope;
         
         // Create bus_stop agents from the GTFS data
        create bus_stop from: gtfs_f  {
@@ -38,13 +41,27 @@ global {
        bus_stop starts_stop <- bus_stop[1017];
        
       
-       list<string> list_tripId <- starts_stop.departureStopsInfo.keys();
+       //list<string> list_tripId <- starts_stop.departureStopsInfo.keys();
        
-       write "list of tripId in departureStopsInfo: " + list_tripId;
+       //write "list of tripId in departureStopsInfo: " + list_tripId;
        
-       list<string> list_tripId_shape <- starts_stop.tripShapeMap.keys();
+       //list<string> list_tripId_shape <- starts_stop.tripShapeMap.keys();
        
-       write "list of tripId in tripShapeMap: " + list_tripId; 
+       //write "list of tripId in tripShapeMap: " + list_tripId; 
+       	int current_hour <- current_date.hour;
+		int current_minute <- current_date.minute;
+		int current_second <- current_date.second;
+
+	// Convertir l'heure actuelle en secondes
+		int current_total_seconds <- current_hour * 3600 + current_minute * 60 + current_second;
+
+	// Ramener l'heure sur 24h avec modulo
+		int current_seconds_mod <- current_total_seconds mod 86400;
+
+		write "current_seconds_mod" + current_seconds_mod;
+       
+       
+       
        
        
 //       list<bus_stop> busStopList <- list<bus_stop>(bus_stop);
@@ -65,6 +82,8 @@ global {
 //       
        
     }
+    
+ 
 }
 
 // Species representing each transport stop
@@ -72,7 +91,7 @@ species bus_stop skills: [TransportStopSkill] {
 	
   action customInit  {
     	if length(departureStopsInfo)> 0 {
-       		write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + ", departureStopsInfo: " + departureStopsInfo;
+       		//write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + ", departureStopsInfo: " + departureStopsInfo;
        }
 
 		
@@ -106,7 +125,7 @@ species bus_stop skills: [TransportStopSkill] {
 species my_species skills: [TransportStopSkill] {
     // Accès à la liste des arrêts créés
     reflex check_stops {
-        write "Nombre d'arrêts créés: " + length(bus_stop);  // Affiche le nombre d'arrêts créés
+        //write "Nombre d'arrêts créés: " + length(bus_stop);  // Affiche le nombre d'arrêts créés
     }
     aspect base {
     	draw circle (100.0) at: location color:#blue;
