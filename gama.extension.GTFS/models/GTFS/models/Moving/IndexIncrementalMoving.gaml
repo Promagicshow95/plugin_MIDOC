@@ -22,11 +22,11 @@ global {
 	string formatted_time;
 	int current_seconds_mod;
 
-	date starting_date <- date("2024-02-21T20:55:00");
-	float step <- 30 #s;
+	date starting_date <- date("2024-02-21T00:00:00");
+	float step <- 1 #s;
 
 	init {
-		write "\ud83d\uddd3\ufe0f Chargement des donn\u00e9es GTFS...";
+		//write "\ud83d\uddd3\ufe0f Chargement des donn\u00e9es GTFS...";
 		create bus_stop from: gtfs_f {
 		}
 		create transport_shape from: gtfs_f {}
@@ -63,7 +63,7 @@ species bus_stop skills: [TransportStopSkill] {
 	
 	reflex init_test when: cycle =1{
 		ordered_trip_ids <- keys(departureStopsInfo);
-		if (ordered_trip_ids !=nil) {write "ordered_trip_ids: " + ordered_trip_ids;}
+		if (ordered_trip_ids !=nil) {}
 		}
 	
 	
@@ -71,6 +71,8 @@ species bus_stop skills: [TransportStopSkill] {
 		string trip_id <- ordered_trip_ids[current_trip_index];
 		list<pair<bus_stop, string>> trip_info <- departureStopsInfo[trip_id];
 		string departure_time <- trip_info[0].value;
+		
+		
 
 		if (current_seconds_mod >= int(departure_time) ){
 		
@@ -79,17 +81,19 @@ species bus_stop skills: [TransportStopSkill] {
 			if shape_found != 0{
 				shape_id <- shape_found;
 				
-				create bus {
-					departureStopsInfo <- trip_info;
-					current_stop_index <- 0;
-					location <- trip_info[0].key.location;
-					target_location <- trip_info[1].key.location;
-					trip_id <- int(trip_id);
-					route_type <- myself.routeType;
-					local_network <- shape_graphs[shape_id];// Utilise le graphe préchargé
-				}
+				create bus with:[
+					departureStopsInfo:: trip_info,
+					current_stop_index :: 0,
+					location :: trip_info[0].key.location,
+					target_location :: trip_info[1].key.location,
+					trip_id :: int(trip_id),
+					route_type :: self.routeType,
+					shapeID ::shape_id,
+					local_network :: shape_graphs[shape_id]// Utilise le graphe préchargé
+				];
 				
 				current_trip_index <- (current_trip_index + 1) mod length(ordered_trip_ids);
+				//write "current_trip_index: " + current_trip_index;
 				
 			}
 		}
@@ -122,24 +126,53 @@ species bus skills: [moving] {
 	point target_location;
 	list<pair<bus_stop,string>> departureStopsInfo;
 	int trip_id;
+	int shapeID;
 	int route_type;
+	int duration;
+	bool waiting_at_stop <- true;
+	
 
 	init {
-		if (route_type = 1) { speed <- 35.0 #km/#h; }
-		else if (route_type = 3) { speed <- 17.75 #km/#h; }
-		else if (route_type = 0) { speed <- 19.8 #km/#h; }
-		else if (route_type = 6) { speed <- 17.75 #km/#h; }
-		else { speed <- 20.0 #km/#h; }
+	}
+	
+	reflex wait_at_stop when: waiting_at_stop {
+		int stop_time <- departureStopsInfo[current_stop_index].value as int;
+
+		if (current_seconds_mod >= stop_time) {
+			// L'heure est atteinte, on peut partir
+			waiting_at_stop <- false;
+		}
+	}
+	
+	reflex configure_speed when: not waiting_at_stop and current_stop_index = 0 {
+		int first_time <- departureStopsInfo[0].value as int;
+		int last_index <- length(departureStopsInfo) - 1;
+		int last_time <- departureStopsInfo[last_index].value as int;
+
+		duration <- last_time - first_time;
+		if duration <= 0 {
+			write "⚠️ Durée du trip non valide pour trip " + trip_id;
+			speed <- 15 #km/#h; // Valeur par défaut si problème
+		} else {
+			// Récupérer la géométrie du trajet via shapeId
+			geometry geom <- (transport_shape first_with (each.shapeId = shapeID)).shape;
+		
+			float dist <- perimeter(geom); // en mètres
+			speed <- (dist / duration) #m/#s;
+			write "✅ [Trip " + trip_id + "] vitesse calculée : " + speed + " m/s pour " + dist + "m en " + duration + "s";
+		}
 	}
 
-	reflex move when: self.location != target_location {
+
+	reflex move when: not waiting_at_stop and self.location != target_location {
 		do goto target: target_location on: local_network speed: speed;
 	}
 
-	reflex check_arrival when: self.location = target_location {
+	reflex check_arrival when: self.location = target_location and not waiting_at_stop {
 		if (current_stop_index < length(departureStopsInfo) - 1) {
 			current_stop_index <- current_stop_index + 1;
-			target_location <- departureStopsInfo[current_stop_index].key().location;
+			target_location <- departureStopsInfo[current_stop_index].key.location;
+			waiting_at_stop <- true; // Arrivé à un nouveau stop, il faut attendre
 		} else {
 			do die;
 		}
