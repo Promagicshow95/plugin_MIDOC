@@ -67,7 +67,7 @@ species bus_stop skills: [TransportStopSkill] {
 		}
 	
 	
-	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids)){
+	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids) and routeType = 0){
 		string trip_id <- ordered_trip_ids[current_trip_index];
 		list<pair<bus_stop, string>> trip_info <- departureStopsInfo[trip_id];
 		string departure_time <- trip_info[0].value;
@@ -93,7 +93,7 @@ species bus_stop skills: [TransportStopSkill] {
 				];
 				
 				current_trip_index <- (current_trip_index + 1) mod length(ordered_trip_ids);
-				//write "current_trip_index: " + current_trip_index;
+				write "🛠️ Trip lancé: " + trip_id + " à " + departure_time + " (route_type=" + self.routeType + ")";
 				
 			}
 		}
@@ -130,6 +130,7 @@ species bus skills: [moving] {
 	int route_type;
 	int duration;
 	int last_time_diff <- 0; 
+	list<int> time_differences <- [];
 	bool waiting_at_stop <- true;
 	
 
@@ -152,7 +153,7 @@ species bus skills: [moving] {
 
 		duration <- last_time - first_time;
 		if duration <= 0 {
-			write "⚠️ Durée du trip non valide pour trip " + trip_id;
+			//write "⚠️ Durée du trip non valide pour trip " + trip_id;
 			speed <- 15 #km/#h; // Valeur par défaut si problème
 		} else {
 			// Récupérer la géométrie du trajet via shapeId
@@ -160,7 +161,7 @@ species bus skills: [moving] {
 		
 			float dist <- perimeter(geom); // en mètres
 			speed <- (dist / duration) #m/#s;
-			write "✅ [Trip " + trip_id + "] vitesse calculée : " + speed + " m/s pour " + dist + "m en " + duration + "s";
+			//write "✅ [Trip " + trip_id + "] vitesse calculée : " + speed + " m/s pour " + dist + "m en " + duration + "s";
 		}
 	}
 
@@ -176,6 +177,7 @@ species bus skills: [moving] {
 			int expected_arrival_time <- departureStopsInfo[current_stop_index + 1].value as int;
 			int actual_time <- current_seconds_mod;
 			last_time_diff <- actual_time - expected_arrival_time;
+			time_differences <- time_differences + [last_time_diff];
 			
 			current_stop_index <- current_stop_index + 1;
 			target_location <- departureStopsInfo[current_stop_index].key.location;
@@ -197,8 +199,9 @@ experiment GTFSExperiment type: gui {
 		 display monitor {
   			chart "Mean arrival time diff" type: series
   			{
-    		data "Early" value: sum(bus collect (each.last_time_diff > 0? each.last_time_diff: 0)) color: # green marker_shape: marker_empty style: spline;
-    		data "Late" value: sum(bus collect (each.last_time_diff < 0? -each.last_time_diff: 0)) color: # red marker_shape: marker_empty style: spline;
+    		data "Early" value: sum(bus collect (sum(each.time_differences where (each > 0)))) color: #green;
+			data "Late" value: sum(bus collect (sum(each.time_differences where (each < 0)) * -1)) color: #red;
+
   			}
  		}
 	}
