@@ -129,6 +129,7 @@ species bus skills: [moving] {
 	int shapeID;
 	int route_type;
 	int duration;
+	int last_time_diff <- 0; 
 	bool waiting_at_stop <- true;
 	
 
@@ -170,6 +171,12 @@ species bus skills: [moving] {
 
 	reflex check_arrival when: self.location = target_location and not waiting_at_stop {
 		if (current_stop_index < length(departureStopsInfo) - 1) {
+			
+			// Calcul de l'écart de temps
+			int expected_arrival_time <- departureStopsInfo[current_stop_index + 1].value as int;
+			int actual_time <- current_seconds_mod;
+			last_time_diff <- actual_time - expected_arrival_time;
+			
 			current_stop_index <- current_stop_index + 1;
 			target_location <- departureStopsInfo[current_stop_index].key.location;
 			waiting_at_stop <- true; // Arrivé à un nouveau stop, il faut attendre
@@ -186,7 +193,13 @@ experiment GTFSExperiment type: gui {
 			species bus aspect: base;
 			species transport_shape aspect: default;
 		}
+		
+		 display monitor {
+  			chart "Mean arrival time diff" type: series
+  			{
+    		data "Early" value: sum(bus collect (each.last_time_diff > 0? each.last_time_diff: 0)) color: # green marker_shape: marker_empty style: spline;
+    		data "Late" value: sum(bus collect (each.last_time_diff < 0? -each.last_time_diff: 0)) color: # red marker_shape: marker_empty style: spline;
+  			}
+ 		}
 	}
 }
-
-
