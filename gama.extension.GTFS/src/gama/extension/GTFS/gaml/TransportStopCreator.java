@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 
 public class TransportStopCreator implements GTFSAgentCreator {
+    
     private List<TransportStop> stops;
 
     public TransportStopCreator(List<TransportStop> stops) {
@@ -34,9 +35,10 @@ public class TransportStopCreator implements GTFSAgentCreator {
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
             stopInit.put("location", stop.getLocation());
-            stopInit.put("routeType", stop.getRouteType()); 
+            stopInit.put("routeType", stop.getRouteType());
             stopInit.put("departureTripsInfo", stop.getDepartureTripsInfo());
             stopInit.put("tripShapeMap", stop.getTripShapeMap());
+            stopInit.put("departureShapeDistances", stop.getDepartureShapeDistances()); // 🔥 ajoute ce champ !
             stopInit.put("name", stop.getStopName());
             inits.add(stopInit);
         }
@@ -45,6 +47,7 @@ public class TransportStopCreator implements GTFSAgentCreator {
     @Override
     public IList<? extends IAgent> createAgents(IScope scope, IPopulation<? extends IAgent> population, List<Map<String, Object>> inits, CreateStatement statement, RemoteSequence sequence) {
         IList<? extends IAgent> createdAgents = population.createAgents(scope, inits.size(), inits, false, true);
+
         @SuppressWarnings("unchecked")
         IMap<String, IAgent> stopIdToAgentMap = GamaMapFactory.create(Types.STRING, Types.AGENT);
 
@@ -64,6 +67,7 @@ public class TransportStopCreator implements GTFSAgentCreator {
 
             @SuppressWarnings("unchecked")
             IMap<String, IList<GamaPair<IAgent, String>>> departureStopsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
+
             for (Map.Entry<String, IList<GamaPair<String, String>>> entry : departureTripsInfo.entrySet()) {
                 IList<GamaPair<IAgent, String>> convertedStops = GamaListFactory.create(Types.PAIR);
                 for (GamaPair<String, String> pair : entry.getValue()) {
@@ -76,9 +80,12 @@ public class TransportStopCreator implements GTFSAgentCreator {
             }
 
             agent.setAttribute("departureStopsInfo", departureStopsInfo);
+
+            // 🔥 Important : departureShapeDistances n'a pas besoin de conversion, donc on le laisse comme il est
+            // (déjà chargé dans addInits)
         }
 
-        return createdAgents; 
+        return createdAgents;
     }
 
     @Override

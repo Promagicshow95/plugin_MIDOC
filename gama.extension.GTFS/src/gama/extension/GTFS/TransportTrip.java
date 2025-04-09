@@ -42,13 +42,15 @@ public class TransportTrip {
     }
 
     // Add stop details (stopId and departureTime)
-    public void addStopDetail(String stopId, String departureTime) {
+    public void addStopDetail(String stopId, String departureTime, double shapeDistTraveled) {
         @SuppressWarnings("unchecked")
-		IMap<String, Object> stopEntry = GamaMapFactory.create();
-        stopEntry.put("stopId", stopId);
-        stopEntry.put("departureTime", departureTime);
-        stopDetails.add(stopEntry);
+		IMap<String, Object> stopDetail = GamaMapFactory.create();
+        stopDetail.put("stopId", stopId);
+        stopDetail.put("departureTime", departureTime);
+        stopDetail.put("shapeDistTraveled", shapeDistTraveled); // 🔥 ajoute la distance
+        stopDetails.add(stopDetail);
     }
+
 
     // Set stop details
     public void setStopDetails(IList<IMap<String, Object>> stopDetails) {

@@ -17,6 +17,7 @@ public class TransportStop {
     private int routeType = -1;
     private IMap<String, IList<GamaPair<String, String>>> departureTripsInfo;
     private IMap<String, Integer> tripShapeMap;
+    private IMap<String, IList<Double>> departureShapeDistances;
 
     @SuppressWarnings("unchecked")
 	public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
@@ -25,6 +26,7 @@ public class TransportStop {
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
         this.departureTripsInfo = null;
         this.tripShapeMap = GamaMapFactory.create(Types.STRING, Types.INT);
+        this.departureShapeDistances = GamaMapFactory.create(Types.STRING, Types.LIST);
     }
 
     public String getStopId() { return stopId; }
@@ -59,6 +61,15 @@ public class TransportStop {
     public void addTripShapePair(String tripId, int shapeId) {
         this.tripShapeMap.put(tripId, shapeId);
     }
+    
+    public IMap<String, IList<Double>> getDepartureShapeDistances() {
+        return departureShapeDistances;
+    }
+
+    public void addDepartureShapeDistances(String tripId, IList<Double> distances) {
+        departureShapeDistances.put(tripId, distances);
+    }
+
 
     @Override
     public String toString() {

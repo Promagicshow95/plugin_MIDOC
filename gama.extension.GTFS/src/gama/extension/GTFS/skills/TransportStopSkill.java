@@ -19,13 +19,14 @@ import gama.gaml.types.IType;
  * Skill for managing individual transport stops. Provides access to stopId, stopName,
  * routeType, and detailed departure information for each stop using the departureStopsInfo structure.
  */
-@skill(name = "TransportStopSkill", doc = @doc("Skill for agents representing transport stops. Manages stop details, routeType, and departure information."))
+@skill(name = "TransportStopSkill", doc = @doc("Skill for agents representing transport stops. Manages stop details, routeType, departure information, and shape distances."))
 @vars({
     @variable(name = "stopId", type = IType.STRING, doc = @doc("The unique ID of the transport stop.")),
     @variable(name = "stopName", type = IType.STRING, doc = @doc("The name of the transport stop.")),
     @variable(name = "routeType", type = IType.INT, doc = @doc("The type of transport route associated with the stop.")),
     @variable(name = "departureStopsInfo", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of GamaPair<IAgent, String> (stop agent and departure time).")),
-    @variable(name = "tripShapeMap", type = IType.MAP, doc = @doc("Mape where keys are trip IDS and values are shape IDS"))
+    @variable(name = "tripShapeMap", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are shape IDs.")),
+    @variable(name = "departureShapeDistances", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of cumulative distances along the shape (in meters)."))
 })
 public class TransportStopSkill extends Skill {
 
@@ -53,14 +54,20 @@ public class TransportStopSkill extends Skill {
     public IMap<String, IList<GamaPair<IAgent, String>>> getDepartureStopsInfo(final IAgent agent) {
         return (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
     }
-    
- // Getter for tripShapeMap
+
+    // Getter for tripShapeMap
     @SuppressWarnings("unchecked")
     @getter("tripShapeMap")
     public IMap<String, Integer> tripShapeMap(final IAgent agent) {
         return (IMap<String, Integer>) agent.getAttribute("tripShapeMap");
     }
 
+    // 🔥 Nouveau Getter pour departureShapeDistances
+    @SuppressWarnings("unchecked")
+    @getter("departureShapeDistances")
+    public IMap<String, IList<Double>> getDepartureShapeDistances(final IAgent agent) {
+        return (IMap<String, IList<Double>>) agent.getAttribute("departureShapeDistances");
+    }
 
     // Action to check if departureStopsInfo is not empty
     @action(name = "isDeparture")
