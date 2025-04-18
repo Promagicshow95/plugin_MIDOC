@@ -48,6 +48,7 @@ public class TransportShapeCreator implements GTFSAgentCreator {
 	        map.put("routeType", routeType);
 	        map.put("routeId", shape.getRouteId());
 	        map.put("tripId", shape.getTripId());
+	        map.put("shape_points", shape.getPoints());
 
 	        inits.add(map);
 	    }

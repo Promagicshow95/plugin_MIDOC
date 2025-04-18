@@ -26,7 +26,7 @@ import gama.gaml.types.IType;
     @variable(name = "routeType", type = IType.INT, doc = @doc("The type of transport route associated with the stop.")),
     @variable(name = "departureStopsInfo", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of GamaPair<IAgent, String> (stop agent and departure time).")),
     @variable(name = "tripShapeMap", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are shape IDs.")),
-    @variable(name = "departureShapeDistances", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of cumulative distances along the shape (in meters)."))
+    @variable(name = "departureShapeIndexes", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of shape indices corresponding to each stop."))
 })
 public class TransportStopSkill extends Skill {
 
@@ -62,11 +62,10 @@ public class TransportStopSkill extends Skill {
         return (IMap<String, Integer>) agent.getAttribute("tripShapeMap");
     }
 
-    // 🔥 Nouveau Getter pour departureShapeDistances
     @SuppressWarnings("unchecked")
-    @getter("departureShapeDistances")
-    public IMap<String, IList<Double>> getDepartureShapeDistances(final IAgent agent) {
-        return (IMap<String, IList<Double>>) agent.getAttribute("departureShapeDistances");
+    @getter("departureShapeIndexes")
+    public IMap<String, IList<Integer>> getDepartureShapeIndexes(final IAgent agent) {
+        return (IMap<String, IList<Integer>>) agent.getAttribute("departureShapeIndexes");
     }
 
     // Action to check if departureStopsInfo is not empty

@@ -15,18 +15,19 @@ public class TransportStop {
     private String stopName;
     private GamaPoint location;
     private int routeType = -1;
+
     private IMap<String, IList<GamaPair<String, String>>> departureTripsInfo;
     private IMap<String, Integer> tripShapeMap;
-    private IMap<String, IList<Double>> departureShapeDistances;
+    private IMap<String, IList<Integer>> departureShapeIndexes; 
 
     @SuppressWarnings("unchecked")
-	public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
+    public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
         this.stopId = stopId;
         this.stopName = stopName;
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
         this.departureTripsInfo = null;
         this.tripShapeMap = GamaMapFactory.create(Types.STRING, Types.INT);
-        this.departureShapeDistances = GamaMapFactory.create(Types.STRING, Types.LIST);
+        this.departureShapeIndexes = GamaMapFactory.create(Types.STRING, Types.LIST);  // 🔥
     }
 
     public String getStopId() { return stopId; }
@@ -35,7 +36,9 @@ public class TransportStop {
     public int getRouteType() { return routeType; }
     public void setRouteType(int routeType) { this.routeType = routeType; }
 
-    public IMap<String, IList<GamaPair<String, String>>> getDepartureTripsInfo() { return departureTripsInfo; }
+    public IMap<String, IList<GamaPair<String, String>>> getDepartureTripsInfo() {
+        return departureTripsInfo;
+    }
 
     public void addStopPairs(String tripId, IList<GamaPair<String, String>> stopPairs) {
         departureTripsInfo.put(tripId, stopPairs);
@@ -45,31 +48,27 @@ public class TransportStop {
         this.departureTripsInfo = departureTripsInfo;
     }
 
-    @SuppressWarnings("unchecked")
     public void ensureDepartureTripsInfo() {
         if (this.departureTripsInfo == null) {
             this.departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
         }
     }
 
-
     public IMap<String, Integer> getTripShapeMap() {
         return tripShapeMap;
     }
 
-   
     public void addTripShapePair(String tripId, int shapeId) {
         this.tripShapeMap.put(tripId, shapeId);
     }
-    
-    public IMap<String, IList<Double>> getDepartureShapeDistances() {
-        return departureShapeDistances;
+
+    public IMap<String, IList<Integer>> getDepartureShapeIndexes() {
+        return departureShapeIndexes;
     }
 
-    public void addDepartureShapeDistances(String tripId, IList<Double> distances) {
-        departureShapeDistances.put(tripId, distances);
+    public void addDepartureShapeIndexes(String tripId, IList<Integer> indexes) {
+        departureShapeIndexes.put(tripId, indexes);
     }
-
 
     @Override
     public String toString() {
