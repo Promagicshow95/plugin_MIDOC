@@ -81,7 +81,7 @@ species bus_stop skills: [TransportStopSkill] {
 		string trip_id <- ordered_trip_ids[current_trip_index];
 		list<pair<bus_stop, string>> trip_info <- departureStopsInfo[trip_id];
 		string departure_time <- trip_info[0].value;
-		list<float> list_distance_stop <- departureShapeDistances[trip_id];
+		
 		
 //		write "departure_time: " + departure_time;
 //		write "current_time: " + current_seconds_mod;
@@ -101,7 +101,6 @@ species bus_stop skills: [TransportStopSkill] {
 					trip_id :: int(trip_id),
 					route_type :: self.routeType,
 					shapeID ::shape_id,
-					list_stop_distance :: list_distance_stop,
 					local_network :: shape_graphs[shape_id]// Utilise le graphe préchargé
 				];
 				
