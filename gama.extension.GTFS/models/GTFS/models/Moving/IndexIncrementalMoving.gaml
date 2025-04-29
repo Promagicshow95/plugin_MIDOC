@@ -12,11 +12,10 @@ model IndexIncrementalMoving
 
 global {
 	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
-	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
+	shape_file boundary_shp <- shape_file("../../includes/envelopFile/routes.shp");
 	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network;
-	graph metro_network;
 	int shape_id;
 	map<int, graph> shape_graphs;
 	string formatted_time;
@@ -32,6 +31,13 @@ global {
 		//write "\ud83d\uddd3\ufe0f Chargement des donn\u00e9es GTFS...";
 		create bus_stop from: gtfs_f {
 		}
+		
+		bus_stop stop1 <- bus_stop first_with (each.stopId = "stop_point:SP_1415");
+        bus_stop stop2 <- bus_stop first_with (each.stopId = "stop_point:SP_1759");
+//        write "Stop Dist: " + (stop1 distance_to stop2);
+//        write "Evelope: " + shape;
+        
+        
 		create transport_shape from: gtfs_f {}
 		
 		// Prégénérer tous les graphes par shapeId
@@ -45,15 +51,16 @@ global {
 		int current_hour <- current_date.hour;
 		int current_minute <- current_date.minute;
 		int current_second <- current_date.second;
-		write "current_date: " + current_date;
-		write "current_hour: "+ current_hour;
-		write "current_minute: " + current_minute;
-		write "current_second: " + current_second;
+//		write "current_date: " + current_date;
+//		write "current_hour: "+ current_hour;
+//		write "current_minute: " + current_minute;
+//		write "current_second: " + current_second;
 
 		int current_total_seconds <- current_hour * 3600 + current_minute * 60 + current_second;
 		current_seconds_mod <- current_total_seconds mod 86400;
-		write string(current_hour) + ":" + string(current_minute) + ":" + string(current_second) + 
-          " = " + current_seconds_mod + " secondes";
+//		write string(current_hour) + ":" + string(current_minute) + ":" + string(current_second) + 
+//          " = " + current_seconds_mod + " secondes";
+        
 	}
 	
 
@@ -83,8 +90,8 @@ species bus_stop skills: [TransportStopSkill] {
 		string departure_time <- trip_info[0].value;
 		list<float> list_distance_stop <- departureShapeDistances[trip_id];
 		
-		write "departure_time: " + departure_time;
-		write "current_time: " + current_seconds_mod;
+//		write "departure_time: " + departure_time;
+//		write "current_time: " + current_seconds_mod;
 
 		if (current_seconds_mod >= int(departure_time) ){
 		
@@ -106,7 +113,7 @@ species bus_stop skills: [TransportStopSkill] {
 				];
 				
 				current_trip_index <- (current_trip_index + 1) mod length(ordered_trip_ids);
-				write "current_trip_index: " + current_trip_index;
+//				write "current_trip_index: " + current_trip_index;
 				
 			}
 		}
@@ -151,14 +158,17 @@ species bus skills: [moving] {
 	
 
 	init {
-		if (route_type = 1) { speed <-  1000 #m/#s; }
-		else if (route_type = 3) { speed <- 17.75 #km/#h; }
-		else if (route_type = 0) { speed <- 19.8 #km/#h; }
-		else if (route_type = 6) { speed <- 17.75 #km/#h; }
-		else { speed <- 20.0 #km/#h; }
+//		if (route_type = 1) { speed <-  1000 #m/#s; }
+//		else if (route_type = 3) { speed <- 17.75 #km/#h; }
+//		else if (route_type = 0) { speed <- 19.8 #km/#h; }
+//		else if (route_type = 6) { speed <- 17.75 #km/#h; }
+//		else { speed <- 20.0 #km/#h; }
+		speed <- 70 #km/#h;
 	}
 	
 	reflex wait_at_stop when: waiting_at_stop {
+		waiting_at_stop <- false;
+		return;
 		int stop_time <- departureStopsInfo[current_stop_index].value as int;
 
 		if (current_seconds_mod >= stop_time) {
@@ -167,51 +177,51 @@ species bus skills: [moving] {
 		}
 	}
 	
-//	reflex configure_speed when: not waiting_at_stop {
-//    if (current_stop_index < length(departureStopsInfo) - 1) {
-//        // Récupérer l'heure de départ du stop actuel
-//        int time_value_current <- departureStopsInfo[current_stop_index].value as int ;
-//        int  time_value_next <- departureStopsInfo[current_stop_index + 1].value as int;
-//
-//
-//        // Récupérer la distance cumulée
-//        float first_distance <- list_stop_distance[current_stop_index];
-//        float next_stop_distance <- list_stop_distance[current_stop_index + 1];
-//        
-//        int time_diff <- time_value_next - time_value_current;
-//        float distance_diff <- next_stop_distance - first_distance;
-//        
-//        //write "⏰ time_diff entre stops for trip " + trip_id + " is "  + current_stop_index + " ➡️ " + (current_stop_index + 1) + ": " + time_diff  + " s" ;
-//        //write "📏 distance_diff entre stops: " + distance_diff + " m";
-//
-//        if (time_diff > 0 and distance_diff > 0) {
-//            speed <- (distance_diff / time_diff) #m/#s;
-////            write "🚍 Nouvelle speed: " + speed + " m/s";
-//        } else {
-//          	int first_time <- departureStopsInfo[0].value as int;
-//			int last_index <- length(departureStopsInfo) - 1;
-//			int last_time <- departureStopsInfo[last_index].value as int;
-//
-//			duration <- last_time - first_time;
-//			if duration <= 0 {
-//			//write "⚠️ Durée du trip non valide pour trip " + trip_id;
-//			speed <- 1000 #m/#s; 
-//			//speed <- distance_diff;
-//		} 
-//		else {
-//			// Récupérer la géométrie du trajet via shapeId
-//			geometry geom <- (transport_shape first_with (each.shapeId = shapeID)).shape;
-//		
-//			float dist <- perimeter(geom); // en mètres
-//			speed <- (dist / duration) #m/#s;
-//			//write "✅ [Trip " + trip_id + "] vitesse calculée : " + speed + " m/s pour " + dist + "m en " + duration + "s";
-//		}
-//			
-//        }
-//        
-//        if (trip_id = 2096254){write "speed: "+ speed + "time_diff: " + time_diff + "distance diff: " + distance_diff;}
-//    }
-//}
+	reflex configure_speed when: not waiting_at_stop {
+    if (current_stop_index < length(departureStopsInfo) - 1) {
+        // Récupérer l'heure de départ du stop actuel
+        int time_value_current <- departureStopsInfo[current_stop_index].value as int ;
+        int  time_value_next <- departureStopsInfo[current_stop_index + 1].value as int;
+
+
+        // Récupérer la distance cumulée
+        float first_distance <- list_stop_distance[current_stop_index];
+        float next_stop_distance <- list_stop_distance[current_stop_index + 1];
+        
+        int time_diff <- time_value_next - time_value_current;
+        float distance_diff <- next_stop_distance - first_distance;
+        
+        //write "⏰ time_diff entre stops for trip " + trip_id + " is "  + current_stop_index + " ➡️ " + (current_stop_index + 1) + ": " + time_diff  + " s" ;
+        //write "📏 distance_diff entre stops: " + distance_diff + " m";
+
+        if (time_diff > 0 and distance_diff > 0) {
+            speed <- (distance_diff / time_diff) #m/#s;
+//            write "🚍 Nouvelle speed: " + speed + " m/s";
+        } else {
+          	int first_time <- departureStopsInfo[0].value as int;
+			int last_index <- length(departureStopsInfo) - 1;
+			int last_time <- departureStopsInfo[last_index].value as int;
+
+			duration <- last_time - first_time;
+			if duration <= 0 {
+			//write "⚠️ Durée du trip non valide pour trip " + trip_id;
+			speed <- 1000 #m/#s; 
+			//speed <- distance_diff;
+		} 
+		else {
+			// Récupérer la géométrie du trajet via shapeId
+			geometry geom <- (transport_shape first_with (each.shapeId = shapeID)).shape;
+		
+			float dist <- perimeter(geom); // en mètres
+			speed <- (dist / duration) #m/#s;
+			//write "✅ [Trip " + trip_id + "] vitesse calculée : " + speed + " m/s pour " + dist + "m en " + duration + "s";
+		}
+			
+        }
+        
+        if (trip_id = 1900169){write "speed: "+ speed + "time_diff: " + time_diff + "distance diff: " + distance_diff;}
+    }
+}
 
 
 	reflex move when: not waiting_at_stop and self.location != target_location {
@@ -242,6 +252,7 @@ species bus skills: [moving] {
         current_stop_index <- current_stop_index + 1;
         target_location <- departureStopsInfo[current_stop_index].key.location;
         waiting_at_stop <- true;
+ 
         
     } else {
         do die;
@@ -260,11 +271,16 @@ experiment GTFSExperiment type: gui {
 		}
 		
 		 display monitor {
-            chart "Mean arrival time diff" type: series
-            {
-                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
-                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
-            }
+//            chart "Mean arrival time diff" type: series
+//            {
+//                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
+//                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
+//            }
+
+						chart "Mean arrival time diff" type: series 
+			{
+				data "Total bus" value: length(bus);
+			}
         }
 	}
 }

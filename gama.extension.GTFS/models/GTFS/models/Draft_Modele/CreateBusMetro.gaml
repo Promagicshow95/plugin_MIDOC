@@ -22,11 +22,11 @@ global {
 	string formatted_time;
 	int current_seconds_mod;
 
-	date starting_date <- date("2024-02-21T07:00:00");
+	date starting_date <- date("2024-02-21T00:00:00");
 	
 	
 	
-	float step <- 1 #s;
+	float step <- 5 #s;
 
 	init {
 		//write "\ud83d\uddd3\ufe0f Chargement des donn\u00e9es GTFS...";
@@ -52,7 +52,12 @@ global {
 
 		int current_total_seconds <- current_hour * 3600 + current_minute * 60 + current_second;
 		current_seconds_mod <- current_total_seconds mod 86400;
+		write string(current_hour) + ":" + string(current_minute) + ":" + string(current_second) + 
+          " = " + current_seconds_mod + " secondes";
 	}
+	
+
+	
 }
 
 species bus_stop skills: [TransportStopSkill] {
@@ -106,6 +111,8 @@ species bus_stop skills: [TransportStopSkill] {
 			}
 		}
 	}
+	
+	
 
 	
 	aspect base {
@@ -144,11 +151,12 @@ species bus skills: [moving] {
 	
 
 	init {
-		if (route_type = 1) { speed <-  30 #km/#h; }
-		else if (route_type = 3) { speed <- 17.75 #km/#h; }
-		else if (route_type = 0) { speed <- 19.8 #km/#h; }
-		else if (route_type = 6) { speed <- 17.75 #km/#h; }
-		else { speed <- 20.0 #km/#h; }
+//		if (route_type = 1) { speed <-  1000 #m/#s; }
+//		else if (route_type = 3) { speed <- 17.75 #km/#h; }
+//		else if (route_type = 0) { speed <- 19.8 #km/#h; }
+//		else if (route_type = 6) { speed <- 17.75 #km/#h; }
+//		else { speed <- 20.0 #km/#h; }
+		speed <- 35 #km/#h;
 	}
 	
 	reflex wait_at_stop when: waiting_at_stop {
@@ -218,7 +226,7 @@ species bus skills: [moving] {
         // Calcul de l'écart de temps à l'arrivée
         int expected_arrival_time <- departureStopsInfo[current_stop_index].value as int;
         int actual_time <- current_seconds_mod;
-        int time_diff_at_stop <- actual_time - expected_arrival_time;
+        int time_diff_at_stop <- expected_arrival_time - actual_time ;
         
         // Ajouter dans la bonne liste
         if (time_diff_at_stop > 0) {
@@ -253,11 +261,16 @@ experiment GTFSExperiment type: gui {
 		}
 		
 		 display monitor {
-            chart "Mean arrival time diff" type: series
-            {
-                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
-                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
-            }
+//            chart "Mean arrival time diff" type: series
+//            {
+//                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
+//                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
+//            }
+
+			chart "Mean arrival time diff" type: series 
+				{
+					data "Total bus" value: length(bus);
+				}
         }
 	}
 }
