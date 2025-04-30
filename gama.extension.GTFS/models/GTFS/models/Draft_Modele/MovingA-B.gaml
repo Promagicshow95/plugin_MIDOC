@@ -14,6 +14,12 @@ global {
 	
 	//if true, keep only the main connected components of the network
 	bool reduce_to_main_connected_components <- true;
+	
+	date starting_date <- date("2024-02-21T00:00:00");
+	
+	
+	
+	float step <- 5 #s;
 
     init {
         write "Loading GTFS contents from: " + gtfs_f;

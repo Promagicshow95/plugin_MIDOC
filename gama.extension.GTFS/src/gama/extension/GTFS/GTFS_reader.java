@@ -472,12 +472,12 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         int tripIdIndex = stopTimesHeader.get("trip_id");
         int stopIdIndex = stopTimesHeader.get("stop_id");
         int departureTimeIndex = stopTimesHeader.get("departure_time");
-        int shapeDistTraveledIndex = stopTimesHeader.get("shape_dist_traveled"); // 🔥 Nouveau
+        int shapeDistTraveledIndex = stopTimesHeader.get("shape_dist_traveled");
 
         @SuppressWarnings("unchecked")
         IMap<String, IList<Integer>> stopRouteTypes = GamaMapFactory.create(Types.STRING, Types.LIST);
 
-        // 🔹 Étape 1 : Associer trips aux arrêts, horaires et distances
+        // Étape 1 : Construction des objets trips
         for (String line : stopTimesData) {
             String[] fields = line.split(",");
             try {
@@ -491,7 +491,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 if (trip == null) continue;
 
                 trip.addStop(stopId);
-                trip.addStopDetail(stopId, departureTime, shapeDist); // 🔥 Ajout shape_dist_traveled
+                trip.addStopDetail(stopId, departureTime, shapeDist);
 
                 TransportStop stop = stopsMap.get(stopId);
                 if (stop != null) {
@@ -503,113 +503,92 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 }
 
             } catch (Exception e) {
-                System.err.println("[ERROR] Error processing stop_times line: " + line + " -> " + e.getMessage());
+                System.err.println("[ERROR] Processing stop_times line: " + line + " -> " + e.getMessage());
             }
         }
 
-        // 🔹 Étape 2 : Préparer les infos de départ et distances
+        // Étape 2 : Préparation des maps temporaires
         @SuppressWarnings("unchecked")
         IMap<String, IList<GamaPair<String, String>>> departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
         @SuppressWarnings("unchecked")
-        IMap<String, String> tripDepartureTimes = GamaMapFactory.create(Types.STRING, Types.STRING);
-        @SuppressWarnings("unchecked")
-        IMap<String, IList<Double>> departureShapeDistances = GamaMapFactory.create(Types.STRING, Types.LIST); // 🔥 Nouveau
+        IMap<String, IList<Double>> departureShapeDistances = GamaMapFactory.create(Types.STRING, Types.LIST);
 
         for (TransportTrip trip : tripsMap.values()) {
             IList<String> stopsInOrder = trip.getStopsInOrder();
             IList<IMap<String, Object>> stopDetails = trip.getStopDetails();
             IList<GamaPair<String, String>> stopPairs = GamaListFactory.create(Types.PAIR);
-            IList<Double> shapeDistances = GamaListFactory.create(Types.FLOAT); // 🔥 Nouveau
+            IList<Double> shapeDistances = GamaListFactory.create(Types.FLOAT);
 
-            if (stopsInOrder.isEmpty()) {
-                System.err.println("[ERROR] Trip " + trip.getTripId() + " has no stops.");
-                continue;
-            }
-            if (stopDetails.size() != stopsInOrder.size()) {
-                System.err.println("[ERROR] Mismatch between stops and stop details for Trip ID " + trip.getTripId());
-                continue;
-            }
-
-            String firstDepartureTime = stopDetails.get(0).get("departureTime").toString();
-            if (firstDepartureTime == null || firstDepartureTime.isEmpty()) {
-                System.err.println("[ERROR] No departure time found for Trip ID " + trip.getTripId());
-                continue;
-            }
-
-            tripDepartureTimes.put(String.valueOf(trip.getTripId()), convertTimeToSeconds(firstDepartureTime));
+            if (stopsInOrder.isEmpty() || stopDetails.size() != stopsInOrder.size()) continue;
 
             for (int i = 0; i < stopsInOrder.size(); i++) {
                 String stopId = stopsInOrder.get(i);
                 String departureTime = stopDetails.get(i).get("departureTime").toString();
                 String departureInSeconds = convertTimeToSeconds(departureTime);
-
                 stopPairs.add(new GamaPair<>(stopId, departureInSeconds, Types.STRING, Types.STRING));
-
-                double shapeDist = (double) stopDetails.get(i).get("shapeDistTraveled"); // 🔥
+                double shapeDist = (double) stopDetails.get(i).get("shapeDistTraveled");
                 shapeDistances.add(shapeDist);
             }
 
             departureTripsInfo.put(String.valueOf(trip.getTripId()), stopPairs);
-            departureShapeDistances.put(String.valueOf(trip.getTripId()), shapeDistances); // 🔥
+            departureShapeDistances.put(String.valueOf(trip.getTripId()), shapeDistances);
         }
 
-        // 🔹 Étape 3 : Trier les trips par heure de départ
-        System.out.println("[DEBUG] Sorting trips by departure time...");
-        IList<String> sortedTripIds = GamaListFactory.create();
-
-        tripDepartureTimes.entrySet().stream()
-            .sorted(Map.Entry.comparingByValue())
-            .forEachOrdered(entry -> sortedTripIds.add(entry.getKey()));
-
-        // 🔹 Étape 4 : Assigner departureTripsInfo et departureShapeDistances aux stops de départ
-        for (String tripId : sortedTripIds) {
+        // 🔁 Étape 3 : Tri par heure de départ pour chaque stopId de départ
+        Map<String, List<String>> stopToTripIds = new HashMap<>();
+        for (String tripId : departureTripsInfo.keySet()) {
             IList<GamaPair<String, String>> stopPairs = departureTripsInfo.get(tripId);
-            IList<Double> shapeDistances = departureShapeDistances.get(tripId);
-
-            if (stopPairs == null || stopPairs.isEmpty() || shapeDistances == null || shapeDistances.isEmpty()) {
-                System.err.println("[ERROR] No stopPairs or shapeDistances found for tripId=" + tripId);
-                continue;
-            }
-
+            if (stopPairs == null || stopPairs.isEmpty()) continue;
             String firstStopId = stopPairs.get(0).key;
-            TransportStop firstStop = stopsMap.get(firstStopId);
+            stopToTripIds.computeIfAbsent(firstStopId, k -> new ArrayList<>()).add(tripId);
+        }
 
-            if (firstStop != null) {
-                firstStop.ensureDepartureTripsInfo();
-                firstStop.addStopPairs(tripId, stopPairs);
-                firstStop.addDepartureShapeDistances(tripId, shapeDistances); // 🔥 Nouveau
-                System.out.println("[DEBUG] Stored tripId " + tripId + " in stop " + firstStopId);
-            } else {
-                System.err.println("[ERROR] First stop not found for sorted tripId=" + tripId);
+        // 🔁 Étape 4 : Stockage trié dans chaque stop
+        for (Map.Entry<String, List<String>> entry : stopToTripIds.entrySet()) {
+            String stopId = entry.getKey();
+            List<String> tripIds = entry.getValue();
+
+            // Tri des trips par heure de départ (en secondes numériques)
+            tripIds.sort((id1, id2) -> {
+                String t1 = departureTripsInfo.get(id1).get(0).value;
+                String t2 = departureTripsInfo.get(id2).get(0).value;
+                return Integer.compare(Integer.parseInt(t1), Integer.parseInt(t2));
+            });
+
+            TransportStop stop = stopsMap.get(stopId);
+            if (stop == null) continue;
+            stop.ensureDepartureTripsInfo();
+
+            for (String tripId : tripIds) {
+                IList<GamaPair<String, String>> pairs = departureTripsInfo.get(tripId);
+                IList<Double> shapeDists = departureShapeDistances.get(tripId);
+                stop.addStopPairs(tripId, pairs);
+                stop.addDepartureShapeDistances(tripId, shapeDists);
             }
         }
 
-        // 🔹 Étape 5 : Assigner routeType dominant aux arrêts
+        // Dernière étape : attribuer le routeType dominant à chaque stop
         for (TransportStop stop : stopsMap.values()) {
             if (stopRouteTypes.containsKey(stop.getStopId())) {
                 IList<Integer> routeTypes = stopRouteTypes.get(stop.getStopId());
-                int mostCommonRouteType = routeTypes.get(0);
 
-                Map<Integer, Integer> frequencyMap = new HashMap<>();
+                Map<Integer, Integer> freqMap = new HashMap<>();
                 for (int type : routeTypes) {
-                    frequencyMap.put(type, frequencyMap.getOrDefault(type, 0) + 1);
+                    freqMap.put(type, freqMap.getOrDefault(type, 0) + 1);
                 }
-                mostCommonRouteType = frequencyMap.entrySet().stream()
-                        .max(Map.Entry.comparingByValue())
-                        .get().getKey();
+
+                int dominantType = freqMap.entrySet().stream()
+                    .max(Map.Entry.comparingByValue())
+                    .get().getKey();
 
                 if (stop.getRouteType() == -1) {
-                    stop.setRouteType(mostCommonRouteType);
-                    System.out.println("[INFO] Assigned most common routeType=" + mostCommonRouteType + " to stopId=" + stop.getStopId());
-                } else {
-                    System.out.println("[INFO] StopId " + stop.getStopId() + " already has a routeType=" + stop.getRouteType());
+                    stop.setRouteType(dominantType);
+                    System.out.println("[INFO] Assigned routeType=" + dominantType + " to stopId=" + stop.getStopId());
                 }
-            } else {
-                System.err.println("[WARNING] Stop ID " + stop.getStopId() + " has no associated trips, keeping routeType=-1.");
             }
         }
 
-        System.out.println("computeDepartureInfo completed successfully.");
+        System.out.println("✅ computeDepartureInfo completed.");
     }
 
     
