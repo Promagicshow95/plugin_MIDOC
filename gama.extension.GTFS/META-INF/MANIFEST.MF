@@ -10,5 +10,8 @@ Import-Package: org.osgi.framework;version="1.10.0"
 Require-Bundle: gama.core,
  gama.dependencies
 Automatic-Module-Name: gama.extension.GTFS
-Bundle-ClassPath: .
+Bundle-ClassPath: .,
+ lib/jts-core-1.20.0.jar,
+ lib/onebusaway-gtfs-6.1.2.jar,
+ lib/opencsv-5.9.jar
 Bundle-RequiredExecutionEnvironment: JavaSE-21

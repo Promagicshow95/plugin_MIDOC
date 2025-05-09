@@ -563,6 +563,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 IList<GamaPair<String, String>> pairs = departureTripsInfo.get(tripId);
                 IList<Double> shapeDists = departureShapeDistances.get(tripId);
                 stop.addStopPairs(tripId, pairs);
+                stop.setTripNumber(stop.getDepartureTripsInfo().size());
                 stop.addDepartureShapeDistances(tripId, shapeDists);
             }
         }
@@ -599,7 +600,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             int hours = Integer.parseInt(parts[0]);
             int minutes = Integer.parseInt(parts[1]);
             int seconds = Integer.parseInt(parts[2]);
-            int totalSeconds = (hours * 3600 + minutes * 60 + seconds) % 86400;
+            int totalSeconds = (hours * 3600 + minutes * 60 + seconds);
             return String.valueOf(totalSeconds);
         } catch (Exception e) {
             System.err.println("[ERROR] Failed to convert time: " + timeStr + " -> " + e.getMessage());

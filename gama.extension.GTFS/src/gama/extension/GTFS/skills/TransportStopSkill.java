@@ -26,7 +26,8 @@ import gama.gaml.types.IType;
     @variable(name = "routeType", type = IType.INT, doc = @doc("The type of transport route associated with the stop.")),
     @variable(name = "departureStopsInfo", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of GamaPair<IAgent, String> (stop agent and departure time).")),
     @variable(name = "tripShapeMap", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are shape IDs.")),
-    @variable(name = "departureShapeDistances", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of cumulative distances along the shape (in meters)."))
+    @variable(name = "departureShapeDistances", type = IType.MAP, doc = @doc("Map where keys are trip IDs and values are lists of cumulative distances along the shape (in meters).")),
+    @variable(name = "tripNumber", type = IType.INT, doc = @doc("Number of trips starting from this stop."))
 })
 public class TransportStopSkill extends Skill {
 
@@ -53,6 +54,11 @@ public class TransportStopSkill extends Skill {
     @getter("departureStopsInfo")
     public IMap<String, IList<GamaPair<IAgent, String>>> getDepartureStopsInfo(final IAgent agent) {
         return (IMap<String, IList<GamaPair<IAgent, String>>>) agent.getAttribute("departureStopsInfo");
+    }
+    
+    @getter("tripNumber")
+    public int getTripNumber(final IAgent agent) {
+        return (int) agent.getAttribute("tripNumber");
     }
 
     // Getter for tripShapeMap

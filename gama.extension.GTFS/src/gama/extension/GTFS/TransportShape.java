@@ -73,6 +73,10 @@ public class TransportShape {
         System.out.println("[DEBUG] Setting tripId for ShapeId=" + shapeId + " -> " + tripId);
         this.tripId = tripId;
     }
+    
+    public IShape getGeometry(IScope scope) {
+        return generateShape(scope);
+    }
 
     @Override
     public String toString() {

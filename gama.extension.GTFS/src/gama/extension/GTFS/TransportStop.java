@@ -6,6 +6,9 @@ import gama.core.util.GamaMapFactory;
 import gama.core.util.GamaPair;
 import gama.core.util.IList;
 import gama.core.util.IMap;
+
+import org.locationtech.jts.geom.Geometry;
+
 import GamaGTFSUtils.SpatialUtils;
 import gama.gaml.types.Types;
 
@@ -15,6 +18,7 @@ public class TransportStop {
     private String stopName;
     private GamaPoint location;
     private int routeType = -1;
+    private int tripNumber = 0; 
     private IMap<String, IList<GamaPair<String, String>>> departureTripsInfo;
     private IMap<String, Integer> tripShapeMap;
     private IMap<String, IList<Double>> departureShapeDistances;
@@ -69,6 +73,15 @@ public class TransportStop {
     public void addDepartureShapeDistances(String tripId, IList<Double> distances) {
         departureShapeDistances.put(tripId, distances);
     }
+    
+	public int getTripNumber() {
+		return tripNumber;
+	}
+	
+	public void setTripNumber(int tripNumber) {
+	    this.tripNumber = tripNumber;
+	}
+	
 
 
     @Override
@@ -81,4 +94,8 @@ public class TransportStop {
                 + "routeType=" + routeType + ", "
                 + "tripShapeMap=" + tripShapeMap + "}";
     }
+
+    public GamaPoint getGeometry() {
+	    return location;
+	}
 }
