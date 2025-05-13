@@ -66,7 +66,7 @@ global {
 	}
 	
 	reflex update_time_every_cycle {
-    current_seconds_mod <- get_time_now();
+    	current_seconds_mod <- get_time_now();
 	}
 	
 	
@@ -82,6 +82,7 @@ global {
 			launched_trips_count <- 0;
 			ask bus_stop where (each.routeType = 1) {
 				current_trip_index <- 0;
+				
 			}
 			write "🌙 Tous les trips ont été lancés. → Passage au jour " + current_day;
 		}
@@ -145,6 +146,7 @@ species bus_stop skills: [TransportStopSkill] {
 					route_type :: self.routeType,
 					shapeID ::shape_id,
 					list_stop_distance :: list_distance_stop,
+					loop_starting_day:: current_day,
 					local_network :: shape_graphs[shape_id]// Utilise le graphe préchargé
 				];
 				
@@ -190,6 +192,8 @@ species bus skills: [moving] {
 	int shapeID;
 	int route_type;
 	int duration;
+	int loop_starting_day;
+	int current_local_time;
 	list<float> list_stop_distance;
 	list<int> arrival_time_diffs_pos <- []; // Liste des écarts de temps
 	list<int> arrival_time_diffs_neg <- [];
@@ -203,13 +207,25 @@ species bus skills: [moving] {
 //		else if (route_type = 6) { speed <- 17.75 #km/#h; }
 //		else { speed <- 20.0 #km/#h; }
 		speed <- 50 #km/#h;
-		creation_time <- current_seconds_mod;
+		creation_time <- get_local_time_now();
+	}
+
+	int get_local_time_now {
+		int dof <- floor((int(current_date - date([1970,1,1,0,0,0]))) / 86400);
+		if dof > loop_starting_day {
+			return time_24h + 86400;
+		}
+		return time_24h;
+	}
+
+	reflex update_time_every_cycle {
+		current_local_time <- get_local_time_now();
 	}
 	
 	reflex wait_at_stop when: waiting_at_stop {
 		int stop_time <- departureStopsInfo[current_stop_index].value as int;
 
-		if (current_seconds_mod >= stop_time) {
+		if (current_local_time >= stop_time) {
 			// L'heure est atteinte, on peut partir
 			waiting_at_stop <- false;
 		}
@@ -252,7 +268,7 @@ species bus skills: [moving] {
 	        
 	        // Calcul de l'écart de temps à l'arrivée
 	        int expected_arrival_time <- departureStopsInfo[current_stop_index].value as int;
-	        int actual_time <- current_seconds_mod;
+	        int actual_time <- current_local_time;
 	        int time_diff_at_stop <-  expected_arrival_time - actual_time ;
 	        
 	        // Ajouter dans la bonne liste
@@ -277,7 +293,7 @@ species bus skills: [moving] {
 	    }
 	    
 	    if (current_stop_index = length(departureStopsInfo) - 1) {
-	    	end_time <- current_seconds_mod;
+	    	end_time <- current_local_time;
 			real_duration <- end_time - creation_time;
 
 //			write "🚌 Bus " + trip_id + " a fini son trajet.";
@@ -302,14 +318,14 @@ experiment GTFSExperiment type: gui {
             {
 //                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
 //                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
-                 data "total_trips_to_launch" value:total_trips_to_launch color: # green marker_shape: marker_empty style: spline;
-                data "launched_trips_count" value: launched_trips_count color: # red marker_shape: marker_empty style: spline;
+//                 data "total_trips_to_launch" value:total_trips_to_launch color: # green marker_shape: marker_empty style: spline;
+//                data "launched_trips_count" value: launched_trips_count color: # red marker_shape: marker_empty style: spline;
             }
 
-//			chart "Number of bus" type: series 
-//			{
-//				data "Total bus" value: length(bus);
-//			}
+			chart "Number of bus" type: series 
+			{
+				data "Total bus" value: length(bus);
+			}
 
 
         }

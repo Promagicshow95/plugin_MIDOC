@@ -44,7 +44,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
     // Required files for GTFS data
     private static final String[] REQUIRED_FILES = {
-        "agency.txt", "routes.txt", "trips.txt", "calendar.txt", "stop_times.txt", "stops.txt"
+        "routes.txt", "trips.txt", "stop_times.txt", "stops.txt"
     };
 
     // Data structure to store GTFS files
@@ -241,6 +241,20 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
 
         // ** Création des arrêts de transport à partir de stops.txt **
+        Set<String> usedStopIds = new HashSet<>();
+        IList<String> stopTimesData = gtfsData.get("stop_times.txt");
+        IMap<String, Integer> stopTimesHeader = headerMaps.get("stop_times.txt");
+
+        if (stopTimesData != null && stopTimesHeader != null && stopTimesHeader.containsKey("stop_id")) {
+            int stopIdIndex = stopTimesHeader.get("stop_id");
+            for (String line : stopTimesData) {
+                String[] fields = line.split(",");
+                if (fields.length > stopIdIndex) {
+                    usedStopIds.add(fields[stopIdIndex].trim());
+                }
+            }
+        }
+
         IList<String> stopsData = gtfsData.get("stops.txt");
         IMap<String, Integer> headerIMap = headerMaps.get("stops.txt"); 
 
@@ -254,14 +268,14 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 String[] fields = line.split(",");
                 try {
                     String stopId = fields[stopIdIndex];
+                    if (!usedStopIds.contains(stopId)) continue;
+
                     String stopName = fields[stopNameIndex];
                     double stopLat = Double.parseDouble(fields[stopLatIndex]);
                     double stopLon = Double.parseDouble(fields[stopLonIndex]);
 
-                    if (stopId.startsWith("stop_point")) {
-                        TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon, scope);
-                        stopsMap.put(stopId, stop);
-                    }
+                    TransportStop stop = new TransportStop(stopId, stopName, stopLat, stopLon, scope);
+                    stopsMap.put(stopId, stop);
                 } catch (Exception e) {
                     System.err.println("[ERROR] Processing stop line: " + line + " -> " + e.getMessage());
                 }
@@ -472,7 +486,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         int tripIdIndex = stopTimesHeader.get("trip_id");
         int stopIdIndex = stopTimesHeader.get("stop_id");
         int departureTimeIndex = stopTimesHeader.get("departure_time");
-        int shapeDistTraveledIndex = stopTimesHeader.get("shape_dist_traveled");
 
         @SuppressWarnings("unchecked")
         IMap<String, IList<Integer>> stopRouteTypes = GamaMapFactory.create(Types.STRING, Types.LIST);
@@ -484,14 +497,12 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 String tripId = fields[tripIdIndex];
                 String stopId = fields[stopIdIndex];
                 String departureTime = fields[departureTimeIndex];
-                String shapeDistStr = fields[shapeDistTraveledIndex];
-                double shapeDist = shapeDistStr.isEmpty() ? 0.0 : Double.parseDouble(shapeDistStr);
 
                 TransportTrip trip = tripsMap.get(tripId);
                 if (trip == null) continue;
 
                 trip.addStop(stopId);
-                trip.addStopDetail(stopId, departureTime, shapeDist);
+                trip.addStopDetail(stopId, departureTime, 0.0); // 0.0 comme valeur par défaut
 
                 TransportStop stop = stopsMap.get(stopId);
                 if (stop != null) {
@@ -510,14 +521,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         // Étape 2 : Préparation des maps temporaires
         @SuppressWarnings("unchecked")
         IMap<String, IList<GamaPair<String, String>>> departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
-        @SuppressWarnings("unchecked")
-        IMap<String, IList<Double>> departureShapeDistances = GamaMapFactory.create(Types.STRING, Types.LIST);
 
         for (TransportTrip trip : tripsMap.values()) {
             IList<String> stopsInOrder = trip.getStopsInOrder();
             IList<IMap<String, Object>> stopDetails = trip.getStopDetails();
             IList<GamaPair<String, String>> stopPairs = GamaListFactory.create(Types.PAIR);
-            IList<Double> shapeDistances = GamaListFactory.create(Types.FLOAT);
 
             if (stopsInOrder.isEmpty() || stopDetails.size() != stopsInOrder.size()) continue;
 
@@ -526,12 +534,9 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 String departureTime = stopDetails.get(i).get("departureTime").toString();
                 String departureInSeconds = convertTimeToSeconds(departureTime);
                 stopPairs.add(new GamaPair<>(stopId, departureInSeconds, Types.STRING, Types.STRING));
-                double shapeDist = (double) stopDetails.get(i).get("shapeDistTraveled");
-                shapeDistances.add(shapeDist);
             }
 
             departureTripsInfo.put(String.valueOf(trip.getTripId()), stopPairs);
-            departureShapeDistances.put(String.valueOf(trip.getTripId()), shapeDistances);
         }
 
         // 🔁 Étape 3 : Tri par heure de départ pour chaque stopId de départ
@@ -548,7 +553,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             String stopId = entry.getKey();
             List<String> tripIds = entry.getValue();
 
-            // Tri des trips par heure de départ (en secondes numériques)
             tripIds.sort((id1, id2) -> {
                 String t1 = departureTripsInfo.get(id1).get(0).value;
                 String t2 = departureTripsInfo.get(id2).get(0).value;
@@ -561,10 +565,8 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
             for (String tripId : tripIds) {
                 IList<GamaPair<String, String>> pairs = departureTripsInfo.get(tripId);
-                IList<Double> shapeDists = departureShapeDistances.get(tripId);
                 stop.addStopPairs(tripId, pairs);
                 stop.setTripNumber(stop.getDepartureTripsInfo().size());
-                stop.addDepartureShapeDistances(tripId, shapeDists);
             }
         }
 
