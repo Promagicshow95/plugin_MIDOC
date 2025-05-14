@@ -22,5 +22,15 @@
 			<type>1</type>
 			<location>C:/Applications/Eclipse.app/Contents/MacOS/C::/Applications/Eclipse.app/Contents/MacOS/C::/Users/tiend/Desktop/Prepared for MIDOC/Prepared for MIDOC/Donnée/DataFile/tisseo_gtfs_v2/stops.txt</location>
 		</link>
+		<link>
+			<name>models/Following Paths.gaml</name>
+			<type>1</type>
+			<location>C:/Users/tiend/AppData/Local/Temp/eb350c51-8502-46a2-b22c-3037531ff0a4_DrivingSkillsBusBehavior (2).zip.0a4/DrivingSkillsBusBehavior/models/Advanced models/Following Paths.gaml</location>
+		</link>
+		<link>
+			<name>models/Traffic.gaml</name>
+			<type>1</type>
+			<location>C:/Users/tiend/AppData/Local/Temp/f09f73eb-cb30-420f-adbf-6ba44328f5f9_DrivingSkillsBusBehavior (2).zip.5f9/DrivingSkillsBusBehavior/models/Advanced models/Traffic.gaml</location>
+		</link>
 	</linkedResources>
 </projectDescription>

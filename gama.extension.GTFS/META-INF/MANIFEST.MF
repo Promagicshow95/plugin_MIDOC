@@ -13,5 +13,6 @@ Automatic-Module-Name: gama.extension.GTFS
 Bundle-ClassPath: .,
  lib/jts-core-1.20.0.jar,
  lib/onebusaway-gtfs-6.1.2.jar,
- lib/opencsv-5.9.jar
+ lib/opencsv-5.9.jar,
+ lib/gson-2.10.1.jar
 Bundle-RequiredExecutionEnvironment: JavaSE-21

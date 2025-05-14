@@ -11,9 +11,8 @@ model IndexIncrementalMoving
 
 
 global {
-	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
-	shape_file boundary_shp <- shape_file("../../includes/envelopFile/routes.shp");
-	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
+	gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_am");
+	shape_file boundary_shp <- shape_file("../../includes/envelopFileNantes/gtfs-tan/routes.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network;
 	int shape_id;
@@ -71,8 +70,8 @@ global {
 	
 	
 	reflex show_metro_trip_count when: cycle = 1 {
-   		total_trips_to_launch <- sum((bus_stop where (each.routeType = 1)) collect each.tripNumber);
-   		write "🟣 Total des trips métro (routeType = 1) = " + total_trips_to_launch;
+   		total_trips_to_launch <- sum((bus_stop where (each.routeType = 3)) collect each.tripNumber);
+   		write "🟣 Total des trips métro (routeType = 3) = " + total_trips_to_launch;
 	}
 	
 	reflex check_new_day when: launched_trips_count >= total_trips_to_launch {
@@ -80,7 +79,7 @@ global {
 		if sim_day_index > current_day {
 			current_day <- sim_day_index;
 			launched_trips_count <- 0;
-			ask bus_stop where (each.routeType = 1) {
+			ask bus_stop where (each.routeType = 3) {
 				current_trip_index <- 0;
 				
 			}
@@ -121,11 +120,11 @@ species bus_stop skills: [TransportStopSkill] {
 
 
 	
-	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids) and routeType = 1){
+	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids) and routeType = 3){
 		string trip_id <- ordered_trip_ids[current_trip_index];
 		list<pair<bus_stop, string>> trip_info <- departureStopsInfo[trip_id];
 		string departure_time <- trip_info[0].value;
-		list<float> list_distance_stop <- departureShapeDistances[trip_id];
+
 		
 //		write "departure_time: " + departure_time;
 //		write "current_time: " + current_seconds_mod;
@@ -145,7 +144,6 @@ species bus_stop skills: [TransportStopSkill] {
 					trip_id :: int(trip_id),
 					route_type :: self.routeType,
 					shapeID ::shape_id,
-					list_stop_distance :: list_distance_stop,
 					loop_starting_day:: current_day,
 					local_network :: shape_graphs[shape_id]// Utilise le graphe préchargé
 				];
@@ -316,16 +314,16 @@ experiment GTFSExperiment type: gui {
 		 display monitor {
             chart "Mean arrival time diff" type: series
             {
-//                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
-//                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
+                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
+                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
 //                 data "total_trips_to_launch" value:total_trips_to_launch color: # green marker_shape: marker_empty style: spline;
 //                data "launched_trips_count" value: launched_trips_count color: # red marker_shape: marker_empty style: spline;
             }
 
-			chart "Number of bus" type: series 
-			{
-				data "Total bus" value: length(bus);
-			}
+//			chart "Number of bus" type: series 
+//			{
+//				data "Total bus" value: length(bus);
+//			}
 
 
         }

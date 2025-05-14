@@ -1,225 +1,106 @@
-route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_url,route_color,route_text_color
-01_1,,,Route_01_1,,3,,,
-01_2,,,Route_01_2,,3,,,
-02_1,,,Route_02_1,,3,,,
-02_2,,,Route_02_2,,3,,,
-03A_1,,,Route_03A_1,,3,,,
-03A_2,,,Route_03A_2,,3,,,
-03B_1,,,Route_03B_1,,3,,,
-03B_2,,,Route_03B_2,,3,,,
-04_1,,,Route_04_1,,3,,,
-04_2,,,Route_04_2,,3,,,
-05_1,,,Route_05_1,,3,,,
-05_2,,,Route_05_2,,3,,,
-06A_1,,,Route_06A_1,,3,,,
-06A_2,,,Route_06A_2,,3,,,
-06B_1,,,Route_06B_1,,3,,,
-06B_2,,,Route_06B_2,,3,,,
-06C_1,,,Route_06C_1,,3,,,
-06C_2,,,Route_06C_2,,3,,,
-06D_1,,,Route_06D_1,,3,,,
-06D_2,,,Route_06D_2,,3,,,
-06E_1,,,Route_06E_1,,3,,,
-06E_2,,,Route_06E_2,,3,,,
-07_1,,,Route_07_1,,3,,,
-07_2,,,Route_07_2,,3,,,
-08A_1,,,Route_08A_1,,3,,,
-08A_2,,,Route_08A_2,,3,,,
-08B_1,,,Route_08B_1,,3,,,
-08B_2,,,Route_08B_2,,3,,,
-09_1,,,Route_09_1,,3,,,
-09_2,,,Route_09_2,,3,,,
-10A_1,,,Route_10A_1,,3,,,
-10A_2,,,Route_10A_2,,3,,,
-10B_1,,,Route_10B_1,,3,,,
-10B_2,,,Route_10B_2,,3,,,
-11_1,,,Route_11_1,,3,,,
-11_2,,,Route_11_2,,3,,,
-12_1,,,Route_12_1,,3,,,
-12_2,,,Route_12_2,,3,,,
-13_1,,,Route_13_1,,3,,,
-13_2,,,Route_13_2,,3,,,
-14_1,,,Route_14_1,,3,,,
-14_2,,,Route_14_2,,3,,,
-15_1,,,Route_15_1,,3,,,
-15_2,,,Route_15_2,,3,,,
-16_1,,,Route_16_1,,3,,,
-16_2,,,Route_16_2,,3,,,
-17_1,,,Route_17_1,,3,,,
-17_2,,,Route_17_2,,3,,,
-18_1,,,Route_18_1,,3,,,
-18_2,,,Route_18_2,,3,,,
-19_1,,,Route_19_1,,3,,,
-19_2,,,Route_19_2,,3,,,
-20A_1,,,Route_20A_1,,3,,,
-20A_2,,,Route_20A_2,,3,,,
-20B_1,,,Route_20B_1,,3,,,
-20B_2,,,Route_20B_2,,3,,,
-20C_1,,,Route_20C_1,,3,,,
-20C_2,,,Route_20C_2,,3,,,
-21A_1,,,Route_21A_1,,3,,,
-21A_2,,,Route_21A_2,,3,,,
-21B_1,,,Route_21B_1,,3,,,
-21B_2,,,Route_21B_2,,3,,,
-22A_1,,,Route_22A_1,,3,,,
-22A_2,,,Route_22A_2,,3,,,
-22B_1,,,Route_22B_1,,3,,,
-22B_2,,,Route_22B_2,,3,,,
-22C_1,,,Route_22C_1,,3,,,
-22C_2,,,Route_22C_2,,3,,,
-23_1,,,Route_23_1,,3,,,
-23_2,,,Route_23_2,,3,,,
-24_1,,,Route_24_1,,3,,,
-24_2,,,Route_24_2,,3,,,
-25_1,,,Route_25_1,,3,,,
-25_2,,,Route_25_2,,3,,,
-26_1,,,Route_26_1,,3,,,
-26_2,,,Route_26_2,,3,,,
-27_1,,,Route_27_1,,3,,,
-27_2,,,Route_27_2,,3,,,
-28_1,,,Route_28_1,,3,,,
-28_2,,,Route_28_2,,3,,,
-29_1,,,Route_29_1,,3,,,
-29_2,,,Route_29_2,,3,,,
-30_1,,,Route_30_1,,3,,,
-30_2,,,Route_30_2,,3,,,
-31_1,,,Route_31_1,,3,,,
-31_2,,,Route_31_2,,3,,,
-32_1,,,Route_32_1,,3,,,
-32_2,,,Route_32_2,,3,,,
-33_1,,,Route_33_1,,3,,,
-33_2,,,Route_33_2,,3,,,
-34_1,,,Route_34_1,,3,,,
-34_2,,,Route_34_2,,3,,,
-35A_1,,,Route_35A_1,,3,,,
-35A_2,,,Route_35A_2,,3,,,
-35B_1,,,Route_35B_1,,3,,,
-35B_2,,,Route_35B_2,,3,,,
-36_1,,,Route_36_1,,3,,,
-36_2,,,Route_36_2,,3,,,
-37_1,,,Route_37_1,,3,,,
-37_2,,,Route_37_2,,3,,,
-38_1,,,Route_38_1,,3,,,
-38_2,,,Route_38_2,,3,,,
-39_1,,,Route_39_1,,3,,,
-39_2,,,Route_39_2,,3,,,
-40_1,,,Route_40_1,,3,,,
-40_2,,,Route_40_2,,3,,,
-41_1,,,Route_41_1,,3,,,
-41_2,,,Route_41_2,,3,,,
-42_1,,,Route_42_1,,3,,,
-42_2,,,Route_42_2,,3,,,
-43_1,,,Route_43_1,,3,,,
-43_2,,,Route_43_2,,3,,,
-44_1,,,Route_44_1,,3,,,
-44_2,,,Route_44_2,,3,,,
-45_1,,,Route_45_1,,3,,,
-45_2,,,Route_45_2,,3,,,
-46_1,,,Route_46_1,,3,,,
-46_2,,,Route_46_2,,3,,,
-47A_1,,,Route_47A_1,,3,,,
-47A_2,,,Route_47A_2,,3,,,
-47B_1,,,Route_47B_1,,3,,,
-47B_2,,,Route_47B_2,,3,,,
-48_1,,,Route_48_1,,3,,,
-48_2,,,Route_48_2,,3,,,
-49_1,,,Route_49_1,,3,,,
-49_2,,,Route_49_2,,3,,,
-50_1,,,Route_50_1,,3,,,
-50_2,,,Route_50_2,,3,,,
-51_1,,,Route_51_1,,3,,,
-51_2,,,Route_51_2,,3,,,
-52A_1,,,Route_52A_1,,3,,,
-52A_2,,,Route_52A_2,,3,,,
-52B_1,,,Route_52B_1,,3,,,
-52B_2,,,Route_52B_2,,3,,,
-53A_1,,,Route_53A_1,,3,,,
-53A_2,,,Route_53A_2,,3,,,
-53B_1,,,Route_53B_1,,3,,,
-53B_2,,,Route_53B_2,,3,,,
-54_1,,,Route_54_1,,3,,,
-54_2,,,Route_54_2,,3,,,
-55_1,,,Route_55_1,,3,,,
-55_2,,,Route_55_2,,3,,,
-55B_1,,,Route_55B_1,,3,,,
-55B_2,,,Route_55B_2,,3,,,
-56A_1,,,Route_56A_1,,3,,,
-56A_2,,,Route_56A_2,,3,,,
-56B_1,,,Route_56B_1,,3,,,
-56B_2,,,Route_56B_2,,3,,,
-57_1,,,Route_57_1,,3,,,
-57_2,,,Route_57_2,,3,,,
-58_1,,,Route_58_1,,3,,,
-58_2,,,Route_58_2,,3,,,
-59_1,,,Route_59_1,,3,,,
-59_2,,,Route_59_2,,3,,,
-60A_1,,,Route_60A_1,,3,,,
-60A_2,,,Route_60A_2,,3,,,
-60B_1,,,Route_60B_1,,3,,,
-60B_2,,,Route_60B_2,,3,,,
-61_1,,,Route_61_1,,3,,,
-61_2,,,Route_61_2,,3,,,
-62_1,,,Route_62_1,,3,,,
-62_2,,,Route_62_2,,3,,,
-63_1,,,Route_63_1,,3,,,
-63_2,,,Route_63_2,,3,,,
-64_1,,,Route_64_1,,3,,,
-64_2,,,Route_64_2,,3,,,
-65_1,,,Route_65_1,,3,,,
-65_2,,,Route_65_2,,3,,,
-72_1,,,Route_72_1,,3,,,
-72_2,,,Route_72_2,,3,,,
-74_1,,,Route_74_1,,3,,,
-74_2,,,Route_74_2,,3,,,
-84_1,,,Route_84_1,,3,,,
-84_2,,,Route_84_2,,3,,,
-85_1,,,Route_85_1,,3,,,
-85_2,,,Route_85_2,,3,,,
-86_1,,,Route_86_1,,3,,,
-86_2,,,Route_86_2,,3,,,
-87_1,,,Route_87_1,,3,,,
-87_2,,,Route_87_2,,3,,,
-88_1,,,Route_88_1,,3,,,
-88_2,,,Route_88_2,,3,,,
-89_1,,,Route_89_1,,3,,,
-89_2,,,Route_89_2,,3,,,
-90_1,,,Route_90_1,,3,,,
-90_2,,,Route_90_2,,3,,,
-91_1,,,Route_91_1,,3,,,
-91_2,,,Route_91_2,,3,,,
-92_1,,,Route_92_1,,3,,,
-92_2,,,Route_92_2,,3,,,
-93_1,,,Route_93_1,,3,,,
-93_2,,,Route_93_2,,3,,,
-94_1,,,Route_94_1,,3,,,
-94_2,,,Route_94_2,,3,,,
-95_1,,,Route_95_1,,3,,,
-95_2,,,Route_95_2,,3,,,
-96_1,,,Route_96_1,,3,,,
-96_2,,,Route_96_2,,3,,,
-97_1,,,Route_97_1,,3,,,
-97_2,,,Route_97_2,,3,,,
-98_1,,,Route_98_1,,3,,,
-98_2,,,Route_98_2,,3,,,
-99_1,,,Route_99_1,,3,,,
-99_2,,,Route_99_2,,3,,,
-100_1,,,Route_100_1,,3,,,
-100_2,,,Route_100_2,,3,,,
-101_1,,,Route_101_1,,3,,,
-101_2,,,Route_101_2,,3,,,
-102_1,,,Route_102_1,,3,,,
-102_2,,,Route_102_2,,3,,,
-103_1,,,Route_103_1,,3,,,
-103_2,,,Route_103_2,,3,,,
-104_1,,,Route_104_1,,3,,,
-104_2,,,Route_104_2,,3,,,
-105_1,,,Route_105_1,,3,,,
-105_2,,,Route_105_2,,3,,,
-106_1,,,Route_106_1,,3,,,
-106_2,,,Route_106_2,,3,,,
-107_1,,,Route_107_1,,3,,,
-107_2,,,Route_107_2,,3,,,
-108_1,,,Route_108_1,,3,,,
-108_2,,,Route_108_2,,3,,,
-BRT01_1,,,Route_BRT01_1,,3,,,
-BRT01_2,,,Route_BRT01_2,,3,,,
+route_id,agency_id,route_short_name,route_long_name,route_desc,route_type,route_color,route_text_color,route_sort_order
+1-0,1,1,François Mitterrand / Jamet - Beaujoire / Ranzay,,0,007A45,FFFFFF,1
+2-0,1,2,Orvault Grand Val - Gare de Pont Rousseau,,0,E53138,FFFFFF,3
+3-0,1,3,Marcel Paul - Neustrie,,0,0079BC,FFFFFF,5
+4-0,1,4,Foch - Cathédrale - Porte de Vertou,,3,FDC600,000000,7
+5-0,1,5,Hangar à Bananes - Gare Sud,,3,34B4E4,FFFFFF,8
+10-0,1,10,Gare de Chantenay - Bd de Doulon,,3,FFED00,000000,50
+11-0,1,11,Tertre - Perray,,3,E9C389,000000,51
+12-0,1,12,Jules Verne - Beauséjour,,3,B5DDF3,000000,52
+23-0,1,23,Haluchère Batignolles - Mendès France - Bellevue,,3,34B4E4,FFFFFF,63
+26-0,1,26,Jonelière - Hôtel de Région,,3,009534,FFFFFF,66
+27-0,1,27,La Herdrie - Pirmil,,3,B5DDF3,000000,67
+28-0,1,28,Vertou - Pirmil,,3,B5DDF3,000000,68
+30-0,1,30,Joliverie / Iles de Loire - Trentemoult,,3,FFED00,000000,70
+33-0,1,33,Robinière / L'Aufrère - Espace Diderot,,3,F5BAC6,000000,73
+36-0,1,36,Greneraie - Croix Jeannette,,3,00A4A7,FFFFFF,76
+38-0,1,38,Greneraie - Aéroport,,3,009640,FFFFFF,78
+40-0,1,40,Mendès France - Bellevue - Neustrie,,3,FFED00,000000,80
+42-0,1,42,Vertou - Pirmil,,3,CBD300,000000,82
+47-0,1,47,Pégers / Grande Noëlle - Vertou,,3,BEABD0,FFFFFF,87
+50-0,1,50,Basse Indre - Porte de La Chapelle,,3,FFED00,000000,90
+54-0,1,54,Marcel Paul - Saupin,,3,CBD300,000000,94
+59-0,1,59,Mendès France - Bellevue - Bout des Landes,,3,F5BAC6,000000,99
+60-0,1,60,Quintaine - Vertou,,3,F8EA22,000000,100
+66-0,1,66,Babinière - Ecole Centrale-Audencia,,3,2C4393,FFFFFF,106
+67-0,1,67,Le Cellier - Centre de Thouaré,,3,2C4393,FFFFFF,107
+69-0,1,69,Sautron - Orvault Morlière,,3,C0893A,FFFFFF,109
+71-0,1,71,Bac de Couëron - François Mitterrand,,3,CBD300,000000,111
+75-0,1,75,Charbonneau - Facultés,,3,E9C389,000000,115
+77-0,1,77,Sables d'Or - Haluchère - Batignolles,,3,B5DDF3,000000,117
+78-0,1,78,Bac du Pellerin - Neustrie,,3,F8B323,000000,118
+79-0,1,79,Orvault - Beauséjour,,3,F5BAC6,000000,119
+80-0,1,80,Chassay / Bellevue -  Fac de Droit,,3,FFED00,000000,120
+81-0,1,81,Mendès France - Bellevue - Gare Maritime,,3,00A4A7,FFFFFF,121
+85-0,1,85,Souchais - Haluchère - Batignolles,,3,F5BAC6,000000,125
+86-0,1,86,La Chapelle Aulnay - Bout des Pavés,,3,34B4E4,FFFFFF,126
+87-0,1,87,Le Halleray - Toutes Aides,,3,F8B323,000000,127
+88-0,1,88,Château d'Aux - Neustrie,,3,BEABD0,FFFFFF,128
+89-0,1,89,Le Cardo - Beauséjour,,3,77AD1C,FFFFFF,129
+91-0,1,91,Couëron-Bougon - Mendès France - Bellevue,,3,009534,FFFFFF,131
+93-0,1,93,Hôpital Laënnec - Hauts de Couëron,,3,00A4A7,FFFFFF,133
+95-0,1,95,Bois St-Lys - Haluchère - Batignolles,,3,CBD300,000000,135
+96-0,1,96,Coutancière - Bout des Pavés,,3,F8B323,000000,136
+97-0,1,97,Vertou - Trentemoult,,3,BEABD0,FFFFFF,137
+98-0,1,98,St-Léger-les-Vignes / Brains - Neustrie,,3,F8B323,000000,138
+101-0,1,101,Mairie de Couëron - Sinière,,3,FFFFFF,E53138,301
+102-0,1,102,Chalonges - René Bernier,,3,FFFFFF,E53138,302
+104-0,1,104,Les Sorinières - Petite Lande,,3,FFFFFF,E53138,304
+105-0,1,105,Collège Sainte Anne - Centre de Thouaré,,3,FFFFFF,E53138,305
+107-0,1,107,Bournière - Reinetière,,3,FFFFFF,E53138,307
+108-0,1,108,Saint-Hermeland - Saint-Léger-les-Vignes,,3,FFFFFF,E53138,308
+109-0,1,109,Ferrière - Couchant,,3,FFFFFF,E53138,309
+111-0,1,111,ADAPEI à Tillay - Lycée Appert,,3,FFFFFF,E53138,311
+112-0,1,112,St Blaise - Savarières,,3,FFFFFF,E53138,312
+115-0,1,115,Lycée Carquefou - Beaujoire,,3,FFFFFF,E53138,315
+117-0,1,117,Le Halleray - Reinetière,,3,FFFFFF,E53138,317
+118-0,1,118,Pirmil - Saint-Léger-Les-Vignes,,3,FFFFFF,E53138,318
+119-0,1,119,Mairie d'Orvault - Angevinière,,3,FFFFFF,E53138,319
+122-0,1,122,Savarières - St Blaise,,3,FFFFFF,E53138,322
+127-0,1,127,Colinière - Monteverdi,,3,FFFFFF,E53138,327
+128-0,1,128,Pé de Buzay - Lycée d'Orbigny,,3,FFFFFF,E53138,328
+129-0,1,129,Les Anges - Angevinière,,3,FFFFFF,E53138,329
+131-0,1,131,Bac de Couëron - Mendès France Bellevue,,3,FFFFFF,E53138,331
+135-0,1,135,Petits Champs Blancs - Collège Sainte-Anne,,3,FFFFFF,E53138,335
+137-0,1,137,Chinon / Monteverdi - Toutes Aides,,3,FFFFFF,E53138,337
+138-0,1,138,Le Pellerin - Lycée de Bouaye,,3,FFFFFF,E53138,338
+139-0,1,139,Sautron - Angevinière,,3,FFFFFF,E53138,339
+141-0,1,141,Sainte Philomène - La Ferme,,3,FFFFFF,E53138,341
+142-0,1,142,CAT Vertonne - Porte de Vertou,,3,FFFFFF,E53138,342
+147-0,1,147,Bournière - Toutes Aides,,3,FFFFFF,E53138,347
+149-0,1,149,Cheverny - Sautron,,3,FFFFFF,E53138,349
+152-0,1,152,La Herdrie - Pirmil,,3,FFFFFF,E53138,352
+157-0,1,157,Toutes Aides - Le Halleray,,3,FFFFFF,E53138,357
+158-0,1,158,St Jean de Boisseau - Lycée de Bouaye,,3,FFFFFF,E53138,358
+159-0,1,159,Sautron - Angevinière,,3,FFFFFF,E53138,359
+162-0,1,162,La Herdrie - Pirmil,,3,FFFFFF,E53138,362
+168-0,1,168,St Jean de Boiseau - Lycée d'Orbigny,,3,000000,FF8080,368
+169-0,1,169,Sautron - Thébaudières,,3,FFFFFF,E53138,369
+172-0,1,172,René Bernier - Pirmil,,3,FFFFFF,E53138,372
+179-0,1,179,Les Anges - Orvault-Morlière,,3,FFFFFF,E53138,379
+189-0,1,189,Pont Marchand - Angevinière,,3,FFFFFF,E53138,389
+192-0,1,192,Jean Monnet - Porte de Vertou,,3,FFFFFF,E53138,392
+C1-0,1,C1,Haluchère - Batignolles - Gare de Chantenay,,3,34B4E4,FFFFFF,21
+C2-0,1,C2,Le Cardo - Gare Sud,,3,ED7703,FFFFFF,22
+C20-0,1,C20,Ecole Centrale - Audencia - Gare Maritime,,3,F8EA22,000000,40
+C3-0,1,C3,Armor - Bd de Doulon,,3,F8B323,000000,23
+C4-0,1,C4,Les Sorinières - Greneraie,,3,77AD1C,FFFFFF,24
+C6-0,1,C6,Chantrerie Grandes Ecoles - Hermeland,,3,BEABD0,FFFFFF,26
+C7-0,1,C7,Trianon / Clairais - Souillarderie,,3,CBD300,000000,27
+C9-0,1,C9,Basse Goulaine / Chalonges - Pirmil,,3,F5B8C6,000000,29
+E1-0,1,E1,Couëron Océan - Gare Maritime,,3,E53138,FFFFFF,151
+E4-0,1,E4,Porte de Vertou - Vertou,,3,E53138,FFFFFF,154
+E5-0,1,E5,Carquefou - Fac de Droit,,3,E53138,FFFFFF,155
+E8-0,1,E8,La Cochère - Greneraie,,3,E53138,FFFFFF,158
+LCE-0,1,LCE,Cotalard - Léo Lagrange,,3,009534,FFFFFF,197
+LCN-0,1,LCN,Léo Lagrange - Pont Pilet,,3,E53138,FFFFFF,198
+LCO-0,1,LCO,René Cassin - Léo Lagrange,,3,34B4E4,FFFFFF,199
+N1-0,1,N1,Trentemoult - Roquios - Gare Maritime,,4,2AAAB6,FFFFFF,171
+N2-0,1,N2,Bas-Chantenay - Hangar à Bananes,,4,2AAAB6,FFFFFF,172
+N3-0,1,N3,Port Boyer Navibus - Petit Port-Facultés,,4,2AAAB6,FFFFFF,173
+NA-0,1,NA,Aéroport - Hôtel Dieu,,3,34B4E4,FFFFFF,160
+NC-0,1,NC,Chantrerie Grandes Ecoles - Ligne de nuit Chantrerie,,3,FFFFFF,242D77,191
+NGG-0,1,NGG,Gachet - Grimaudière,,4,2581C4,FFFFFF,181
+NN-0,1,NN,Hangar à Bananes - Ligne de nuit Nord,,3,F91AFF,FFFFFF,192
+NO-0,1,NO,Hangar à Bananes - Ligne de nuit Ouest,,3,FFFA3E,242D77,193
+NS-0,1,NS,Hangar à Bananes - Ligne de nuit Sud,,3,00FFC2,242D77,194

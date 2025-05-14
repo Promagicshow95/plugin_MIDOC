@@ -26,6 +26,8 @@ import gama.core.util.file.GamaFile;
 import gama.gaml.types.IContainerType;
 import gama.gaml.types.IType;
 import gama.gaml.types.Types;
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
 
 /**
  * Reading and processing GTFS files in GAMA. This class reads multiple GTFS files
@@ -90,6 +92,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         System.out.println("Creating transport objects...");
         createTransportObjects(scope);
         System.out.println("Transport object creation completed.");
+       
     }
 
     public GTFS_reader(final String pathName) throws GamaRuntimeException {
@@ -216,10 +219,10 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         shapesMap = GamaMapFactory.create(Types.INT, Types.get(TransportShape.class));	
         shapeRouteTypeMap = GamaMapFactory.create();
 
-        // ** Création d'une table associant shapeId à routeId **
+        // Table associant shapeId à routeId
         IMap<Integer, String> shapeRouteMap = GamaMapFactory.create(Types.INT, Types.STRING); 
 
-        // ** Récupération des types de lignes via routes.txt **
+        // Récupération des types de lignes via routes.txt
         IMap<String, Integer> routeTypeMap = GamaMapFactory.create(Types.STRING, Types.INT);
         IList<String> routesData = gtfsData.get("routes.txt");
         IMap<String, Integer> routesHeader = headerMaps.get("routes.txt");
@@ -231,7 +234,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             for (String line : routesData) {
                 String[] fields = line.split(",");
                 try {
-                    String routeId = fields[routeIdIndex];
+                    String routeId = fields[routeIdIndex].trim().replace("\"", "").replace("'", "");	
                     int routeType = Integer.parseInt(fields[routeTypeIndex]);
                     routeTypeMap.put(routeId, routeType);
                 } catch (Exception e) {
@@ -240,7 +243,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-        // ** Création des arrêts de transport à partir de stops.txt **
+        // Collecte des stop_ids utilisés
         Set<String> usedStopIds = new HashSet<>();
         IList<String> stopTimesData = gtfsData.get("stop_times.txt");
         IMap<String, Integer> stopTimesHeader = headerMaps.get("stop_times.txt");
@@ -250,13 +253,14 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             for (String line : stopTimesData) {
                 String[] fields = line.split(",");
                 if (fields.length > stopIdIndex) {
-                    usedStopIds.add(fields[stopIdIndex].trim());
+                    usedStopIds.add(fields[stopIdIndex].trim().replace("\"", "").replace("'", ""));
                 }
             }
         }
 
+        // Création des stops
         IList<String> stopsData = gtfsData.get("stops.txt");
-        IMap<String, Integer> headerIMap = headerMaps.get("stops.txt"); 
+        IMap<String, Integer> headerIMap = headerMaps.get("stops.txt");
 
         if (stopsData != null && headerIMap != null) {
             int stopIdIndex = headerIMap.get("stop_id");
@@ -267,7 +271,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             for (String line : stopsData) {
                 String[] fields = line.split(",");
                 try {
-                    String stopId = fields[stopIdIndex];
+                    String stopId = fields[stopIdIndex].trim().replace("\"", "").replace("'", ""); 
                     if (!usedStopIds.contains(stopId)) continue;
 
                     String stopName = fields[stopNameIndex];
@@ -284,7 +288,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
         System.out.println("Finished creating TransportStop objects.");
 
-        // ** Création des TransportShape à partir de shapes.txt **
+        // Création des TransportShape
         IList<String> shapesData = gtfsData.get("shapes.txt");
         IMap<String, Integer> headerMap = headerMaps.get("shapes.txt");
 
@@ -315,9 +319,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
         System.out.println("Finished collecting points for TransportShape objects.");
 
-        // ** Création des TransportTrip et remplissage de shapeRouteMap **
-        System.out.println("[INFO] Creating TransportTrip objects and populating shapeRouteMap...");
-
+        // Création des TransportTrip
         IList<String> tripsData = gtfsData.get("trips.txt");
         IMap<String, Integer> tripsHeaderMap = headerMaps.get("trips.txt");
 
@@ -329,14 +331,14 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             for (String line : tripsData) {
                 String[] fields = line.split(",");
                 try {
-                    String routeId = fields[routeIdIndex];
-                    int tripId = Integer.parseInt(fields[tripIdIndex]);
+                    String routeId = fields[routeIdIndex].trim().replace("\"", "").replace("'", "");
+                    String tripId = fields[tripIdIndex].trim().replace("\"", "").replace("'", "");
                     int shapeId = Integer.parseInt(fields[shapeIdIndex]);
 
                     TransportTrip trip = tripsMap.get(tripId);
                     if (trip == null) {
-                        trip = new TransportTrip(routeId, "", tripId, 0, shapeId);
-                        tripsMap.put(String.valueOf(tripId), trip);
+                    	trip = new TransportTrip(routeId, "", tripId, 0, shapeId);
+                        tripsMap.put(tripId, trip);
                     }
 
                     if (routeTypeMap.containsKey(routeId)) {
@@ -345,15 +347,15 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     }
 
                     shapeRouteMap.put(shapeId, routeId);
-                    
-                 // Ajouter tripId à TransportShape correspondant
+
                     if (shapesMap.containsKey(shapeId)) {
                         TransportShape shape = shapesMap.get(shapeId);
-                        shape.setTripId(tripId);
+                        shape.setTripId(tripId); // ✅ tripId reste un String ici
                         System.out.println("[DEBUG] Assigned tripId=" + tripId + " to shapeId=" + shapeId);
                     } else {
                         System.err.println("[ERROR] No shape found for shapeId=" + shapeId);
                     }
+
                     System.out.println("[DEBUG] Stored in shapeRouteMap: ShapeId=" + shapeId + " -> RouteId=" + routeId);
                 } catch (Exception e) {
                     System.err.println("[ERROR] Invalid trip line in trips.txt: " + line + " -> " + e.getMessage());
@@ -361,13 +363,13 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-        // ** Vérification du contenu de shapeRouteMap avant l’assignation **
+        // Vérification
         System.out.println("[DEBUG] Final content of shapeRouteMap:");
         for (Map.Entry<Integer, String> entry : shapeRouteMap.entrySet()) {
             System.out.println("ShapeId=" + entry.getKey() + " -> RouteId=" + entry.getValue());
         }
 
-        // ** Assignation des routeId aux TransportShape **
+        // Assignation des routeId aux TransportShape
         System.out.println("[INFO] Assigning routeId to TransportShapes...");
         for (TransportShape shape : shapesMap.values()) {
             int shapeId = shape.getShapeId();
@@ -380,7 +382,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-        // ** Assignation des routeType aux TransportShape et TransportTrip **
+        // Assignation des routeType
         for (TransportShape shape : shapesMap.values()) {
             int shapeId = shape.getShapeId();
             if (shapeRouteTypeMap.containsKey(shapeId)) {
@@ -490,12 +492,12 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         @SuppressWarnings("unchecked")
         IMap<String, IList<Integer>> stopRouteTypes = GamaMapFactory.create(Types.STRING, Types.LIST);
 
-        // Étape 1 : Construction des objets trips
+        // Étape 1 : construction des trips
         for (String line : stopTimesData) {
             String[] fields = line.split(",");
             try {
-                String tripId = fields[tripIdIndex];
-                String stopId = fields[stopIdIndex];
+                String tripId = fields[tripIdIndex].trim().replace("\"", "").replace("'", "");
+                String stopId = fields[stopIdIndex].trim().replace("\"", "").replace("'", "");
                 String departureTime = fields[departureTimeIndex];
 
                 TransportTrip trip = tripsMap.get(tripId);
@@ -518,11 +520,14 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
         }
 
-        // Étape 2 : Préparation des maps temporaires
+        // Étape 2 : préparer une map temporaire pour les départs
         @SuppressWarnings("unchecked")
         IMap<String, IList<GamaPair<String, String>>> departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
 
-        for (TransportTrip trip : tripsMap.values()) {
+        for (Map.Entry<String, TransportTrip> entry : tripsMap.entrySet()) {
+            String tripId = entry.getKey();
+            TransportTrip trip = entry.getValue();
+
             IList<String> stopsInOrder = trip.getStopsInOrder();
             IList<IMap<String, Object>> stopDetails = trip.getStopDetails();
             IList<GamaPair<String, String>> stopPairs = GamaListFactory.create(Types.PAIR);
@@ -536,10 +541,10 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 stopPairs.add(new GamaPair<>(stopId, departureInSeconds, Types.STRING, Types.STRING));
             }
 
-            departureTripsInfo.put(String.valueOf(trip.getTripId()), stopPairs);
+            departureTripsInfo.put(tripId, stopPairs);
         }
 
-        // 🔁 Étape 3 : Tri par heure de départ pour chaque stopId de départ
+        // Étape 3 : regrouper les tripId par stop de départ
         Map<String, List<String>> stopToTripIds = new HashMap<>();
         for (String tripId : departureTripsInfo.keySet()) {
             IList<GamaPair<String, String>> stopPairs = departureTripsInfo.get(tripId);
@@ -548,7 +553,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             stopToTripIds.computeIfAbsent(firstStopId, k -> new ArrayList<>()).add(tripId);
         }
 
-        // 🔁 Étape 4 : Stockage trié dans chaque stop
+        // Étape 4 : trier et stocker dans chaque stop
         for (Map.Entry<String, List<String>> entry : stopToTripIds.entrySet()) {
             String stopId = entry.getKey();
             List<String> tripIds = entry.getValue();
@@ -566,11 +571,12 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             for (String tripId : tripIds) {
                 IList<GamaPair<String, String>> pairs = departureTripsInfo.get(tripId);
                 stop.addStopPairs(tripId, pairs);
-                stop.setTripNumber(stop.getDepartureTripsInfo().size());
             }
+
+            stop.setTripNumber(stop.getDepartureTripsInfo().size());
         }
 
-        // Dernière étape : attribuer le routeType dominant à chaque stop
+        // Étape 5 : attribuer un routeType dominant s'il n'est pas défini
         for (TransportStop stop : stopsMap.values()) {
             if (stopRouteTypes.containsKey(stop.getStopId())) {
                 IList<Integer> routeTypes = stopRouteTypes.get(stop.getStopId());
@@ -594,6 +600,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         System.out.println("✅ computeDepartureInfo completed.");
     }
 
+
     
     // Method to convert departureTime of stops into seconds
     private String convertTimeToSeconds(String timeStr) {
@@ -609,5 +616,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             return "0";  // fallback
         }
     }
-
+    
+   
 }
