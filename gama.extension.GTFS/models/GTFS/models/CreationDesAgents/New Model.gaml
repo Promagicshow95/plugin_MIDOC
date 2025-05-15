@@ -25,19 +25,19 @@ global {
        	
 				
        }
-       
-       do export_bus_stop_json;
+//       
+//       do export_bus_stop_json;
 
        
     }
     
- 	action export_bus_stop_json {
-    list<bus_stop> filtered_stops <- bus_stop where (length(each.departureStopsInfo) > 0 and each.routeType = 3);
-    string json_out <- to_json(filtered_stops);
-    file f <- file("../../includes/bus_stops_filtered.txt");
-    save  f;
-    write "complete";
-	}
+// 	action export_bus_stop_json {
+//    list<bus_stop> filtered_stops <- bus_stop where (length(each.departureStopsInfo) > 0 and each.routeType = 3);
+//    string json_out <- to_json(filtered_stops);
+//    file f <- file("../../includes/bus_stops_filtered.txt");
+//    save  f;
+//    write "complete";
+//	}
  	
 }
 

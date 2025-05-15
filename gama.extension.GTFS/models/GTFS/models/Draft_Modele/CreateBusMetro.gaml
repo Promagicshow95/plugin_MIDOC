@@ -8,8 +8,6 @@
 
 model IndexIncrementalMoving
 
-
-
 global {
 	gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_am");
 	shape_file boundary_shp <- shape_file("../../includes/envelopFileNantes/gtfs-tan/routes.shp");
@@ -23,37 +21,22 @@ global {
 
 	date starting_date <- date("2024-02-21T00:00:00");
 	
-	
-	
-	
-	
 	float step <- 5 #s;
 	
 	int total_trips_to_launch <- 0;
 	int launched_trips_count <- 0;
 	int current_day <- 0;
+	list<string> launched_trip_ids <- []; // # MODIF : Liste globale des trips déjà lancés
 
 	init {
 		current_day <- floor((int(current_date - date([1970,1,1,0,0,0]))) / 86400);
-		//write "\ud83d\uddd3\ufe0f Chargement des donn\u00e9es GTFS...";
-		create bus_stop from: gtfs_f {
-		}
-		
-//		bus_stop stop1 <- bus_stop first_with (each.stopId = "stop_point:SP_1415");
-//        bus_stop stop2 <- bus_stop first_with (each.stopId = "stop_point:SP_1759");
-//        write "Stop Dist: " + (stop1 distance_to stop2);
-//        write "Evelope: " + shape;
-        
-        
+		create bus_stop from: gtfs_f {}
 		create transport_shape from: gtfs_f {}
-		
+
 		// Prégénérer tous les graphes par shapeId
 		loop s over: transport_shape {
 			shape_graphs[s.shapeId] <- as_edge_graph(s);
 		}
-		
-
-		
 	}
 	
 	int get_time_now {
@@ -68,7 +51,6 @@ global {
     	current_seconds_mod <- get_time_now();
 	}
 	
-	
 	reflex show_metro_trip_count when: cycle = 1 {
    		total_trips_to_launch <- sum((bus_stop where (each.routeType = 3)) collect each.tripNumber);
    		write "🟣 Total des trips métro (routeType = 3) = " + total_trips_to_launch;
@@ -79,26 +61,13 @@ global {
 		if sim_day_index > current_day {
 			current_day <- sim_day_index;
 			launched_trips_count <- 0;
+			launched_trip_ids <- []; 
 			ask bus_stop where (each.routeType = 3) {
 				current_trip_index <- 0;
-				
 			}
 			write "🌙 Tous les trips ont été lancés. → Passage au jour " + current_day;
 		}
 	}
-
-	
-
-	
-//	reflex debug when: every(1 #mn) {
-//		bus max_delay <- bus with_max_of (-mean(each.arrival_time_diffs_neg));
-//		if max_delay != nil {write "Max bus delay is: " + mean(max_delay.arrival_time_diffs_neg) + ", bus: " + max_delay + " tripId: " +  max_delay.trip_id;}
-//		
-//	}
-
-
-
-	
 }
 
 species bus_stop skills: [TransportStopSkill] {
@@ -108,61 +77,48 @@ species bus_stop skills: [TransportStopSkill] {
 	int current_trip_index <- 0;
 	bool initialized <- false;
 
-	init {
-	}  
+	init {}
 	
-	reflex init_test when: cycle =1{
+	reflex init_test when: cycle = 1 {
 		ordered_trip_ids <- keys(departureStopsInfo);
-		if (ordered_trip_ids !=nil) {}
-		
+		if (ordered_trip_ids != nil) {}
 	}
-	
 
-
-	
-	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids) and routeType = 3){
+	// --- MODIF : Logique de lancement des bus avec contrôle global des trips déjà lancés ---
+	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids) and routeType = 3) {
 		string trip_id <- ordered_trip_ids[current_trip_index];
 		list<pair<bus_stop, string>> trip_info <- departureStopsInfo[trip_id];
 		string departure_time <- trip_info[0].value;
 
-		
-//		write "departure_time: " + departure_time;
-//		write "current_time: " + current_seconds_mod;
-
-		if (current_seconds_mod >= int(departure_time) ){
-		
+		// --- Empêcher de lancer un trip déjà lancé globalement ! ---
+		if (current_seconds_mod >= int(departure_time) and not (trip_id in launched_trip_ids)) {
 			int shape_found <- tripShapeMap[trip_id] as int;
-			
-			if shape_found != 0{
+			if shape_found != 0 {
 				shape_id <- shape_found;
-				
-				create bus with:[
+				create bus with: [
 					departureStopsInfo:: trip_info,
 					current_stop_index :: 0,
 					location :: trip_info[0].key.location,
 					target_location :: trip_info[1].key.location,
 					trip_id :: int(trip_id),
 					route_type :: self.routeType,
-					shapeID ::shape_id,
+					shapeID :: shape_id,
 					loop_starting_day:: current_day,
-					local_network :: shape_graphs[shape_id]// Utilise le graphe préchargé
+					local_network :: shape_graphs[shape_id]
 				];
-				
+
 				launched_trips_count <- launched_trips_count + 1;
+				launched_trip_ids <- launched_trip_ids + trip_id; // # MODIF : ajouter à la liste globale
 				current_trip_index <- (current_trip_index + 1) mod length(ordered_trip_ids);
-//				write "current_trip_index: " + current_trip_index;
-				
 			}
 		}
 	}
-	
-	
 
-	
 	aspect base {
 		draw circle(20) color: customColor;
 	}
 }
+
 
 species transport_shape skills: [TransportShapeSkill] {
 	aspect default { draw shape color: #black; }
@@ -314,16 +270,16 @@ experiment GTFSExperiment type: gui {
 		 display monitor {
             chart "Mean arrival time diff" type: series
             {
-                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
-                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
+//                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
+//                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
 //                 data "total_trips_to_launch" value:total_trips_to_launch color: # green marker_shape: marker_empty style: spline;
 //                data "launched_trips_count" value: launched_trips_count color: # red marker_shape: marker_empty style: spline;
             }
 
-//			chart "Number of bus" type: series 
-//			{
-//				data "Total bus" value: length(bus);
-//			}
+			chart "Number of bus" type: series 
+			{
+				data "Total bus" value: length(bus);
+			}
 
 
         }
