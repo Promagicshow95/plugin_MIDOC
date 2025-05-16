@@ -1,11 +1,14 @@
 
 package utils;
 
-import com.vividsolutions.jts.geom.*;
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
 import java.util.List;
+
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Envelope;
+import org.locationtech.jts.geom.LineString;
 
 /**
  * Minimal Shapefile writer for Point and LineString geometries (no DBF).
