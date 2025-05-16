@@ -1,48 +1,19 @@
 model GTFSreader
 
-global {
+global  {
+    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+    shape_file boundary_shp <- shape_file("../../includes/routes.shp");
 
-    // Path to the GTFS file
-    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");	
-    shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
-
-    // Geometry of the boundary
     geometry shape <- envelope(boundary_shp);
 
-    //tolerance for reconnecting nodes
-	float tolerance <- 3.0;
-	
-	//if true, split the lines at their intersection
-	bool split_lines <- true;
-	
-	//if true, keep only the main connected components of the network
-	bool reduce_to_main_connected_components <- true;
-    
-
-    // Initialization section
     init {
         write "Loading GTFS contents from: " + gtfs_f;
         
-        // Create transport_shape agents from the GTFS data
-        create transport_shape from: gtfs_f {
-         
-        }
-        
-         // Nettoyage du réseau de transport
-//        list<geometry> clean_lines <- clean_network(transport_shape collect each.shape, tolerance, split_lines, reduce_to_main_connected_components) ;
-//         // **Créer une correspondance entre chaque shape et son routeType**
-//        map<geometry, int> shape_to_routeType <- map(transport_shape collect (each.shape::each.routeType));
-//         // Création des routes à partir des géométries nettoyées
-//        create road from: clean_lines{
-//        	 if (shape_to_routeType contains (self.shape)){
-//        	 	routeType <- shape_to_routeType[self.shape];
-//        	 }
-//        }
-        
-		//save building geometry into the shapefile: add the attribute TYPE which value is set by the type variable of the building agent and the attribute ID 
-//		save road to:"../includes/cleaned_network.shp" format:"shp"; 
-//        write "Cleaned road network saved successfully!";
-//        
+        // *** Export du shapefile directement ***
+       
+
+        // Si tu veux ensuite créer les agents pour affichage, tu peux :
+        // create transport_shape from: gtfs_f { }
     }
 }
 

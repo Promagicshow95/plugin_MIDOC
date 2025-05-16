@@ -8,7 +8,7 @@ import gama.core.metamodel.agent.IAgent;
 import gama.core.metamodel.population.IPopulation;
 import gama.extension.GTFS.GTFS_reader;
 import gama.extension.GTFS.TransportShape;
-import gama.extension.GTFS.export.GTFSExporterShapeFile;
+
 import gama.gaml.expressions.IExpression;
 import gama.gaml.operators.Cast;
 import gama.gaml.species.ISpecies;
@@ -65,12 +65,14 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
      // Generation of initializations
         agentCreator.addInits(scope, inits, max);
      // Exporter les routes en .shp
-        try {
-            List<TransportShape> shapes = gtfsReader.getShapes();
-            GTFSExporterShapeFile.exportShapesToShapefile(shapes, "includes");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+//        try {
+//            List<TransportShape> shapes = gtfsReader.getShapes();
+//            System.out.println(">>> Appel exportShapesToShapefile avec " + shapes.size() + " shapes");
+//            GeoToolsShapeExporter.exportShapesToShapefile(shapes, "C:/Users/tiend/Desktop/Formation");
+//            System.out.println(">>> Export shapefile terminé !");
+//        } catch (Exception e) {
+//            e.printStackTrace();
+//        }
         return true;
     }
 

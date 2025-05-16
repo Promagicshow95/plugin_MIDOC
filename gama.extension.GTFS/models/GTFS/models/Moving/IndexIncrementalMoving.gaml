@@ -12,7 +12,7 @@ model IndexIncrementalMoving
 
 global {
 	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
-	shape_file boundary_shp <- shape_file("../../includes/envelopFile/routes.shp");
+	shape_file boundary_shp <- shape_file("../../includes/routes.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network;
 	int shape_id;
