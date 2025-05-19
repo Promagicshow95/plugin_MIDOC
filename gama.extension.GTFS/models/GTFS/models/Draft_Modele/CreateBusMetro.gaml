@@ -270,16 +270,16 @@ experiment GTFSExperiment type: gui {
 		 display monitor {
             chart "Mean arrival time diff" type: series
             {
-//                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
-//                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
+                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
+                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
 //                 data "total_trips_to_launch" value:total_trips_to_launch color: # green marker_shape: marker_empty style: spline;
 //                data "launched_trips_count" value: launched_trips_count color: # red marker_shape: marker_empty style: spline;
             }
 
-			chart "Number of bus" type: series 
-			{
-				data "Total bus" value: length(bus);
-			}
+//			chart "Number of bus" type: series 
+//			{
+//				data "Total bus" value: length(bus);
+//			}
 
 
         }

@@ -1,7 +1,7 @@
 model GTFSreader
 
 global  {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_am");
     shape_file boundary_shp <- shape_file("../../includes/routes.shp");
 
     geometry shape <- envelope(boundary_shp);
@@ -9,11 +9,11 @@ global  {
     init {
         write "Loading GTFS contents from: " + gtfs_f;
         
-        // *** Export du shapefile directement ***
+        
        
 
-        // Si tu veux ensuite créer les agents pour affichage, tu peux :
-        // create transport_shape from: gtfs_f { }
+       
+        create transport_shape from: gtfs_f { }
     }
 }
 
