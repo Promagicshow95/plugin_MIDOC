@@ -10,6 +10,8 @@ model IndexIncrementalMoving
 
 global {
 	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+	date min_date_gtfs <- starting_date_gtfs(gtfs_f);
+    date max_date_gtfs <- ending_date_gtfs(gtfs_f);
 	shape_file boundary_shp <- shape_file("../../includes/envelopFile/routes.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network;
@@ -29,6 +31,8 @@ global {
 	list<string> launched_trip_ids <- []; // # MODIF : Liste globale des trips déjà lancés
 
 	init {
+		write "Le premier jour du GTFS = " + min_date_gtfs;
+        write "Le dernier jour du GTFS = " + max_date_gtfs;
 		current_day <- floor((int(current_date - date([1970,1,1,0,0,0]))) / 86400);
 		create bus_stop from: gtfs_f {}
 		create transport_shape from: gtfs_f {}

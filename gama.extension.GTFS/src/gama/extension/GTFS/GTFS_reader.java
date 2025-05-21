@@ -779,6 +779,81 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
         return validTripIds;
     }
+    
+    public java.time.LocalDate getStartingDate() {
+        java.time.LocalDate minDate = null;
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
+
+        // Cherche la plus petite date dans calendar.txt
+        IList<String> calendarData = gtfsData.get("calendar.txt");
+        if (calendarData != null && !calendarData.isEmpty()) {
+            IMap<String, Integer> header = headerMaps.get("calendar.txt");
+            if (header != null && header.containsKey("start_date")) {
+                int startIdx = header.get("start_date");
+                for (String line : calendarData) {
+                    String[] fields = line.split(",");
+                    if (fields.length > startIdx) {
+                        java.time.LocalDate d = java.time.LocalDate.parse(fields[startIdx], formatter);
+                        if (minDate == null || d.isBefore(minDate)) minDate = d;
+                    }
+                }
+            }
+        }
+        // Cherche la plus petite date dans calendar_dates.txt
+        IList<String> calendarDates = gtfsData.get("calendar_dates.txt");
+        if (calendarDates != null && !calendarDates.isEmpty()) {
+            IMap<String, Integer> header = headerMaps.get("calendar_dates.txt");
+            if (header != null && header.containsKey("date")) {
+                int dateIdx = header.get("date");
+                for (String line : calendarDates) {
+                    String[] fields = line.split(",");
+                    if (fields.length > dateIdx) {
+                        java.time.LocalDate d = java.time.LocalDate.parse(fields[dateIdx], formatter);
+                        if (minDate == null || d.isBefore(minDate)) minDate = d;
+                    }
+                }
+            }
+        }
+        return minDate;
+    }
+
+    public java.time.LocalDate getEndingDate() {
+        java.time.LocalDate maxDate = null;
+        java.time.format.DateTimeFormatter formatter = java.time.format.DateTimeFormatter.ofPattern("yyyyMMdd");
+
+        // Cherche la plus grande date dans calendar.txt
+        IList<String> calendarData = gtfsData.get("calendar.txt");
+        if (calendarData != null && !calendarData.isEmpty()) {
+            IMap<String, Integer> header = headerMaps.get("calendar.txt");
+            if (header != null && header.containsKey("end_date")) {
+                int endIdx = header.get("end_date");
+                for (String line : calendarData) {
+                    String[] fields = line.split(",");
+                    if (fields.length > endIdx) {
+                        java.time.LocalDate d = java.time.LocalDate.parse(fields[endIdx], formatter);
+                        if (maxDate == null || d.isAfter(maxDate)) maxDate = d;
+                    }
+                }
+            }
+        }
+        // Cherche la plus grande date dans calendar_dates.txt
+        IList<String> calendarDates = gtfsData.get("calendar_dates.txt");
+        if (calendarDates != null && !calendarDates.isEmpty()) {
+            IMap<String, Integer> header = headerMaps.get("calendar_dates.txt");
+            if (header != null && header.containsKey("date")) {
+                int dateIdx = header.get("date");
+                for (String line : calendarDates) {
+                    String[] fields = line.split(",");
+                    if (fields.length > dateIdx) {
+                        java.time.LocalDate d = java.time.LocalDate.parse(fields[dateIdx], formatter);
+                        if (maxDate == null || d.isAfter(maxDate)) maxDate = d;
+                    }
+                }
+            }
+        }
+        return maxDate;
+    }
+
 
     
     // Method to convert departureTime of stops into seconds

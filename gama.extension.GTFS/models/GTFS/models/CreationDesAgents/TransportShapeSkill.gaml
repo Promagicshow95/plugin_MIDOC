@@ -2,14 +2,20 @@ model GTFSreader
 
 global  {
     gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_am");
+    date min_date_gtfs <- starting_date_gtfs(gtfs_f);
+    date max_date_gtfs <- ending_date_gtfs(gtfs_f);
     shape_file boundary_shp <- shape_file("../../includes/routes.shp");
+    
 
     geometry shape <- envelope(boundary_shp);
-
+	
     init {
         write "Loading GTFS contents from: " + gtfs_f;
         
         
+        write "Le premier jour du GTFS = " + min_date_gtfs;
+        write "Le dernier jour du GTFS = " + max_date_gtfs;
+    
        
 
        
@@ -52,5 +58,7 @@ experiment GTFSExperiment type: gui {
             species transport_shape aspect: base;
             species road aspect: default;
         }
+       
+
     }
 }
