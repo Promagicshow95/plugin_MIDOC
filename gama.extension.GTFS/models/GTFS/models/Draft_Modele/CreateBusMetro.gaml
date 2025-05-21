@@ -9,8 +9,8 @@
 model IndexIncrementalMoving
 
 global {
-	gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_am");
-	shape_file boundary_shp <- shape_file("../../includes/envelopFileNantes/gtfs-tan/routes.shp");
+	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+	shape_file boundary_shp <- shape_file("../../includes/envelopFile/routes.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network;
 	int shape_id;
@@ -19,7 +19,7 @@ global {
 	int time_24h -> int(current_date - date([1970,1,1,0,0,0])) mod 86400;
 	int current_seconds_mod <- 0;
 
-	date starting_date <- date("2024-02-21T00:00:00");
+	date starting_date <- date("2025-04-07T04:00:00");
 	
 	float step <- 5 #s;
 	
@@ -270,16 +270,16 @@ experiment GTFSExperiment type: gui {
 		 display monitor {
             chart "Mean arrival time diff" type: series
             {
-                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
-                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
+//                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
+//                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
 //                 data "total_trips_to_launch" value:total_trips_to_launch color: # green marker_shape: marker_empty style: spline;
 //                data "launched_trips_count" value: launched_trips_count color: # red marker_shape: marker_empty style: spline;
             }
 
-//			chart "Number of bus" type: series 
-//			{
-//				data "Total bus" value: length(bus);
-//			}
+			chart "Number of bus" type: series 
+			{
+				data "Total bus" value: length(bus);
+			}
 
 
         }
