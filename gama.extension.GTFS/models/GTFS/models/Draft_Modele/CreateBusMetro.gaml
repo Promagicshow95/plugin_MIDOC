@@ -31,6 +31,7 @@ global {
 	list<string> launched_trip_ids <- []; // # MODIF : Liste globale des trips déjà lancés
 
 	init {
+		
 		write "Le premier jour du GTFS = " + min_date_gtfs;
         write "Le dernier jour du GTFS = " + max_date_gtfs;
 		current_day <- floor((int(current_date - date([1970,1,1,0,0,0]))) / 86400);

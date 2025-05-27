@@ -22,5 +22,15 @@
 			<type>1</type>
 			<location>C:/Applications/Eclipse.app/Contents/MacOS/C::/Applications/Eclipse.app/Contents/MacOS/C::/Users/tiend/Desktop/Prepared for MIDOC/Prepared for MIDOC/Donnée/DataFile/tisseo_gtfs_v2/stops.txt</location>
 		</link>
+		<link>
+			<name>models/OSMLoader.gaml</name>
+			<type>1</type>
+			<location>C:/Users/tiend/Downloads/OSMLoader.gaml</location>
+		</link>
+		<link>
+			<name>models/WorldHandler.gaml</name>
+			<type>1</type>
+			<location>C:/Users/tiend/Downloads/WorldHandler.gaml</location>
+		</link>
 	</linkedResources>
 </projectDescription>

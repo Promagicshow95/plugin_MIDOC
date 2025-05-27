@@ -1,5 +1,6 @@
 package gama.extension.GTFS.Operators;
 
+import gama.core.metamodel.shape.GamaShape;
 import gama.core.runtime.IScope;
 import gama.core.util.GamaDate;
 import gama.extension.GTFS.GTFS_reader;
@@ -31,5 +32,7 @@ public class GTFSOperators {
 		    if (localDate == null) return null;
 		    return new GamaDate(scope, localDate);
 		}
+		
+
 
 }
