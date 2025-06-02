@@ -2,7 +2,7 @@ model GTFSreader
 
 global {
     // Path to the GTFS file
-    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/rouen_gtfs");
      
 	shape_file boundary_shp <- shape_file("../../includes/stops_points_wgs84.shp");
 	

@@ -1,7 +1,7 @@
 model GTFSreader
 
 global  {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_am");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/rouen_gtfs");
     date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
     shape_file boundary_shp <- shape_file("../../includes/routes.shp");
