@@ -33,7 +33,6 @@ public class TransportTrip {
 
     public void setRouteType(int routeType) {
         this.routeType = routeType;
-        System.out.println("[DEBUG] Trip ID " + tripId + " assigned routeType: " + routeType);
     }
 
     // Add a stop_id in sequence order

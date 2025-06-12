@@ -22,5 +22,35 @@
 			<type>1</type>
 			<location>C:/Applications/Eclipse.app/Contents/MacOS/C::/Applications/Eclipse.app/Contents/MacOS/C::/Users/tiend/Desktop/Prepared for MIDOC/Prepared for MIDOC/Donnée/DataFile/tisseo_gtfs_v2/stops.txt</location>
 		</link>
+		<link>
+			<name>external/xapi_meta-4237575946200336236</name>
+			<type>1</type>
+			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta-4237575946200336236</locationURI>
+		</link>
+		<link>
+			<name>external/xapi_meta-6276846089483801963</name>
+			<type>1</type>
+			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta-6276846089483801963</locationURI>
+		</link>
+		<link>
+			<name>external/xapi_meta-7281790584386539207</name>
+			<type>1</type>
+			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta-7281790584386539207</locationURI>
+		</link>
+		<link>
+			<name>external/xapi_meta1213047944735059727</name>
+			<type>1</type>
+			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta1213047944735059727</locationURI>
+		</link>
+		<link>
+			<name>models/OSMLoader.gaml</name>
+			<type>1</type>
+			<location>C:/Users/tiend/Downloads/OSMLoader.gaml</location>
+		</link>
+		<link>
+			<name>models/WorldHandler.gaml</name>
+			<type>1</type>
+			<location>C:/Users/tiend/Downloads/WorldHandler.gaml</location>
+		</link>
 	</linkedResources>
 </projectDescription>

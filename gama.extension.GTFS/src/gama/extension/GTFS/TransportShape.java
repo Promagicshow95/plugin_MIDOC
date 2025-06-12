@@ -27,7 +27,6 @@ public class TransportShape {
 
     public IShape generateShape(IScope scope) {
         if (points.isEmpty()) {
-            System.err.println("[ERROR] No points found for shapeId=" + shapeId);
             return null;
         }
 
@@ -52,7 +51,6 @@ public class TransportShape {
     }
 
     public void setRouteId(String routeId) {
-        System.out.println("[DEBUG] Setting routeId for ShapeId=" + shapeId + " -> " + routeId);
         this.routeId = routeId;
     }
 
@@ -70,7 +68,6 @@ public class TransportShape {
     }
 
     public void setTripId(String tripId) {
-        System.out.println("[DEBUG] Setting tripId for ShapeId=" + shapeId + " -> " + tripId);
         this.tripId = tripId;
     }
     

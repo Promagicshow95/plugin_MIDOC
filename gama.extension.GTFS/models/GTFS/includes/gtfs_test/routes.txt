@@ -1,0 +1,86 @@
+﻿route_id,agency_id,route_short_name,route_long_name,route_type,route_color,route_text_color,route_url,route_sort_order
+01,2,"F1","Plaine de la Ronce <> Stade Diochon",3,E6007E,ffffff,,20
+02,2,"F2","Centre commercial de La Vatine <> Tamarelle",3,A2559D,ffffff,,21
+03,2,"F3","Hôtel de Ville de Sotteville <> Tourville-la-Rivière",3,FFDD00,1d1d1b,,22
+04,2,"F4","Hameau de Frévaux <> Mont-Riboudet",3,EC6408,ffffff,,23
+05,2,"F5","Théâtre des Arts <> Lycée Galilée",3,AFCA0B,1d1d1b,,24
+06,2,"F6","Les Bouttières <> Gare de Saint-Etienne",3,00ACE5,ffffff,,25
+07,2,"F7","La Pléiade <> Hôtel de Ville de Sotteville",3,008F5B,ffffff,,26
+08,2,"F8","Lycée du Cailly <> Tamarelle",3,0090D7,ffffff,,27
+10,2,"10","Maromme La Maine <> Lycée Flaubert",3,F8AE4C,1d1d1b,,40
+11,2,"11","Collège L. de Vinci <> Ile Lacroix",3,00ACE5,ffffff,,41
+13,2,"13","Martainville <> École de Musique",3,F8AE4C,1d1d1b,,42
+14,2,"14","Mont Pilon <> Mairie de Belbeuf",3,00ACE5,ffffff,,43
+15,2,"15","Jules Verne <> Grand Val",3,74B95B,1d1d1b,,44
+20,2,"20","Le Chapître <> Mairie de Saint-Aubin-Épinay",3,C29FCB,1d1d1b,,45
+201,2,"201","Rue d'Hectot / Salle des Fêtes <> Collège Gustave Flaubert",3,FDC300,1d1d1b,,201
+202,2,"202","Le Maupas - Ferme du Tronc <> Collège Gustave Flaubert",3,FDC300,1d1d1b,,202
+203,2,"203","L'Orvason <> Collège Gustave Flaubert",3,FDC300,1d1d1b,,203
+204,2,"204","Bois de la Fontaine <> Collège Gustave Flaubert",3,FDC300,1d1d1b,,204
+205,2,"205","Le Paulu - Usine Oxford <> Collège Gustave Flaubert",3,FDC300,1d1d1b,,205
+206,2,"206","Rue Saint-Jean <> Collège Gustave Flaubert",3,FDC300,1d1d1b,,206
+207,2,"207","Route du Halage <> Collège Gustave Flaubert",3,FDC300,1d1d1b,,207
+208,2,"208","Calumet <> Collège Gustave Flaubert",3,FDC300,1d1d1b,,208
+210,2,"210","Ronceray <> Collège Charcot",3,FDC300,1d1d1b,,210
+211,2,"211","Le Beauquesnay <> Collège Charcot",3,FDC300,1d1d1b,,211
+212,2,"212","Terrain de Pétanque <> Collège Charcot",3,FDC300,1d1d1b,,212
+213,2,"213","La Maison Blanche <> Collège Charcot",3,FDC300,1d1d1b,,213
+214,2,"214","Le Genetey / Roumardière <> Collège Le Cèdre / Collège Ste-Marie",3,FDC300,1d1d1b,,214
+22,2,"22","Parc de la Vatine <> Barrières de Darnétal",3,F4A3AF,1d1d1b,,46
+220,2,"220","École J.Y. Cousteau <>",3,FDC300,1d1d1b,,220
+221,2,"221","École d'Épinay <>",3,FDC300,1d1d1b,,221
+222,2,"222","Route de Yainville <> École de Jumièges",3,FDC300,1d1d1b,,222
+224,2,"224","Les Vieux / Le Bas Aulnay <> Écoles de Saint-Paër",3,FDC300,1d1d1b,,224
+225,2,"225","Mairie - École d'Yville <>",3,FDC300,1d1d1b,,225
+227,2,"227","La Chapelle des Monts <> École Malraux",3,FDC300,1d1d1b,,227
+228,2,"228","Le Halage <> École Malraux",3,FDC300,1d1d1b,,228
+229,2,"229","Église du Trait <> École Maupassant",3,FDC300,1d1d1b,,229
+27,2,"27","Théâtre des Arts <> Bel Air",3,74B95B,1d1d1b,,48
+28,2,"28","Louise Michel <> Bois Tison",3,F4A3AF,1d1d1b,,49
+300,2,"300","Lycée Flaubert <> Épinay",3,FDC300,1d1d1b,,300
+301,2,"301","Lycée Flaubert <> Bois Breton",3,FDC300,1d1d1b,,301
+302,2,"302","Lycée Grieu <> Boulingrin",3,FDC300,1d1d1b,,302
+303,2,"303","Route d'Isneauville <> Lycée Flaubert / Coll. St-Victrice",3,FDC300,1d1d1b,,303
+305,2,"305","Lycée Flaubert <> Petit Pont",3,FDC300,1d1d1b,,305
+310,2,"310","Pôle Multimodal-Cotoni <> Lycée des Bruyères / Lycée Élisa Lemonnier",3,FDC300,1d1d1b,,310
+311,2,"311","Pôle Multimodal-Cotoni / Champ de Foire <> Lycée Val de Seine",3,FDC300,1d1d1b,,311
+313,2,"313","Collège E. Branly <> Coopérateurs",3,FDC300,1d1d1b,,313
+314,2,"314","La Houssière <> Lycée des Bruyères",3,FDC300,1d1d1b,,314
+315,2,"315","Les Bouttières <> Lycée des Bruyères",3,FDC300,1d1d1b,,315
+322,2,"322","Collège Lucie Aubrac <> Siamoisiers",3,FDC300,1d1d1b,,322
+33,2,"33","François Truffaut <> Hôtel de Ville de Sotteville",3,00A983,ffffff,,50
+330,2,"330","Lycée Galilée <> Long Corbeil",3,FDC300,1d1d1b,,330
+331,2,"331","La Providence <> Eauplet",3,FDC300,1d1d1b,,331
+332,2,"332","Lycée Galilée / La Providence / Collège Malot <> Mairie de Montmain",3,FDC300,1d1d1b,,332
+333,2,"333","Lycée Galilée / La Providence <> Château Anquetil",3,FDC300,1d1d1b,,333
+334,2,"334","Lycée Galilée / Collège Malot  <> Ecole Mendès-France",3,FDC300,1d1d1b,,334
+335,2,"335","Lycée Galilée / La Providence / Collège Malot <> Allée du Couvent",3,FDC300,1d1d1b,,335
+336,2,"336","Collège Verhaeren <> Mairie de Belbeuf",3,FDC300,1d1d1b,,336
+340,2,"340","Forgettes <> Boulingrin",3,FDC300,1d1d1b,,340
+341,2,"341","Collège Rousseau <> Epinay",3,FDC300,1d1d1b,,341
+342,2,"342","Collège Rousseau <> Bois Breton",3,FDC300,1d1d1b,,342
+343,2,"343","Collège Chartier <> Mont Pilon",3,FDC300,1d1d1b,,343
+35,2,"35","Sente d'Houdeville <> École Moulin",3,D3D800,1d1d1b,,51
+350,2,"350","Place Alexandre <> Collège Gounod",3,FDC300,1d1d1b,,350
+351,2,"351","Place du Général de Gaulle <> Collège Gounod",3,FDC300,1d1d1b,,351
+36,2,"36","Boulingrin <> Coteaux du Larmont",3,D3D800,1d1d1b,,52
+360,2,"360","Place du Vivier <> Collège Jean Zay",3,FDC300,1d1d1b,,360
+361,2,"361","Hameau Saint-Maurice <> Collège Jean Zay",3,FDC300,1d1d1b,,361
+363,2,"363","Lycée du Cailly <> Maromme La Maine",3,FDC300,1d1d1b,,363
+364,2,"364","Lycée du Cailly <> Place du Vivier",3,FDC300,1d1d1b,,364
+37,2,"37","Plaine de la Ronce <> Les Bosquets ou Hauts Poiriers",3,D3D800,1d1d1b,,53
+38,2,"38","Coteaux Branly <> Mairie de Montmain",3,D3D800,1d1d1b,,54
+41,2,"41","Ancienne Mare <> Vente Olivier",3,F8AE4C,1d1d1b,,55
+42,2,"42","Lebon <> La Houssière",3,A2559D,ffffff,,56
+43,2,"43","Longs Vallons <> Place du Vivier",3,9BD5E3,1d1d1b,,57
+44,2,"44","E. Lacroix <> Chapelle Saint-Siméon",3,9BD5E3,1d1d1b,,58
+90,2,"Métro","Boulingrin <> Georges Braque / Technopôle",1,123E8B,ffffff,,1
+91,2,"T1","Mont aux Malades <> CHU Charles Nicolle",0,E63027,ffffff,,5
+92,2,"T2","Mairie - V. Schoelcher <> Tamarelle",0,008F5B,ffffff,,6
+93,2,"T3","Monet <> Durécu-Lavoisier",0,6D1C74,ffffff,,7
+94,2,"T4","Marie Curie - MTC <> Zénith-Parc Expo",0,F5C500,1d1d1b,,8
+98,2,"Noctambus","La Pléiade <> Cateliers",3,29235C,ffde00,,81
+99,2,"Calypso","Navette Calypso",4,0bbbef,ffffff,,80
+26,2,"26","Salle des Fêtes de Saint-Pierre-de-Varengeville <> Mont-Riboudet",3,0069B3,ffffff,,47
+529,2,"529","Route de Montville <> Gare Routière de Rouen",3,9BD5E3,1d1d1b,,59
+530,2,"530","Caudebec Quai <> Gare Routière de Rouen",3,D20A11,ffffff,,60

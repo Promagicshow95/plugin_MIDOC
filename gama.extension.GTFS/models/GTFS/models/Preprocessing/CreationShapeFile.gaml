@@ -1,7 +1,7 @@
 model GTFSreader
 
 global skills: [gtfs_export] {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/rouen_gtfs");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
     //shape_file boundary_shp <- shape_file("../../includes/routes.shp");
 
     //geometry shape <- envelope(boundary_shp);

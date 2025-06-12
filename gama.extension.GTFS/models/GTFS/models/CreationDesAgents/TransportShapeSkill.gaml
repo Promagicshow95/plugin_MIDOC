@@ -1,10 +1,10 @@
 model GTFSreader
 
 global  {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/rouen_gtfs");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/gtfs_test");
     date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
-    shape_file boundary_shp <- shape_file("../../includes/routes.shp");
+    shape_file boundary_shp <- shape_file("../../includes/stops_points_wgs84.shp");
     
 
     geometry shape <- envelope(boundary_shp);
