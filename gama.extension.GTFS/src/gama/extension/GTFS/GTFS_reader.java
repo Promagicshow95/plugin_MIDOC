@@ -6,6 +6,7 @@ import java.io.FileReader;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -501,7 +502,54 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         System.out.println("[INFO] Finished assigning routeType to TransportShape and TransportTrip.");
         System.out.println("[INFO] Calling computeDepartureInfo...");
         computeDepartureInfo(scope);
+        
+        System.out.println("[INFO] Début de la propagation finale des routeType aux stops...");
+        int propagated = 0;
+        for (TransportTrip trip : tripsMap.values()) {
+            int routeType = trip.getRouteType();
+            if (routeType == -1) {
+                System.out.println("[DEBUG] Trip " + trip.getTripId() + " a routeType=-1 => ignoré");
+                continue;
+            }
+            List<String> orderedStops = trip.getStopsInOrder();
+            if (orderedStops == null || orderedStops.isEmpty()) {
+                System.out.println("[DEBUG] Trip " + trip.getTripId() + " a stopsInOrder vide");
+                continue;
+            }
+
+            for (String stopId : orderedStops) {
+                TransportStop stop = stopsMap.get(stopId);
+                if (stop != null && stop.getRouteType() == -1) {
+                    stop.setRouteType(routeType);
+                    propagated++;
+                    System.out.println("[INFO] ✅ Propagation : stop " + stopId + " reçoit routeType " + routeType + " depuis trip " + trip.getTripId());
+                }
+            }
+        }
+        System.out.println("✅ Tous les stops ont reçu leur routeType à partir des trips complets. (nouveaux assignés : " + propagated + ")");
         System.out.println("[INFO] computeDepartureInfo completed.");
+
+        System.out.println("[INFO] Réinitialisation des routeType à -1 pour tous les stops...");
+        for (TransportStop stop : stopsMap.values()) {
+            stop.setRouteType(-1);
+        }
+
+        System.out.println("[INFO] Début de la propagation finale des routeType aux stops...");
+        int counter = 0;
+        for (TransportTrip trip : tripsMap.values()) {
+            int routeType = trip.getRouteType();
+            if (routeType == -1) continue;
+
+            for (String stopId : trip.getStopsInOrder()) {
+                TransportStop stop = stopsMap.get(stopId);
+                if (stop != null && stop.getRouteType() == -1) {
+                    stop.setRouteType(routeType);
+                    counter++;
+                }
+            }
+        }
+        System.out.println("✅ Tous les stops ont reçu leur routeType à partir des trips complets. (nouveaux assignés : " + counter + ")");
+
     }
 
 
@@ -731,37 +779,55 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
 
         // 4. Remplissage séquentiel des trips et stops
+        int totalAdded = 0;
+        int totalSkipped = 0;
+        int totalMissingTrip = 0;
+
         for (String[] fields : stopTimesData) {
-            if (fields == null || fields.length <= Math.max(tripIdIndex, Math.max(stopIdIndex, departureTimeIndex))) continue;
+            if (fields == null || fields.length <= Math.max(tripIdIndex, Math.max(stopIdIndex, departureTimeIndex))) {
+                System.out.println("[SKIP] Ligne ignorée (champ manquant), taille=" + fields.length);
+                totalSkipped++;
+                continue;
+            }
+
             try {
+                // Nettoyage de trip_id et stop_id
                 String tripId = fields[tripIdIndex].trim().replace("\"", "").replace("'", "");
-                if (!activeTripIds.contains(tripId)) continue;
                 String stopId = fields[stopIdIndex].trim().replace("\"", "").replace("'", "");
                 String departureTime = fields[departureTimeIndex];
 
+                // Vérification existence du trip
                 TransportTrip trip = tripsMap.get(tripId);
                 if (trip == null) {
-                    System.err.println("[ERROR] Trip object not found for tripId: " + tripId);
+                    System.err.println("[WARNING] tripId \"" + tripId + "\" non trouvé dans tripsMap.");
+                    totalMissingTrip++;
                     continue;
                 }
+
+                // Ajout du stop dans le trip
                 trip.addStop(stopId);
                 trip.addStopDetail(stopId, departureTime, 0.0);
+                totalAdded++;
 
+                // Récupération ou création du stop
                 TransportStop stop = stopsMap.get(stopId);
                 if (stop != null) {
-                    // Récupération du routeType pour propagation (même si pas de shape)
                     int tripRouteType = trip.getRouteType();
                     if (tripRouteType != -1 && stop.getRouteType() == -1) {
                         stop.setRouteType(tripRouteType);
                     }
-                    // Ajout du lien trip-shape (shapeId = -1 si pas de shape)
                     stop.addTripShapePair(tripId, trip.getShapeId());
                 }
+
             } catch (Exception e) {
-                System.err.println("[ERROR] Processing stop_times line failed: " + java.util.Arrays.toString(fields) + " -> " + e.getMessage());
+                System.err.println("[ERROR] Échec traitement ligne : " + Arrays.toString(fields) + " → " + e.getMessage());
             }
         }
 
+        System.out.println("🔎 Résumé computeDepartureInfo():");
+        System.out.println("   → Stops ajoutés dans trips : " + totalAdded);
+        System.out.println("   → Lignes ignorées (incomplètes) : " + totalSkipped);
+        System.out.println("   → tripId non trouvés dans tripsMap : " + totalMissingTrip);
         // 5. Création des departureTripsInfo (infos de départ par stop)
         IMap<String, IList<GamaPair<String, String>>> departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
         for (String tripId : activeTripIds) {

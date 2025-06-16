@@ -43,14 +43,14 @@
 			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta1213047944735059727</locationURI>
 		</link>
 		<link>
-			<name>models/OSMLoader.gaml</name>
+			<name>external/xapi_meta1395908177997246268</name>
 			<type>1</type>
-			<location>C:/Users/tiend/Downloads/OSMLoader.gaml</location>
+			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta1395908177997246268</locationURI>
 		</link>
 		<link>
-			<name>models/WorldHandler.gaml</name>
+			<name>external/xapi_meta5916324093038181545</name>
 			<type>1</type>
-			<location>C:/Users/tiend/Downloads/WorldHandler.gaml</location>
+			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta5916324093038181545</locationURI>
 		</link>
 	</linkedResources>
 </projectDescription>

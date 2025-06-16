@@ -6,7 +6,7 @@ global {
    string adress <-"http://overpass-api.de/api/xapi_meta?*[bbox="+top_left.x+"," + bottom_right.y + ","+ bottom_right.x + "," + top_left.y+"]";
 			
    file<geometry> osm_geometries <- osm_file<geometry> (adress, osm_data_to_generate);
-   file data_file <- shape_file("../../includes/stops_points_wgs84.shp");
+   file data_file <- shape_file("../../includes/envelopFile/routes.shp");
    geometry shape <- envelope(data_file);
 
     map<string, list> osm_data_to_generate <- [
@@ -16,31 +16,31 @@ global {
         "cycleway"::[]
     ];
     
-    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
-    shape_file boundary_shp <- shape_file("../../includes/envelopFile/routes.shp");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+   
     
     init{
     	   
         // Create bus_stop agents from the GTFS data
-       create bus_stop from: gtfs_f  {
+//       create bus_stop from: gtfs_f  {
        	
 				
        }
     }
     
    
-}
+//}
 
 
-species bus_stop skills: [TransportStopSkill] {
-	
- 
-     aspect base {
-     	
-     	
-		draw circle (100.0) at: location color:#blue;	
-     }
-}
+//species bus_stop skills: [TransportStopSkill] {
+//	
+// 
+//     aspect base {
+//     	
+//     	
+//		draw circle (100.0) at: location color:#blue;	
+//     }
+//}
 // Espèce générique pour une route de transport public
 species network_route {
     geometry shape;
@@ -60,7 +60,7 @@ experiment main type: gui {
     output {
         display map {
             species network_route aspect:base ;
-            species bus_stop aspect: base;
+//            species bus_stop aspect: base;
         }
     }
     
@@ -88,10 +88,14 @@ experiment main type: gui {
                 routeType_num <- 0;
             }
             // Subway
-            else if geom.attributes["railway"] = "subway" {
-                route_type <- "subway";
-                routeType_num <- 1;
-            }
+            else if (
+    				geom.attributes["railway"] = "subway" or
+    				geom.attributes["route"] = "subway" or
+    				geom.attributes["route_master"] = "subway"
+				) {
+    				route_type <- "subway";
+    				routeType_num <- 1;
+				}
             // Railway générique
             else if geom.attributes["railway"] != nil
                     and !(geom.attributes["railway"] in ["abandoned", "platform", "disused"]) {
