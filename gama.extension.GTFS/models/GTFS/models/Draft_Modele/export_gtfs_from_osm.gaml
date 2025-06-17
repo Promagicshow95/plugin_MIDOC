@@ -1,12 +1,13 @@
-/**
-* Name: exportgtfsfromosm
-* Based on the internal empty template. 
-* Author: tiend
-* Tags: 
-*/
+model FilterGTFS
 
+global skills: [gtfs_filter] {
+    string gtfs_path <- "../../includes/tisseo_gtfs_v2";
+    string osm_path <- "../../includes/map.osm";
+    string output_path <- "../../includes/filtered_gtfs";
 
-model exportgtfsfromosm
+    init {
+        do filter_gtfs_with_osm;
+    }
+}
 
-/* Insert your model definition here */
-
+experiment demo type: gui {}

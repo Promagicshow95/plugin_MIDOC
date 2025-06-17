@@ -1,0 +1,6 @@
+route_id,agency_id,route_short_name,route_long_name,route_color,route_text_color,route_type
+line:8,network:1,15,Jeanne d'Arc / Etats-Unis Fondeyre,a0670f,ffffff,3
+line:42,network:1,70,Jeanne d'Arc / Aéroconstellation,e675a7,ffffff,3
+line:99,network:1,AERO,Navette Aéroport,e46809,ffffff,3
+line:69,network:1,B,Borderouge / Ramonville,ffdd00,000000,1
+line:108,network:1,CIMTR,Navette Cimetières,0098d4,ffffff,3

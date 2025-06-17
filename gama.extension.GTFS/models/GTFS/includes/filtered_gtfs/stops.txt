@@ -1,0 +1,9 @@
+stop_id,stop_code,stop_name,stop_lat,stop_lon,location_type,parent_station,wheelchair_boarding
+stop_area:SA_1467,,Pont du Béarnais,43.61212727051525,1.425184834451094,1,,1
+stop_area:SA_581,,Passerelle Haedens,43.61352822211923,1.4310415032881587,1,,2
+stop_point:SP_1015,27411,ZAC Ponts Jumeaux,43.611943123802625,1.4227144061212573,0,stop_area:SA_694,1
+stop_point:SP_1077,27400,Pont du Béarnais,43.61224735854389,1.4246802390011386,0,stop_area:SA_1467,1
+stop_point:SP_3531,5201,Passerelle Haedens,43.61353543085304,1.4314193323061157,0,stop_area:SA_581,2
+stop_point:SP_3763,27403,Pont du Béarnais,43.61177321584225,1.4249476086735773,0,stop_area:SA_1467,1
+stop_point:SP_552,5200,Passerelle Haedens,43.613521012150755,1.4306636743594545,0,stop_area:SA_581,2
+stop_point:SP_974,27401,Pont du Béarnais,43.61236123340021,1.4259266589052302,0,stop_area:SA_1467,1

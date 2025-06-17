@@ -9,10 +9,10 @@
 model IndexIncrementalMoving
 
 global {
-	gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
+	gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
 	date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
-	shape_file boundary_shp <- shape_file("../../includes/stops_points_wgs84.shp");
+	shape_file boundary_shp <- shape_file("../../includes/routes_wgs84.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network;
 	int shape_id;
@@ -21,8 +21,7 @@ global {
 	int time_24h -> int(current_date - date([1970,1,1,0,0,0])) mod 86400;
 	int current_seconds_mod <- 0;
 
-	date starting_date <- date("2018-12-31T16:00:00");
-	
+	date starting_date <- date("2025-05-17T00:00:00");
 	float step <- 10 #s;
 	
 	int total_trips_to_launch <- 0;
