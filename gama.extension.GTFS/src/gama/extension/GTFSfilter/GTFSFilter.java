@@ -1,24 +1,18 @@
 package gama.extension.GTFSfilter;
 
-
 import GamaGTFSUtils.OSMUtils;
 import org.locationtech.jts.geom.Envelope;
+import com.opencsv.CSVReader;
+import com.opencsv.CSVParserBuilder;
+import com.opencsv.CSVReaderBuilder;
+import com.opencsv.exceptions.CsvValidationException;
 
 import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
 
-/**
- * Utility to filter GTFS files based on the bounding box extracted from an OSM file.
- * The resulting filtered files are written to a new directory.
- */
 public class GTFSFilter {
 
-    /**
-     * Filter the GTFS directory using the bounding box contained in the OSM file.
-     * Only the most common files (stops, shapes, trips, stop_times and routes)
-     * are filtered. Other files are copied as is.
-     */
     public static void filter(String gtfsDirPath, String osmFilePath, String outputDirPath) throws Exception {
         Envelope env = OSMUtils.extractEnvelope(osmFilePath);
 
@@ -29,142 +23,132 @@ public class GTFSFilter {
         File outDir = new File(outputDirPath);
         if (!outDir.exists()) outDir.mkdirs();
 
-        // Filter stops
+        // Filtrage des stops
         Set<String> keptStopIds = new HashSet<>();
-        File stopsFile = new File(gtfsDir, "stops.txt");
-        if (stopsFile.exists()) {
-            List<String> lines = Files.readAllLines(stopsFile.toPath());
-            if (!lines.isEmpty()) {
-                Map<String,Integer> idx = parseHeader(lines.get(0));
-                List<String> out = new ArrayList<>();
-                out.add(lines.get(0));
-                for (int i = 1; i < lines.size(); i++) {
-                    String[] parts = parseCsv(lines.get(i));
-                    if (parts.length <= Math.max(idx.get("stop_lat"), idx.get("stop_lon"))) continue;
-                    double lat = Double.parseDouble(parts[idx.get("stop_lat")]);
-                    double lon = Double.parseDouble(parts[idx.get("stop_lon")]);
-                    if (env.contains(lon, lat)) {
-                        keptStopIds.add(parts[idx.get("stop_id")]);
-                        out.add(lines.get(i));
-                    }
+        filterAndWriteFile("stops.txt", gtfsDir, outDir, (header, row) -> {
+            int idxLat = header.getOrDefault("stop_lat", -1);
+            int idxLon = header.getOrDefault("stop_lon", -1);
+            int idxStopId = header.getOrDefault("stop_id", -1);
+            if (row.length <= Math.max(idxLat, idxLon) || idxLat < 0 || idxLon < 0 || idxStopId < 0) return false;
+            try {
+                double lat = Double.parseDouble(row[idxLat]);
+                double lon = Double.parseDouble(row[idxLon]);
+                if (env.contains(lon, lat)) {
+                    keptStopIds.add(row[idxStopId]);
+                    return true;
                 }
-                Files.write(new File(outDir,"stops.txt").toPath(), out);
-            }
-        }
+            } catch (Exception e) {}
+            return false;
+        });
 
-        // Filter shapes (optional)
+        // Filtrage des shapes
         Set<String> keptShapeIds = new HashSet<>();
-        File shapesFile = new File(gtfsDir, "shapes.txt");
-        if (shapesFile.exists()) {
-            List<String> lines = Files.readAllLines(shapesFile.toPath());
-            if (!lines.isEmpty()) {
-                Map<String,Integer> idx = parseHeader(lines.get(0));
-                List<String> out = new ArrayList<>();
-                out.add(lines.get(0));
-                String currentShape = null;
-                boolean keepCurrent = false;
-                for (int i = 1; i < lines.size(); i++) {
-                    String[] parts = parseCsv(lines.get(i));
-                    String shapeId = parts[idx.get("shape_id")];
-                    if (!shapeId.equals(currentShape)) {
-                        currentShape = shapeId;
-                        keepCurrent = false;
-                    }
-                    double lat = Double.parseDouble(parts[idx.get("shape_pt_lat")]);
-                    double lon = Double.parseDouble(parts[idx.get("shape_pt_lon")]);
-                    if (env.contains(lon, lat)) {
-                        keepCurrent = true;
-                    }
-                    if (keepCurrent) {
-                        keptShapeIds.add(shapeId);
-                        out.add(lines.get(i));
-                    }
+        filterAndWriteFile("shapes.txt", gtfsDir, outDir, (header, row) -> {
+            int idxLat = header.getOrDefault("shape_pt_lat", -1);
+            int idxLon = header.getOrDefault("shape_pt_lon", -1);
+            int idxShapeId = header.getOrDefault("shape_id", -1);
+            if (row.length <= Math.max(idxLat, idxLon) || idxLat < 0 || idxLon < 0 || idxShapeId < 0) return false;
+            try {
+                double lat = Double.parseDouble(row[idxLat]);
+                double lon = Double.parseDouble(row[idxLon]);
+                if (env.contains(lon, lat)) {
+                    keptShapeIds.add(row[idxShapeId]);
+                    return true;
                 }
-                Files.write(new File(outDir,"shapes.txt").toPath(), out);
-            }
-        }
+            } catch (Exception e) {}
+            return false;
+        });
 
-        // Filter stop_times and remember remaining trips
+        // stop_times et keptTripIds
         Set<String> keptTripIds = new HashSet<>();
-        File stopTimesFile = new File(gtfsDir, "stop_times.txt");
-        if (stopTimesFile.exists()) {
-            List<String> lines = Files.readAllLines(stopTimesFile.toPath());
-            if (!lines.isEmpty()) {
-                Map<String,Integer> idx = parseHeader(lines.get(0));
-                List<String> out = new ArrayList<>();
-                out.add(lines.get(0));
-                for (int i=1;i<lines.size();i++) {
-                    String[] parts = parseCsv(lines.get(i));
-                    String stopId = parts[idx.get("stop_id")];
-                    if (keptStopIds.contains(stopId)) {
-                        keptTripIds.add(parts[idx.get("trip_id")]);
-                        out.add(lines.get(i));
-                    }
-                }
-                Files.write(new File(outDir,"stop_times.txt").toPath(), out);
+        filterAndWriteFile("stop_times.txt", gtfsDir, outDir, (header, row) -> {
+            int idxStopId = header.getOrDefault("stop_id", -1);
+            int idxTripId = header.getOrDefault("trip_id", -1);
+            if (row.length <= Math.max(idxStopId, idxTripId) || idxStopId < 0 || idxTripId < 0) return false;
+            if (keptStopIds.contains(row[idxStopId])) {
+                keptTripIds.add(row[idxTripId]);
+                return true;
             }
-        }
+            return false;
+        });
 
-        // Filter trips
-        File tripsFile = new File(gtfsDir, "trips.txt");
+        // trips et routesToKeep
         Set<String> routesToKeep = new HashSet<>();
-        if (tripsFile.exists()) {
-            List<String> lines = Files.readAllLines(tripsFile.toPath());
-            if (!lines.isEmpty()) {
-                Map<String,Integer> idx = parseHeader(lines.get(0));
-                List<String> out = new ArrayList<>();
-                out.add(lines.get(0));
-                for (int i=1;i<lines.size();i++) {
-                    String[] parts = parseCsv(lines.get(i));
-                    String tripId = parts[idx.get("trip_id")];
-                    String shapeId = idx.containsKey("shape_id") ? parts[idx.get("shape_id")] : "";
-                    if (keptTripIds.contains(tripId) || keptShapeIds.contains(shapeId)) {
-                        out.add(lines.get(i));
-                        routesToKeep.add(parts[idx.get("route_id")]);
-                        keptTripIds.add(tripId);
-                        if (!shapeId.isEmpty()) keptShapeIds.add(shapeId);
-                    }
-                }
-                Files.write(new File(outDir,"trips.txt").toPath(), out);
+        filterAndWriteFile("trips.txt", gtfsDir, outDir, (header, row) -> {
+            int idxTripId = header.getOrDefault("trip_id", -1);
+            int idxShapeId = header.getOrDefault("shape_id", -1);
+            int idxRouteId = header.getOrDefault("route_id", -1);
+            if (row.length <= Math.max(idxTripId, idxRouteId) || idxTripId < 0 || idxRouteId < 0) return false;
+            String tripId = row[idxTripId];
+            String shapeId = (idxShapeId >= 0 && row.length > idxShapeId) ? row[idxShapeId] : "";
+            if (keptTripIds.contains(tripId) || (!shapeId.isEmpty() && keptShapeIds.contains(shapeId))) {
+                routesToKeep.add(row[idxRouteId]);
+                keptTripIds.add(tripId);
+                if (!shapeId.isEmpty()) keptShapeIds.add(shapeId);
+                return true;
             }
-        }
+            return false;
+        });
 
-        // Filter routes
-        File routesFile = new File(gtfsDir, "routes.txt");
-        if (routesFile.exists()) {
-            List<String> lines = Files.readAllLines(routesFile.toPath());
-            if (!lines.isEmpty()) {
-                Map<String,Integer> idx = parseHeader(lines.get(0));
-                List<String> out = new ArrayList<>();
-                out.add(lines.get(0));
-                for (int i=1;i<lines.size();i++) {
-                    String[] parts = parseCsv(lines.get(i));
-                    if (routesToKeep.contains(parts[idx.get("route_id")])) {
-                        out.add(lines.get(i));
-                    }
-                }
-                Files.write(new File(outDir,"routes.txt").toPath(), out);
-            }
-        }
+        // routes
+        filterAndWriteFile("routes.txt", gtfsDir, outDir, (header, row) -> {
+            int idxRouteId = header.getOrDefault("route_id", -1);
+            if (row.length <= idxRouteId || idxRouteId < 0) return false;
+            return routesToKeep.contains(row[idxRouteId]);
+        });
 
-        // Copy remaining files
+        // Copy remaining files (inchangés)
         for (File f : Objects.requireNonNull(gtfsDir.listFiles())) {
             if (!f.isFile() || !f.getName().endsWith(".txt")) continue;
             if (Set.of("stops.txt","shapes.txt","trips.txt","stop_times.txt","routes.txt").contains(f.getName())) continue;
-            Files.copy(f.toPath(), new File(outDir,f.getName()).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            Files.copy(f.toPath(), new File(outDir, f.getName()).toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         }
     }
 
-    private static Map<String,Integer> parseHeader(String headerLine) {
-        Map<String,Integer> map = new HashMap<>();
-        String[] cols = headerLine.split(",");
-        for (int i=0;i<cols.length;i++) {
-            map.put(cols[i].trim().toLowerCase(), i);
+    /**
+     * Fonction utilitaire : filtre et écrit un fichier GTFS
+     * @throws CsvValidationException 
+     */
+    private static void filterAndWriteFile(String filename, File inDir, File outDir, RowPredicate keepRow) throws IOException, CsvValidationException {
+        File inFile = new File(inDir, filename);
+        if (!inFile.exists()) return;
+
+        char sep = detectSeparator(inFile);
+        try (
+            Reader reader = new BufferedReader(new FileReader(inFile));
+            CSVReader csvReader = new CSVReaderBuilder(reader).withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build();
+            BufferedWriter writer = Files.newBufferedWriter(new File(outDir, filename).toPath())
+        ) {
+            String[] header = csvReader.readNext();
+            if (header == null) return;
+            writer.write(String.join(String.valueOf(sep), header)); writer.newLine();
+            Map<String, Integer> headerIdx = new HashMap<>();
+            for (int i=0; i<header.length; i++) headerIdx.put(header[i].trim().toLowerCase(), i);
+
+            String[] row;
+            while ((row = csvReader.readNext()) != null) {
+                if (row.length == 0) continue;
+                if (keepRow.keep(headerIdx, row)) {
+                    writer.write(String.join(String.valueOf(sep), row));
+                    writer.newLine();
+                }
+            }
         }
-        return map;
     }
 
-    private static String[] parseCsv(String line) {
-        return line.split(",");
+    // Détection automatique du séparateur
+    private static char detectSeparator(File file) throws IOException {
+        try (BufferedReader r = new BufferedReader(new FileReader(file))) {
+            String line = r.readLine();
+            if (line == null) return ',';
+            if (line.contains(";")) return ';';
+            if (line.contains("\t")) return '\t';
+            return ',';
+        }
+    }
+
+    @FunctionalInterface
+    interface RowPredicate {
+        boolean keep(Map<String, Integer> header, String[] row);
     }
 }

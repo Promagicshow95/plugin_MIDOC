@@ -21,7 +21,7 @@ global {
 	int time_24h -> int(current_date - date([1970,1,1,0,0,0])) mod 86400;
 	int current_seconds_mod <- 0;
 
-	date starting_date <- date("2025-05-17T00:00:00");
+	date starting_date <- date("2025-05-17T16:00:00");
 	float step <- 10 #s;
 	
 	int total_trips_to_launch <- 0;
@@ -76,17 +76,34 @@ global {
 
 species bus_stop skills: [TransportStopSkill] {
 	rgb customColor <- rgb(0,0,255);
-	map<string, bool> trips_launched;
-	list<string> ordered_trip_ids;
-	int current_trip_index <- 0;
-	bool initialized <- false;
+        map<string, bool> trips_launched;
+        list<string> ordered_trip_ids;
+        int current_trip_index <- 0;
+        bool initialized <- false;
 
-	init {}
-	
-	reflex init_test when: cycle = 1 {
-		ordered_trip_ids <- keys(departureStopsInfo);
-		if (ordered_trip_ids != nil) {}
-	}
+// Pour arrive tout suite à l'heure choisit 
+//        int first_index_of_trip_after_starting_time {
+//                int idx <- 0;
+//                if (ordered_trip_ids = nil) { return 0; }
+//                loop tid over: ordered_trip_ids {
+//                        pair<bus_stop, string> first_stop_info <- departureStopsInfo[tid][0];
+//						int dep_time <- int(first_stop_info.value);
+//                        if dep_time >= current_seconds_mod {
+//                                return idx;
+//                        }
+//                        idx <- idx + 1;
+//                }
+//                return idx;
+//        }
+        
+        init {}
+
+        reflex init_test when: cycle = 1 {
+                ordered_trip_ids <- keys(departureStopsInfo);
+                if (ordered_trip_ids != nil) {
+//                        current_trip_index <- first_index_of_trip_after_starting_time();
+                }
+        }
 
 	// --- MODIF : Logique de lancement des bus avec contrôle global des trips déjà lancés ---
 	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids) and routeType = 3) {
