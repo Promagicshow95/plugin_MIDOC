@@ -1,10 +1,10 @@
 model GTFSreader
 
 global  {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/filtered_gtfs_cleaned");
     date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
-    shape_file boundary_shp <- shape_file("../../includes/envelopFileNantes/gtfs-tan/routes.shp");
+    shape_file boundary_shp <- shape_file("../../includes/stops_points_wgs84.shp");
     
 
     geometry shape <- envelope(boundary_shp);

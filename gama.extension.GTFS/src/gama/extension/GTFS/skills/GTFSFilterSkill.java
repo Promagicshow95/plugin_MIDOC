@@ -11,39 +11,47 @@ import java.io.File;
 @skill(name = "gtfs_filter")
 public class GTFSFilterSkill extends Skill {
 
-    @action(name = "filter_gtfs_with_osm", doc = @doc("Filter GTFS files using the bounding box of an OSM file. Global variables gtfs_path, osm_path and output_path must be defined."))
+    @action(
+        name = "filter_gtfs_with_osm",
+        doc = @doc("Filtre les fichiers GTFS selon la bounding box de l’OSM. Le résultat final (propre et cohérent) est dans output_path. Les variables globales gtfs_path, osm_path et output_path doivent être définies.")
+    )
     public Object filterGtfsWithOsm(final IScope scope) {
         try {
-            // Récupération des chemins relatifs définis en GAML
+            // Récupère les chemins depuis les variables globales GAMA
             String gtfsRelPath = scope.getGlobalVarValue("gtfs_path").toString();
             String osmRelPath = scope.getGlobalVarValue("osm_path").toString();
             String outputRelPath = scope.getGlobalVarValue("output_path").toString();
 
-            // Résolution manuelle des chemins absolus
+            // Résolution des chemins absolus
             String baseFolder = scope.getModel().getDescription().getModelFolderPath();
             File gtfsAbsPath = new File(baseFolder, gtfsRelPath);
             File osmAbsPath = new File(baseFolder, osmRelPath);
             File outputAbsPath = new File(baseFolder, outputRelPath);
 
-            // Debugging simple (optionnel)
-            System.out.println("GTFS absolu: " + gtfsAbsPath.getAbsolutePath());
-            System.out.println("OSM absolu: " + osmAbsPath.getAbsolutePath());
-            System.out.println("Output absolu: " + outputAbsPath.getAbsolutePath());
-
-            // Appel au filtre GTFS
+            // Lance le filtrage + nettoyage + validation
             GTFSFilter.filter(
-                gtfsAbsPath.getAbsolutePath(), 
-                osmAbsPath.getAbsolutePath(), 
+                gtfsAbsPath.getAbsolutePath(),
+                osmAbsPath.getAbsolutePath(),
                 outputAbsPath.getAbsolutePath()
             );
 
-            // Message succès console GAMA
+            // Affiche un message de succès dans la console GAMA
             if (scope.getGui() != null) {
-                scope.getGui().getConsole().informConsole("✅ GTFS filtered successfully to: " + outputAbsPath.getAbsolutePath(), scope.getSimulation());
+                scope.getGui().getConsole().informConsole(
+                    "✅ GTFS filtré, nettoyé et validé : " + outputAbsPath.getAbsolutePath(),
+                    scope.getSimulation()
+                );
+                scope.getGui().getConsole().informConsole(
+                    "Voir le rapport : " + outputAbsPath.getAbsolutePath() + "/validation/report.json",
+                    scope.getSimulation()
+                );
             }
         } catch (Exception e) {
             if (scope.getGui() != null) {
-                scope.getGui().getConsole().informConsole("❌ Error while filtering GTFS: " + e.getMessage(), scope.getSimulation());
+                scope.getGui().getConsole().informConsole(
+                    "❌ Error while filtering/validating GTFS: " + e.getMessage(),
+                    scope.getSimulation()
+                );
             }
             e.printStackTrace();
         }

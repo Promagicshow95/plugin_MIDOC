@@ -2,9 +2,9 @@ model GTFSreader
 
 global {
     // Path to the GTFS file
-    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/filtered_gtfs_cleaned");
      
-	shape_file boundary_shp <- shape_file("../../includes/envelopFile/routes.shp");
+	shape_file boundary_shp <- shape_file("../../includes/stops_points_wgs84.shp");
 	
 	geometry shape <- envelope(boundary_shp);
 	 //string formatted_time;

@@ -1,7 +1,7 @@
 model GTFSreader
 
 global skills: [gtfs_export] {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/filtered_gtfs");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/filtered_gtfs_cleaned");
     //shape_file boundary_shp <- shape_file("../../includes/routes.shp");
 
     //geometry shape <- envelope(boundary_shp);
