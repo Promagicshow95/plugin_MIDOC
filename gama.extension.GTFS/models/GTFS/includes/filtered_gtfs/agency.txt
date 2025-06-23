@@ -1,2 +1,2 @@
-agency_id,agency_name,agency_url,agency_timezone
-1,Default Agency,http://www.example.com,UTC
+agency_id,agency_name,agency_url,agency_timezone,agency_lang,agency_phone
+1,Naolib,https://www.naolib.fr,Europe/Paris,fr,0240444444

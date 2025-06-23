@@ -21,9 +21,12 @@ public class GTFSFilter {
     private static final Set<String> REQUIRED_FILES = Set.of(
         "stops.txt", "trips.txt", "routes.txt", "stop_times.txt", "agency.txt"
     );
-    // Optionnels
+    // Fichiers optionnels (shapes.txt géré séparément)
+            // Fichiers optionnels (calendar) — shapes.txt géré séparément
     private static final Set<String> OPTIONAL_FILES = Set.of(
-        "shapes.txt", "calendar.txt", "calendar_dates.txt"
+        "calendar.txt",
+        "calendar_dates.txt"
+       
     );
 
     public static void filter(String gtfsDirPath, String osmFilePath, String outputDirPath) throws Exception {
@@ -53,13 +56,12 @@ public class GTFSFilter {
                 }
             }
         }
-        
         if (!missingFiles.isEmpty()) {
             throw new IllegalArgumentException("Fichiers GTFS manquants: " + String.join(", ", missingFiles));
         }
         System.out.println("✅ Fichiers GTFS requis vérifiés");
 
-        // --- agency.txt : 
+        // --- agency.txt ---
         handleAgencyFile(gtfsDir, outDir, osmFilePath);
 
         // --- stops.txt ---
@@ -101,14 +103,19 @@ public class GTFSFilter {
 
         // --- trips.txt ---
         Set<String> routesToKeep = new HashSet<>();
+        Set<String> shapesToKeep = new HashSet<>();
         System.out.println("🔄 Filtrage des voyages (trips.txt)...");
         filterAndWriteFile("trips.txt", gtfsDir, outDir, (header, row) -> {
             int idxTripId = header.getOrDefault("trip_id", -1);
             int idxRouteId = header.getOrDefault("route_id", -1);
-            if (row.length <= Math.max(idxTripId, idxRouteId) || idxTripId < 0 || idxRouteId < 0) return false;
+            int idxShapeId = header.getOrDefault("shape_id", -1);
+            if (row.length <= Math.max(idxTripId, Math.max(idxRouteId, idxShapeId))) return false;
             String tripId = row[idxTripId];
             if (keptTripIds.contains(tripId)) {
                 routesToKeep.add(row[idxRouteId]);
+                if (idxShapeId >= 0) {
+                    shapesToKeep.add(row[idxShapeId]);
+                }
                 return true;
             }
             return false;
@@ -123,13 +130,41 @@ public class GTFSFilter {
             return routesToKeep.contains(row[idxRouteId]);
         });
 
+     // --- shapes.txt (filtrage spatial des points) ---
+        File shapesFile = new File(gtfsDir, "shapes.txt");
+        if (shapesFile.exists()) {
+            System.out.println("🔄 Filtrage spatial des points de shape (shapes.txt)…");
+            filterAndWriteFile("shapes.txt", gtfsDir, outDir, (header, row) -> {
+                int idxId  = header.getOrDefault("shape_id",     -1);
+                int idxLat = header.getOrDefault("shape_pt_lat", -1);
+                int idxLon = header.getOrDefault("shape_pt_lon", -1);
+                if (idxId < 0 || idxLat < 0 || idxLon < 0) return false;
+                String shapeId = row[idxId];
+                // ne traiter que les shapes déjà référencés par un voyage filtré
+                if (!shapesToKeep.contains(shapeId)) return false;
+                try {
+                  double lat = Double.parseDouble(row[idxLat]);
+                  double lon = Double.parseDouble(row[idxLon]);
+                  // conserver uniquement les points à l’intérieur de l’enveloppe OSM
+                  return env.contains(lon, lat);
+                } catch (NumberFormatException e) {
+                  return false;
+                }
+            });
+            System.out.println("✅ Points de shapes filtrés selon l’enveloppe");
+        } else {
+            System.out.println("ℹ️ Aucun shapes.txt trouvé, skip filtrage spatial");
+        }
+
+
+
         // --- fichiers optionnels ---
         System.out.println("🔄 Copie des fichiers optionnels...");
         int optionalFilesCopied = 0;
         for (String filename : OPTIONAL_FILES) {
             File src = new File(gtfsDir, filename);
             if (src.exists()) {
-                Files.copy(src.toPath(), new File(outDir, filename).toPath(), 
+                Files.copy(src.toPath(), new File(outDir, filename).toPath(),
                           java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                 optionalFilesCopied++;
                 System.out.println("✅ " + filename + " copié");
@@ -154,8 +189,6 @@ public class GTFSFilter {
         if (result.hasErrors()) {
             System.err.println("⚠️ GTFS-Validator a détecté " + result.getErrorCount() + " erreur(s)");
             System.err.println("📁 Voir détails dans: " + result.getValidationPath());
-            
-            // Ne lance pas d'exception, mais informe l'utilisateur
             if (result.hasCriticalErrors()) {
                 System.err.println("❌ Erreurs critiques détectées - les données peuvent être inutilisables");
             } else {
@@ -168,6 +201,7 @@ public class GTFSFilter {
         System.out.println("✅ Filtrage GTFS terminé avec succès!");
         System.out.println("📁 Résultats dans: " + cleanedDir);
     }
+
 
     private static void handleAgencyFile(File gtfsDir, File outDir, String osmFilePath) throws IOException {
         File agencySrc = new File(gtfsDir, "agency.txt");
@@ -225,11 +259,15 @@ public class GTFSFilter {
     private static void cleanupUnwantedFiles(File outDir) {
         int removedFiles = 0;
         for (File f : Objects.requireNonNull(outDir.listFiles())) {
-            if (!f.isFile() || !f.getName().endsWith(".txt")) continue;
-            if (!REQUIRED_FILES.contains(f.getName()) && !OPTIONAL_FILES.contains(f.getName())) {
+            String name = f.getName();
+            // on ne supprime pas shapes.txt, même si ce n'est ni REQUIRED ni OPTIONAL
+            if (!f.isFile() || !name.endsWith(".txt") || "shapes.txt".equals(name)) {
+                continue;
+            }
+            if (!REQUIRED_FILES.contains(name) && !OPTIONAL_FILES.contains(name)) {
                 if (f.delete()) {
                     removedFiles++;
-                    System.out.println("🗑️ Fichier supprimé: " + f.getName());
+                    System.out.println("🗑️ Fichier supprimé: " + name);
                 }
             }
         }

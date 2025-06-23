@@ -14,6 +14,7 @@ global skills: [gtfs_export] {
 
         // Si tu veux ensuite créer les agents pour affichage, tu peux :
         //create transport_shape from: gtfs_f { }
+        write "GTFS utilisé pour export shapefile : " + gtfs_f;
     }
 }
 
