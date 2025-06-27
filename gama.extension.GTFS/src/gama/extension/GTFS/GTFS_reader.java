@@ -164,13 +164,14 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         System.out.println("Starting directory validity check...");
 
         File folder = getFile(scope);
-
+        
         if (!folder.exists() || !folder.isDirectory()) {
             throw GamaRuntimeException.error("The provided path for GTFS files is invalid. Ensure it is a directory containing .txt files.", scope);
         }
-
         Set<String> requiredFilesSet = new HashSet<>(Set.of(REQUIRED_FILES));
+        //System.out.println("Required GTFS files: " + requiredFilesSet);
         File[] files = folder.listFiles();
+        //System.out.println("Liste des fichiers trouvés : " + Arrays.toString(files));
         if (files != null) {
             for (File file : files) {
                 String fileName = file.getName();
@@ -182,7 +183,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
         if (!requiredFilesSet.isEmpty()) {
             throw GamaRuntimeException.error("Missing GTFS files: " + requiredFilesSet, scope);
-        }
+        }     
         System.out.println("Directory validity check completed.");
     }
 
@@ -201,11 +202,15 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     if (file.isFile() && file.getName().endsWith(".txt")) {
                     	// 1. Détecte le séparateur
                     	char separator = detectSeparator(file);
+                    	//System.out.println("Séparateur détecté pour " + file.getName() + " : " + separator);
                     	// 2. Mémorise le séparateur pour ce fichier
                     	fileSeparators.put(file.getName(), separator);
                     	// 3. Utilise OpenCSV avec le séparateur détecté
                     	Map<String, Integer> headerMap = new HashMap<>();
+                        	// 3.1 Lit le fichier CSV et récupère le contenu
                     	List<String[]> fileContent = readCsvFileOpenCSV(file, headerMap);
+                    	//System.out.println("Headers trouvés dans " + file.getName() + " : " + headerMap.keySet());
+                        	// 4. Stocke le contenu du fichier et le header dans les maps
                     	gtfsData.put(file.getName(), fileContent);
                     	IMap<String, Integer> headerIMap = GamaMapFactory.wrap(Types.STRING, Types.INT, headerMap);
                     	headerMaps.put(file.getName(), headerIMap);  
@@ -217,9 +222,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             System.err.println("Error while loading GTFS files: " + e.getMessage());
             throw GamaRuntimeException.create(e, scope);
         }
-
         System.out.println("All GTFS files have been loaded.");
-        System.out.println("Headers loaded for files: " + headerMaps.keySet());
     }
     
     /**
@@ -465,6 +468,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     System.err.println("[ERROR] Processing stop line: " + java.util.Arrays.toString(fields) + " -> " + e.getMessage());
                 }
             }
+            System.out.println("Nombre d'objets TransportStop créés : " + stopsMap.size());System.out.println("Nombre d'objets TransportStop créés : " + stopsMap.size());
         }
         System.out.println("Finished creating TransportStop objects.");
 
@@ -492,12 +496,13 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
 
         // 7. Résumé et computeDepartureInfo (communs)
-        System.out.println("------ Résumé chargement objets GTFS ------");
-        System.out.println("Nombre de TransportTrip (tripsMap)         : " + tripsMap.size());
-        System.out.println("Nombre de TransportStop (stopsMap)         : " + stopsMap.size());
-        System.out.println("Nombre de TransportShape (shapesMap)       : " + shapesMap.size());
-        System.out.println("Nombre de shapeRouteTypeMap                : " + shapeRouteTypeMap.size());
-        System.out.println("-------------------------------------------");
+//        System.out.println("---- Récapitulatif création objets GTFS ----");
+//        System.out.println("Nombre de stops lus dans stops.txt          : " + (stopsData != null ? stopsData.size() : 0));
+//        System.out.println("Nombre de stops créés (stopsMap)            : " + stopsMap.size());
+//        System.out.println("Nombre de trips créés (tripsMap)            : " + tripsMap.size());
+//        System.out.println("Nombre de shapes lus dans shapes.txt        : " + (shapesData != null ? shapesData.size() : 0));
+//        System.out.println("Nombre de shapes créés (shapesMap)          : " + shapesMap.size());
+//        System.out.println("--------------------------------------------");
 
         System.out.println("[INFO] Finished assigning routeType to TransportShape and TransportTrip.");
         System.out.println("[INFO] Calling computeDepartureInfo...");
@@ -600,7 +605,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
 
         char separator = detectSeparator(file);
-
+ 
         try (CSVReader reader = new CSVReaderBuilder(new FileReader(file))
                                     .withSkipLines(0)
                                     .withCSVParser(new CSVParserBuilder().withSeparator(separator).build())
@@ -616,6 +621,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     headerMap.put(col, i);
                 }
             }
+            System.out.println("Headers trouvés dans " + file.getName() + " : " + headerMap.keySet());
             String[] line;
             while ((line = reader.readNext()) != null) {
                 // Complète les champs manquants (à droite)

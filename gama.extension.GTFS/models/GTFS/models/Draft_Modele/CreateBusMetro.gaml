@@ -9,10 +9,10 @@
 model IndexIncrementalMoving
 
 global {
-	gtfs_file gtfs_f <- gtfs_file("../../includes/filtered_gtfs");
+	gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
 	date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
-	shape_file boundary_shp <- shape_file("../../includes/routes_wgs84.shp");
+	shape_file boundary_shp <- shape_file("../../includes/shapeFileNantes.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network;
 	int shape_id;
@@ -97,7 +97,8 @@ species bus_stop skills: [TransportStopSkill] {
 //        }
         
         init {}
-
+		
+		//Mettre indice pour trip pour simulation à l'heure choisit
         reflex init_test when: cycle = 1 {
                 ordered_trip_ids <- keys(departureStopsInfo);
                 if (ordered_trip_ids != nil) {

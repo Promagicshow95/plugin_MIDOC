@@ -2,14 +2,14 @@ model GTFSreader
 
 global {
     // Path to the GTFS file
-    gtfs_file gtfs_f <- gtfs_file("../../includes/filtered_gtfs_cleaned");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
      
-	shape_file boundary_shp <- shape_file("../../includes/stops_points_wgs84.shp");
+	shape_file boundary_shp <- shape_file("../../includes/ShapeFileToulouse.shp");
 	
 	geometry shape <- envelope(boundary_shp);
 	 //string formatted_time;
 
-	date starting_date <- date("2025-06-02T20:55:00");
+	date starting_date <- date("2025-06-09T20:55:00");
 
 	
 	

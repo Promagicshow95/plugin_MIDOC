@@ -48,6 +48,16 @@
 			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta1395908177997246268</locationURI>
 		</link>
 		<link>
+			<name>external/xapi_meta3208957502689865698</name>
+			<type>1</type>
+			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta3208957502689865698</locationURI>
+		</link>
+		<link>
+			<name>external/xapi_meta5873946091971038103</name>
+			<type>1</type>
+			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta5873946091971038103</locationURI>
+		</link>
+		<link>
 			<name>external/xapi_meta5916324093038181545</name>
 			<type>1</type>
 			<locationURI>CACHE_LOC/overpass-api.de+_++_+api+_+xapi_meta5916324093038181545</locationURI>

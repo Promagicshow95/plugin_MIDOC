@@ -18,10 +18,10 @@ global {
     point top_left <- CRS_transform({0,0}, "EPSG:4326").location;
     point bottom_right <- CRS_transform({shape.width, shape.height}, "EPSG:4326").location;
     string adress <- "http://overpass-api.de/api/xapi_meta?*[bbox=" + top_left.x + "," + bottom_right.y + "," + bottom_right.x + "," + top_left.y + "]";
-    //file<geometry> osm_geometries <- osm_file<geometry>(adress, osm_data_to_generate);
-    file<geometry> osm_geometries <- osm_file("../../includes/Nantes_map (2).osm", osm_data_to_generate);
-    gtfs_file gtfs_f <- gtfs_file("../../includes/filtered_gtfs_cleaned");
-    file data_file <- shape_file("../../includes/routes_wgs84.shp");
+    file<geometry> osm_geometries <- osm_file<geometry>(adress, osm_data_to_generate);
+    //file<geometry> osm_geometries <- osm_file("../../includes/Nantes_map (2).osm", osm_data_to_generate);
+    gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
+    file data_file <- shape_file("../../includes/shapeFileNantes.shp");
     geometry shape <- envelope(data_file);
 
     // --- FILTRES OSM ---
