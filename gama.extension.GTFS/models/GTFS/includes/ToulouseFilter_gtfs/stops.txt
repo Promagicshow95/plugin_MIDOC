@@ -1,0 +1,10 @@
+stop_id,stop_code,stop_name,stop_lat,stop_lon,location_type,parent_station,wheelchair_boarding
+stop_area:SA_1585,,Rémusat,43.605217039910364,1.443809487338909,1,,1
+stop_area:SA_1715,,Capitole,43.60446821376056,1.4455430154109983,1,,1
+stop_point:SP_147,40120,Jean Jaurès,43.605517965012524,1.4485880804931053,0,stop_area:SA_1707,1
+stop_point:SP_1572,40121,Jean Jaurès,43.6055920118823,1.448520132262742,0,stop_area:SA_1707,1
+stop_point:SP_1702,3671,Jean Jaurès,43.60616104601614,1.448308411051059,0,stop_area:SA_1707,1
+stop_point:SP_1912,40110,Capitole,43.604428913867075,1.445573315589176,0,stop_area:SA_1715,1
+stop_point:SP_2368,22330,Rémusat,43.605217039910364,1.443809487338909,0,stop_area:SA_1585,1
+stop_point:SP_2757,40111,Capitole,43.60450751364558,1.445512715193809,0,stop_area:SA_1715,1
+stop_point:SP_3415,3673,Jean Jaurès,43.6060064032493,1.4487412826922728,0,stop_area:SA_1707,1

@@ -34,6 +34,7 @@ public class TransportStop {
         this.departureTripsInfo = null;
         this.tripShapeMap = GamaMapFactory.create(Types.STRING, Types.INT);
         this.departureShapeDistances = GamaMapFactory.create(Types.STRING, Types.LIST);
+        //System.out.println("[TEST] Coordonnées projetées pour " + stopName + ": " + location);
     }
 
     // --- ACCESSEURS classiques

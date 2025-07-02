@@ -1,0 +1,10 @@
+agency_id,route_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+network:1,line:107,VILLE,Navette Centre Ville,3,e675a7,ffffff
+network:1,line:108,CIMTR,Navette Cimetières,3,0098d4,ffffff
+network:1,line:144,L1,Sept Deniers - Salvador Dali / Fonsegrives Entiore,3,ff671b,ffffff
+network:1,line:172,L8,Marengo - SNCF / Gonin,3,ff671b,ffffff
+network:1,line:174,L9,L'Union Grande Halle / Saint-Orens Centre Commercial,3,ff671b,ffffff
+network:1,line:264,L14,Basso Cambo / Marengo - SNCF,3,ff671b,ffffff
+network:1,line:61,A,Basso Cambo / Balma - Gramont,1,db001b,ffffff
+network:1,line:74,23,Jeanne d'Arc / Rangueil,3,a0670f,ffffff
+network:1,line:8,15,Jeanne d'Arc / Etats-Unis Fondeyre,3,a0670f,ffffff

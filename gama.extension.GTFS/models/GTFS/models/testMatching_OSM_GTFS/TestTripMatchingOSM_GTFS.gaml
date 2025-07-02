@@ -1,10 +1,3 @@
-/**
-* Name: GTFS_OSM_Bus_Simulation
-* Author: Promagicshow95
-* Description: Modèle combiné : matching GTFS-OSM + simulation de bus sur routes OSM
-* Tags: GTFS, OSM, mapping, transport, simulation
-* Date: 2025-06-25
-*/
 
 model GTFS_OSM_Bus_Simulation
 

@@ -1,11 +1,5 @@
-/**
-* GTFS Reader Model
-* Modified version with unique stops counting
-* Last modified: 2025-06-22 12:42:06 UTC
-* Author: Promagicshow95
-*/
 
-model GTFSreader
+model datefilter
 
 global {
     // Path to the GTFS file
