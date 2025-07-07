@@ -168,6 +168,8 @@ global {
             }
         }
         
+        
+        
         loop trip_id over: temp_mapping.keys {
             list<int> indices <- temp_mapping[trip_id];
             map<int, int> counter <- [];
@@ -410,6 +412,8 @@ global {
         
         write "Bus créé et simulation lancée !";
     }
+    
+    
 }
 
 species bus_stop skills: [TransportStopSkill] {
@@ -488,21 +492,32 @@ species bus skills: [moving] {
 
     // ACTION : Calculer le chemin vers la cible
     action calculate_path_to_target {
-        if target_location != nil and route_network != nil {
-            current_path <- path_between(route_network, location, target_location);
-            if current_path != nil {
-                write "Chemin calculé vers " + my_departureStopsInfo[current_stop_index].key.name;
-                is_moving <- true;
-            } else {
-                write "ATTENTION : Pas de chemin trouvé, déplacement direct";
-                is_moving <- true;
-            }
+    if target_location != nil and route_network != nil {
+        write "--- Calcul du chemin entre : " + string(location) + " -> " + string(target_location)
+            + " (arrêt cible : " + my_departureStopsInfo[current_stop_index].key.name + ")";
+        current_path <- path_between(route_network, location, target_location);
+        if current_path != nil {
+            write "OK: Chemin trouvé vers " + my_departureStopsInfo[current_stop_index].key.name;
+            is_moving <- true;
+        } else {
+            write "ATTENTION : Pas de chemin trouvé entre " + string(location) + " et "
+                + string(target_location) + " (" + my_departureStopsInfo[current_stop_index].key.name + ")";
+            is_moving <- true;
         }
     }
+}
+
 
     aspect base {
         // Dessiner le bus avec une orientation basée sur la direction
         draw rectangle(200, 100) color: #red rotate: heading;
+        
+        // Dessiner le chemin calculé (si trouvé)
+    	if current_path != nil {
+        	draw current_path.shape color: #blue width: 3;
+    	}	
+    	
+    	
         
         // Optionnel : dessiner le chemin prévu
         if current_path != nil {
@@ -531,25 +546,29 @@ species bus skills: [moving] {
     }
 
     // ACTION : Gérer l'arrivée à un arrêt
-    action arrive_at_stop {
-        string stop_name <- my_departureStopsInfo[current_stop_index].key.name;
-        write "Bus arrivé à l'arrêt : " + stop_name + " (index: " + current_stop_index + ")";
+   action arrive_at_stop {
+    string stop_name <- my_departureStopsInfo[current_stop_index].key.name;
+    write "Bus arrivé à l'arrêt : " + stop_name + " (index: " + current_stop_index + ")";
+    
+    if (current_stop_index < length(my_departureStopsInfo) - 1) {
+        string next_stop_name <- my_departureStopsInfo[current_stop_index + 1].key.name;
+        float dist <- my_departureStopsInfo[current_stop_index].key.location distance_to my_departureStopsInfo[current_stop_index + 1].key.location;
+        write "Distance vers prochain arrêt (" + next_stop_name + ") : " + dist + " m";
         
-        if (current_stop_index < length(my_departureStopsInfo) - 1) {
-            current_stop_index <- current_stop_index + 1;
-            target_location <- my_departureStopsInfo[current_stop_index].key.location;
-            
-            string next_stop_name <- my_departureStopsInfo[current_stop_index].key.name;
-            write "Bus se dirige vers : " + next_stop_name;
-            
-            // Recalculer le chemin vers le prochain arrêt
-            do calculate_path_to_target;
-        } else {
-            write "Bus arrivé au terminus !";
-            has_arrived <- true;
-            do die;
-        }
+        current_stop_index <- current_stop_index + 1;
+        target_location <- my_departureStopsInfo[current_stop_index].key.location;
+
+        write "Bus se dirige vers : " + next_stop_name;
+
+        // Recalculer le chemin vers le prochain arrêt
+        do calculate_path_to_target;
+    } else {
+        write "Bus arrivé au terminus !";
+        has_arrived <- true;
+        do die;
     }
+}
+
    }
 
 experiment main type: gui {

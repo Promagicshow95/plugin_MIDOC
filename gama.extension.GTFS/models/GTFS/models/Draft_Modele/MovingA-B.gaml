@@ -1,8 +1,8 @@
 model MovingAB
 
 global {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");    
-    shape_file boundary_shp <- shape_file("../../includes/stops_points.shp");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");    
+    shape_file boundary_shp <- shape_file("../../includes/shapeFileToulouse.shp");
     geometry shape <- envelope(boundary_shp);
     graph road_network;
     
@@ -62,10 +62,10 @@ species bus_stop skills: [TransportStopSkill] {
     }
 }
 
-//species transport_shape skills: [TransportShapeSkill] {
-//
-//
-//}
+species transport_shape skills: [TransportShapeSkill] {
+
+
+}
 
 //species road {
 //    aspect default {
