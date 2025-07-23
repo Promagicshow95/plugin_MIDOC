@@ -8,7 +8,7 @@ shape_file boundary_shp <- shape_file("../../includes/shapeFileNantes.shp");
 
 geometry shape <- envelope(boundary_shp);
 
-date starting_date <- date("2025-05-17T20:55:00"); 
+date starting_date <- date("2025-05-15T00:55:00"); 
 
 // Variables pour stocker les statistiques
 int nombre_stops_avec_departs <- 0;

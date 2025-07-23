@@ -63,10 +63,6 @@ global {
     int nb_stops_matched <- 0;
     int nb_stops_unmatched <- 0;
     map<string, string> tripId_to_osm_id_majoritaire <- [];
-    
-    // --- NOUVEAU : MAPPING AMÉLIORÉ POUR SIMULATION ---
-    map<string, int> tripId_to_route_index_majoritaire <- [];
-    map<string, int> tripId_to_route_type_majoritaire <- [];
 
     init {
         write "=== 🚌 SIMULATION COMPLÈTE AVEC NAVIGABILITÉ GARANTIE ===";
@@ -383,8 +379,8 @@ global {
     action create_trip_mapping {
         write "\n=== Création du mapping tripId → réseau navigable ===";
         
-        // MAPPING SIMPLE (ancien)
         int navigable_trips <- 0;
+        
         ask bus_stop where (each.is_navigable) {
             loop trip_id over: departureStopsInfo.keys {
                 if !(tripId_to_osm_id_majoritaire contains_key trip_id) {
@@ -394,89 +390,8 @@ global {
             }
         }
         
-        // NOUVEAU MAPPING DÉTAILLÉ (pour simulation)
-        write "\n--- Création du mapping détaillé tripId → route OSM ---";
-        
-        map<string, list<int>> temp_route_mapping <- [];
-        map<string, list<int>> temp_type_mapping <- [];
-
-        // Étape 1: Collecter les associations
-        ask bus_stop where (each.is_navigable and each.closest_route_index != -1) {
-            loop trip_id over: departureStopsInfo.keys {
-                // Mapping vers l'index de route
-                if (temp_route_mapping contains_key trip_id) {
-                    temp_route_mapping[trip_id] <+ closest_route_index;
-                } else {
-                    temp_route_mapping[trip_id] <- [closest_route_index];
-                }
-                
-                // Mapping vers le type de route
-                if (temp_type_mapping contains_key trip_id) {
-                    temp_type_mapping[trip_id] <+ routeType;
-                } else {
-                    temp_type_mapping[trip_id] <- [routeType];
-                }
-            }
-        }
-        
-        // Étape 2: Vote majoritaire pour les routes
-        loop trip_id over: temp_route_mapping.keys {
-            list<int> route_indices <- temp_route_mapping[trip_id];
-            map<int, int> route_counter <- [];
-            
-            loop idx over: route_indices {
-                route_counter[idx] <- (route_counter contains_key idx) ? route_counter[idx] + 1 : 1;
-            }
-            
-            int majority_route_index <- -1;
-            int max_route_count <- 0;
-            loop idx over: route_counter.keys {
-                if route_counter[idx] > max_route_count {
-                    max_route_count <- route_counter[idx];
-                    majority_route_index <- idx;
-                }
-            }
-            tripId_to_route_index_majoritaire[trip_id] <- majority_route_index;
-        }
-        
-        // Étape 3: Vote majoritaire pour les types de transport
-        loop trip_id over: temp_type_mapping.keys {
-            list<int> route_types <- temp_type_mapping[trip_id];
-            map<int, int> type_counter <- [];
-            
-            loop rtype over: route_types {
-                type_counter[rtype] <- (type_counter contains_key rtype) ? type_counter[rtype] + 1 : 1;
-            }
-            
-            int majority_route_type <- -1;
-            int max_type_count <- 0;
-            loop rtype over: type_counter.keys {
-                if type_counter[rtype] > max_type_count {
-                    max_type_count <- type_counter[rtype];
-                    majority_route_type <- rtype;
-                }
-            }
-            tripId_to_route_type_majoritaire[trip_id] <- majority_route_type;
-        }
-        
-        write "Mappings créés :";
-        write "  - Trips navigables (simple) : " + navigable_trips;
-        write "  - Trips → route OSM : " + length(tripId_to_route_index_majoritaire);
-        write "  - Trips → type transport : " + length(tripId_to_route_type_majoritaire);
+        write "Total trips navigables : " + navigable_trips;
         write "Réseaux navigables disponibles : " + navigable_networks.keys;
-        
-        // Afficher quelques exemples
-        write "\n--- Exemples de mapping (5 premiers) ---";
-        int count <- 0;
-        loop trip_id over: tripId_to_route_index_majoritaire.keys {
-            if count >= 5 { break; }
-            int route_idx <- tripId_to_route_index_majoritaire[trip_id];
-            int route_type <- tripId_to_route_type_majoritaire[trip_id];
-            network_route mapped_route <- network_route[route_idx];
-            string route_name <- (mapped_route != nil) ? mapped_route.name : "N/A";
-            write "Trip " + trip_id + " → Route " + route_idx + " (type " + route_type + ", nom: " + route_name + ")";
-            count <- count + 1;
-        }
     }
     
     action prepare_simulation_stats {
@@ -493,90 +408,6 @@ global {
                     write "🚌 Total trips bus navigables : " + total_trips_to_launch;
                 }
             }
-        }
-        
-        write "\n--- Statistiques du mapping trip → route ---";
-        write "Total trips mappés vers routes OSM : " + length(tripId_to_route_index_majoritaire);
-        write "Total trips mappés vers types : " + length(tripId_to_route_type_majoritaire);
-        
-        // Compter par type de transport
-        loop route_type over: route_types_gtfs {
-            int trips_of_type <- length(tripId_to_route_type_majoritaire.pairs where (each.value = route_type));
-            write "  Type " + route_type + " : " + trips_of_type + " trips mappés";
-        }
-    }
-    
-    // === NOUVELLE ACTION : SIMULATION D'UN TRIP SPÉCIFIQUE ===
-    action simulate_specific_trip(string trip_id) {
-        write "\n=== Simulation du trip spécifique : " + trip_id + " ===";
-        
-        // Vérifier que le trip est mappé
-        if !(tripId_to_route_index_majoritaire contains_key trip_id) {
-            write "❌ Trip " + trip_id + " non trouvé dans le mapping !";
-            return;
-        }
-        
-        int route_index <- tripId_to_route_index_majoritaire[trip_id];
-        int route_type <- tripId_to_route_type_majoritaire[trip_id];
-        
-        write "Trip mappé vers route OSM index " + route_index + " (type " + route_type + ")";
-        
-        // Trouver un arrêt de départ pour ce trip
-        bus_stop start_stop <- nil;
-        ask bus_stop where (each.is_navigable and each.routeType = route_type) {
-            if departureStopsInfo contains_key trip_id {
-                start_stop <- self;
-                break;
-            }
-        }
-        
-        if start_stop = nil {
-            write "❌ Aucun arrêt navigable trouvé pour le trip " + trip_id;
-            return;
-        }
-        
-        // Récupérer les informations du trip
-        list<pair<bus_stop, string>> trip_info <- start_stop.departureStopsInfo[trip_id];
-        
-        if empty(trip_info) {
-            write "❌ Aucune information de trajet pour le trip " + trip_id;
-            return;
-        }
-        
-        // Vérifier que tous les arrêts sont navigables
-        bool all_stops_navigable <- true;
-        int navigable_stops_count <- 0;
-        loop stop_info over: trip_info {
-            if stop_info.key.is_navigable {
-                navigable_stops_count <- navigable_stops_count + 1;
-            } else {
-                all_stops_navigable <- false;
-            }
-        }
-        
-        write "Arrêts du trip : " + length(trip_info) + " (navigables : " + navigable_stops_count + ")";
-        
-        if all_stops_navigable and length(trip_info) > 1 {
-            // Créer le bus pour ce trip spécifique
-            create bus with: [
-                departureStopsInfo:: trip_info,
-                current_stop_index :: 0,
-                location :: trip_info[0].key.closest_network_point,
-                target_location :: trip_info[1].key.closest_network_point,
-                trip_id :: int(trip_id),
-                route_type :: route_type,
-                loop_starting_day:: current_day,
-                navigation_network :: navigable_networks[route_type]
-            ];
-            
-            // Marquer comme bus démo après création
-            ask last(bus) {
-                is_demo_bus <- true;
-            }
-            
-            write "✅ Bus démo créé pour le trip " + trip_id + " !";
-        } else {
-            write "⚠ Trip " + trip_id + " partiellement navigable (" + navigable_stops_count + "/" + length(trip_info) + " arrêts)";
         }
     }
     
@@ -623,11 +454,6 @@ species bus_stop skills: [TransportStopSkill] {
     point closest_network_point;
     float distance_to_network <- -1.0;
     
-    // NOUVEAU : Propriétés de mapping OSM
-    string closest_route_id <- "";
-    int closest_route_index <- -1;
-    float closest_route_dist <- -1.0;
-    
     map<string, map<string, list<string>>> departureStopsInfo;
 
     reflex init_trip_list when: cycle = 1 {
@@ -657,10 +483,6 @@ species bus_stop skills: [TransportStopSkill] {
                 is_matched <- true;
                 is_navigable <- true;
                 nb_stops_matched <- nb_stops_matched + 1;
-                
-                // NOUVEAU : Trouver la route OSM la plus proche pour le mapping
-                do find_closest_osm_route;
-                
             } else {
                 write "⚠ Arrêt " + stopId + " trop loin du réseau navigable (" + (distance_to_network_temp with_precision 1) + "m)";
                 is_matched <- false;
@@ -671,30 +493,6 @@ species bus_stop skills: [TransportStopSkill] {
             is_matched <- false;
             is_navigable <- false;
             nb_stops_unmatched <- nb_stops_unmatched + 1;
-        }
-    }
-    
-    // NOUVELLE ACTION : Trouver la route OSM la plus proche
-    action find_closest_osm_route {
-        list<network_route> compatible_routes <- network_route where (each.routeType_num = routeType);
-        
-        if !empty(compatible_routes) {
-            float best_distance <- #max_float;
-            network_route best_route <- nil;
-            
-            loop route over: compatible_routes {
-                float dist <- location distance_to route.shape;
-                if dist < best_distance {
-                    best_distance <- dist;
-                    best_route <- route;
-                }
-            }
-            
-            if best_route != nil {
-                closest_route_id <- best_route.osm_id;
-                closest_route_index <- best_route.index;
-                closest_route_dist <- best_distance;
-            }
         }
     }
 
@@ -794,7 +592,7 @@ species network_route {
             match 0 { return #blue; }      // Tram
             match 1 { return #purple; }    // Subway/Metro
             match 2 { return #orange; }    // Railway
-            match 3 { return #grey; }     // Bus
+            match 3 { return #green; }     // Bus
             match 10 { return #cyan; }     // Cycleway
             match 20 { return #gray; }     // Road
             default { return #black; }
@@ -821,9 +619,6 @@ species bus skills: [moving] {
     int loop_starting_day;
     int current_local_time;
     bool waiting_at_stop <- true;
-    
-    // NOUVEAU : Propriétés pour simulation démo
-    bool is_demo_bus <- false;
     
     // Statistiques de performance
     list<int> arrival_time_diffs_pos <- [];
@@ -927,28 +722,17 @@ species bus skills: [moving] {
     }
 
     aspect base {
-        rgb bus_color;
-        if is_demo_bus {
-            bus_color <- #magenta; // Bus démo en magenta
-        } else if route_type = 1 {
-            bus_color <- #red;
+        if route_type = 1 {
+            draw rectangle(150, 200) color: #red rotate: heading;
         } else if route_type = 3 {
-            bus_color <- #green;
+            draw rectangle(100, 150) color: #green rotate: heading;
         } else {
-            bus_color <- #blue;
+            draw rectangle(110, 170) color: #blue rotate: heading;
         }
-        
-        draw rectangle(150, 200) color: bus_color rotate: heading;
         
         // Indicateur de problème de navigation
         if navigation_failures > 0 {
             draw triangle(20) color: #red at: location + {0, 0, 10};
-        }
-        
-        // Marqueur spécial pour bus démo
-        if is_demo_bus {
-            draw circle(30) color: #yellow at: location + {0, 0, 15};
-            draw "DEMO" color: #black font: font("Arial", 8, #bold) at: location + {0, 0, 20};
         }
     }
 }

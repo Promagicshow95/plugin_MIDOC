@@ -5,18 +5,18 @@
 * Tags: test, time, day_cycle, gtfs
 */
 
-model TimeManagementTest
+model TestHorlogeGTFSHanoi
 
 global {
     // === PARAMÈTRES DE TEST ===
-    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
     date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
-    shape_file boundary_shp <- shape_file("../../includes/shapeFileToulouse.shp");
+    shape_file boundary_shp <- shape_file("../../includes/shapeFileHanoishp.shp");
     geometry shape <- envelope(boundary_shp);
     
     // Configuration temporelle pour test accéléré
-    date starting_date <- date("2025-06-10T00:00:00"); // Commencer à minuit
+    date starting_date <- date("2018-01-01T00:00:00"); // Commencer à minuit
     float step <- 60 #s; // 1 minute par cycle pour test rapide
     
     // === VARIABLES DE GESTION DU TEMPS CORRIGÉES ===

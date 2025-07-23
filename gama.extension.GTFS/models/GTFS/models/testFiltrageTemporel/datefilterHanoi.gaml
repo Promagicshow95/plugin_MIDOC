@@ -3,7 +3,7 @@ model datefilter
 
 global {
     // Path to the GTFS file
-    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_v2");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
      
     shape_file boundary_shp <- shape_file("../../includes/ShapeFileHanoishp.shp");
     
@@ -19,6 +19,7 @@ global {
     int total_trips <- 0;
     list<string> unique_stops <- [];
     int total_unique_stops <- 0;
+    int nombre_stops_depart <- 0;  // NOUVEAU: compteur stops de départ
     map<string, list<pair<string, string>>> departureStopsInfo;
 
     // Initialization section
@@ -57,6 +58,7 @@ global {
         // Display statistics
         write "Nombre total de trips créés: " + total_trips;
         write "Nombre d'arrêts créés: " + length(bus_stop);
+        write "Nombre de stops de départ (departureStopsInfo non null): " + nombre_stops_depart;  // NOUVEAU
         write "Nombre d'arrêts uniques dans departureStopsInfo: " + total_unique_stops;
     }
 }
@@ -67,6 +69,7 @@ species bus_stop skills: [TransportStopSkill] {
     action customInit {
         if length(departureStopsInfo) > 0 {
             total_stops_with_info <- total_stops_with_info + 1;
+            nombre_stops_depart <- nombre_stops_depart + 1;  // NOUVEAU: incrémenter le compteur
             //write "Bus stop initialized: " + stopId + ", " + stopName + ", location: " + location + ", departureStopsInfo: " + departureStopsInfo;
         }
     }
@@ -108,6 +111,7 @@ experiment GTFSExperiment type: gui {
         //monitor "Current Date/Time" value: "2025-06-26T12:42:06" color: #white;
         monitor "Nombre total de trips" value: total_trips;
         monitor "Nombre d'arrêts" value: length(bus_stop);
+        monitor "Nombre de stops de départ" value: nombre_stops_depart;  // NOUVEAU
         monitor "Nombre d'arrêts uniques dans departureStopsInfo" value: total_unique_stops;
         
         // Optional: Display detailed information in a separate window

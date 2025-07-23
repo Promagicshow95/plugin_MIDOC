@@ -4,7 +4,7 @@ model AttributeInjection
 
 global {
     // --- PARAMÈTRES ---
-    string gtfs_dir <- "../../includes/tisseo_gtfs_v2"; 
+    string gtfs_dir <- "../../includes/hanoi_gtfs_pm"; 
 
     // --- VARIABLES GLOBALES ---
     gtfs_file gtfs_f;

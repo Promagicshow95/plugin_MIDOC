@@ -2,10 +2,10 @@ model MoveOnTripOfDepartureStopsInforNantes
 
 
 global {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
-    shape_file boundary_shp <- shape_file("../../includes/ShapeFileNantes.shp");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
+    shape_file boundary_shp <- shape_file("../../includes/shapeFileHanoishp.shp");
     geometry shape <- envelope(boundary_shp);
-    date starting_date <- date("2025-05-15T16:00:00");
+    date starting_date <- date("2018-01-01T16:00:00");
     float step <- 0.2 #s;
     
     // Paramètres de nettoyage
@@ -22,7 +22,7 @@ global {
     bool preventive_waypoints <- true; // Activation préventive des waypoints
     
     // Variables GTFS
-    string selected_trip_id <- "44211738-CR_24_25-HA25P101-L-Ma-Me-J-29-1101000";
+    string selected_trip_id <- "01_1_MD_1";
     bus_stop starts_stop;
     list<bus_stop> list_bus_stops;
     int shape_id;
@@ -80,7 +80,7 @@ global {
         }
 
         // ÉTAPE 3: Configuration trip
-        starts_stop <- bus_stop[9];
+        starts_stop <- bus_stop[0];
         write "4. Configuration trip " + selected_trip_id;
 
         if (selected_trip_id in starts_stop.tripShapeMap.keys and 

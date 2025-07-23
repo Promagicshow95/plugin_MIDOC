@@ -8,7 +8,7 @@ model NoDuplicateAfterReload
 
 global {
     // ------------ PARAMÈTRES ------------
-    string gtfs_dir <- "../../includes/nantes_gtfs"; 
+    string gtfs_dir <- "../../includes/tisseo_gtfs_v2"; 
 
     // ------------ VARIABLES ------------
     gtfs_file gtfs_f;

@@ -5,7 +5,7 @@
 * Tags: test, time, day_cycle, gtfs
 */
 
-model TimeManagementTest
+model TestHorlogeGTFSNantes
 
 global {
     // === PARAMÈTRES DE TEST ===
