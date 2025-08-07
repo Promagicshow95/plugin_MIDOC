@@ -16,8 +16,6 @@ global {
 	
 	geometry shape <- envelope(boundary_shp);
 
-
-	
 	
     // Initialization section
     init {

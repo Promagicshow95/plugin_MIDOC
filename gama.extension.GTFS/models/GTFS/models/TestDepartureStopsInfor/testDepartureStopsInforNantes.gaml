@@ -102,7 +102,7 @@ aspect base {
 }
 
 // GUI-based experiment for visualization
-experiment GTFSExperiment type: gui {
+experiment testDepartureStopsInfor type: gui {
 
 // Output section to define the display
 output {

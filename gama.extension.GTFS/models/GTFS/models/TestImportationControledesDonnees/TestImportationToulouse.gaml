@@ -4,7 +4,7 @@ global {
     // Path to the GTFS file
     gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
      
-	shape_file boundary_shp <- shape_file("../../includes/ShapeFileToulouse.shp");
+	shape_file boundary_shp <- shape_file("../../includes/shapeFileToulouse.shp");
 	
 	geometry shape <- envelope(boundary_shp);
 	

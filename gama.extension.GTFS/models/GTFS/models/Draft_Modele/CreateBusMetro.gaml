@@ -9,10 +9,10 @@
 model IndexIncrementalMoving
 
 global {
-	gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
+	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
 	date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
-	shape_file boundary_shp <- shape_file("../../includes/shapeFileNantes.shp");
+	shape_file boundary_shp <- shape_file("../../includes/shapeFileToulouse.shp");
 	geometry shape <- envelope(boundary_shp);
 	graph local_network;
 	int shape_id;
@@ -21,8 +21,8 @@ global {
 	int time_24h -> int(current_date - date([1970,1,1,0,0,0])) mod 86400;
 	int current_seconds_mod <- 0;
 
-	date starting_date <- date("2025-05-17T16:00:00");
-	float step <- 10 #s;
+	date starting_date <- date("2025-05-17T00:00:00");
+	float step <- 30 #s;
 	
 	int total_trips_to_launch <- 0;
 	int launched_trips_count <- 0;
@@ -56,7 +56,7 @@ global {
 	}
 	
 	reflex show_metro_trip_count when: cycle = 1 {
-   		total_trips_to_launch <- sum((bus_stop where (each.routeType = 3)) collect each.tripNumber);
+   		total_trips_to_launch <- sum((bus_stop where (each.routeType = 1)) collect each.tripNumber);
    		write "🟣 Total des trips métro (routeType = 3) = " + total_trips_to_launch;
 	}
 	
@@ -66,7 +66,7 @@ global {
 			current_day <- sim_day_index;
 			launched_trips_count <- 0;
 			launched_trip_ids <- []; 
-			ask bus_stop where (each.routeType = 3) {
+			ask bus_stop where (each.routeType = 1) {
 				current_trip_index <- 0;
 			}
 			write "🌙 Tous les trips ont été lancés. → Passage au jour " + current_day;
@@ -107,7 +107,7 @@ species bus_stop skills: [TransportStopSkill] {
         }
 
 	// --- MODIF : Logique de lancement des bus avec contrôle global des trips déjà lancés ---
-	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids) and routeType = 3) {
+	reflex launch_all_vehicles when: (departureStopsInfo != nil and current_trip_index < length(ordered_trip_ids) and routeType = 1) {
 		string trip_id <- ordered_trip_ids[current_trip_index];
 		list<pair<bus_stop, string>> trip_info <- departureStopsInfo[trip_id];
 		string departure_time <- trip_info[0].value;
@@ -182,7 +182,7 @@ species bus skills: [moving] {
 //		else if (route_type = 0) { speed <- 19.8 #km/#h; }
 //		else if (route_type = 6) { speed <- 17.75 #km/#h; }
 //		else { speed <- 20.0 #km/#h; }
-		speed <- 50 #km/#h;
+		speed <- 20 #km/#h;
 		creation_time <- get_local_time_now();
 	}
 

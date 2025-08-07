@@ -150,6 +150,20 @@ public class GTFSShapeExporter {
         final SimpleFeatureType TYPE = builder.buildFeatureType();
 
         File newFile = new File(outputPath, "routes_wgs84.shp");
+     // Supprimer tous les fragments shapefile existants pour éviter les verrous/erreurs GeoTools
+        String base = newFile.getAbsolutePath().replace(".shp", "");
+        String[] exts = {".shp", ".shx", ".dbf", ".prj", ".cpg", ".qix", ".fix"};
+        for (String ext : exts) {
+            File f = new File(base + ext);
+            if (f.exists()) {
+                boolean deleted = f.delete();
+                if (deleted) {
+                    System.out.println("🗑️ Ancien fichier supprimé : " + f.getName());
+                } else {
+                    System.err.println("⚠️ Impossible de supprimer : " + f.getName());
+                }
+            }
+        }
         Map<String, Serializable> params = new HashMap<>();
         params.put("url", newFile.toURI().toURL());
         params.put("create spatial index", Boolean.TRUE);

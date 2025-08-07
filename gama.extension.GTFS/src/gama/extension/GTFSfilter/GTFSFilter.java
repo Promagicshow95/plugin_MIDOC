@@ -22,16 +22,14 @@ public class GTFSFilter {
         "stops.txt", "trips.txt", "routes.txt", "stop_times.txt", "agency.txt"
     );
     // Fichiers optionnels (shapes.txt géré séparément)
-            // Fichiers optionnels (calendar) — shapes.txt géré séparément
     private static final Set<String> OPTIONAL_FILES = Set.of(
         "calendar.txt",
         "calendar_dates.txt"
-       
     );
 
     public static void filter(String gtfsDirPath, String osmFilePath, String outputDirPath) throws Exception {
         System.out.println("🔄 Début du filtrage GTFS...");
-        
+
         Envelope env = OSMUtils.extractEnvelope(osmFilePath);
         System.out.println("✅ Enveloppe OSM extraite: " + env.toString());
 
@@ -39,7 +37,7 @@ public class GTFSFilter {
         if (!gtfsDir.isDirectory()) {
             throw new IllegalArgumentException("Répertoire GTFS invalide: " + gtfsDirPath);
         }
-        
+
         File outDir = new File(outputDirPath);
         if (!outDir.exists()) {
             outDir.mkdirs();
@@ -130,7 +128,7 @@ public class GTFSFilter {
             return routesToKeep.contains(row[idxRouteId]);
         });
 
-     // --- shapes.txt (filtrage spatial des points) ---
+        // --- shapes.txt (filtrage spatial des points) ---
         File shapesFile = new File(gtfsDir, "shapes.txt");
         if (shapesFile.exists()) {
             System.out.println("🔄 Filtrage spatial des points de shape (shapes.txt)…");
@@ -156,8 +154,6 @@ public class GTFSFilter {
             System.out.println("ℹ️ Aucun shapes.txt trouvé, skip filtrage spatial");
         }
 
-
-
         // --- fichiers optionnels ---
         System.out.println("🔄 Copie des fichiers optionnels...");
         int optionalFilesCopied = 0;
@@ -178,14 +174,26 @@ public class GTFSFilter {
         // Nettoyage et validation
         System.out.println("🔄 Nettoyage des données...");
         pruneAllFiles(outDir);
-        
+
+        // -----------------------
+        // AJOUT ICI POUR N'AVOIR QU'UN SEUL DOSSIER FINAL
+        // -----------------------
         String cleanedDir = outputDirPath + "_cleaned";
         System.out.println("🔄 Nettoyage avec OneBusAway...");
         cleanWithOneBusAway(outputDirPath, cleanedDir);
-        
+
+        // Supprimer l'ancien dossier filtré brut (outputDirPath)
+        deleteDirectoryRecursively(new File(outputDirPath));
+        // Renommer le dossier nettoyé comme dossier final
+        boolean ok = new File(cleanedDir).renameTo(new File(outputDirPath));
+        if (!ok) {
+            System.err.println("⚠️ Erreur lors du renommage du dossier nettoyé !");
+        }
+
+        // Validation sur le dossier FINAL
         System.out.println("🔄 Validation avec GTFS-Validator...");
-        ValidationResult result = validateWithGtfsValidator(cleanedDir);
-        
+        ValidationResult result = validateWithGtfsValidator(outputDirPath);
+
         if (result.hasErrors()) {
             System.err.println("⚠️ GTFS-Validator a détecté " + result.getErrorCount() + " erreur(s)");
             System.err.println("📁 Voir détails dans: " + result.getValidationPath());
@@ -197,23 +205,21 @@ public class GTFSFilter {
         } else {
             System.out.println("✅ Validation GTFS réussie - aucune erreur détectée");
         }
-        
-        System.out.println("✅ Filtrage GTFS terminé avec succès!");
-        System.out.println("📁 Résultats dans: " + cleanedDir);
-    }
 
+        System.out.println("✅ Filtrage GTFS terminé avec succès!");
+        System.out.println("📁 Résultats dans: " + outputDirPath);
+    }
 
     private static void handleAgencyFile(File gtfsDir, File outDir, String osmFilePath) throws IOException {
         File agencySrc = new File(gtfsDir, "agency.txt");
         File agencyDest = new File(outDir, "agency.txt");
 
         if (agencySrc.exists() && agencySrc.length() > 0) {
-            // Vérification basique du contenu
             try (BufferedReader reader = new BufferedReader(new FileReader(agencySrc))) {
                 String header = reader.readLine();
                 String firstLine = reader.readLine();
                 if (header != null && firstLine != null && !firstLine.trim().isEmpty()) {
-                    Files.copy(agencySrc.toPath(), agencyDest.toPath(), 
+                    Files.copy(agencySrc.toPath(), agencyDest.toPath(),
                               java.nio.file.StandardCopyOption.REPLACE_EXISTING);
                     System.out.println("✅ agency.txt copié depuis la source");
                     return;
@@ -241,7 +247,6 @@ public class GTFSFilter {
             System.out.println("💡 Utilisation des valeurs par défaut pour agency.txt");
         }
 
-        // Variables d'environnement
         String envAgencyName = System.getenv("GTFS_AGENCY_NAME");
         String envAgencyUrl = System.getenv("GTFS_AGENCY_URL");
         String envAgencyTimezone = System.getenv("GTFS_AGENCY_TIMEZONE");
@@ -260,7 +265,6 @@ public class GTFSFilter {
         int removedFiles = 0;
         for (File f : Objects.requireNonNull(outDir.listFiles())) {
             String name = f.getName();
-            // on ne supprime pas shapes.txt, même si ce n'est ni REQUIRED ni OPTIONAL
             if (!f.isFile() || !name.endsWith(".txt") || "shapes.txt".equals(name)) {
                 continue;
             }
@@ -276,11 +280,7 @@ public class GTFSFilter {
         }
     }
 
-    /**
-     * Nettoie un GTFS en utilisant OneBusAway pour supprimer les données inutiles.
-     */
     public static void cleanWithOneBusAway(String filteredInput, String outputDir) throws Exception {
-        // Vérification préalable d'agency.txt
         File agencyFile = new File(filteredInput, "agency.txt");
         if (!agencyFile.exists() || agencyFile.length() == 0) {
             throw new IllegalStateException("Fichier agency.txt valide requis pour le traitement GTFS");
@@ -293,7 +293,6 @@ public class GTFSFilter {
             reader.setEntityStore(dao);
             reader.run();
 
-            // Création du répertoire de sortie
             File outputDirFile = new File(outputDir);
             if (!outputDirFile.exists()) {
                 outputDirFile.mkdirs();
@@ -303,12 +302,11 @@ public class GTFSFilter {
             writer.setOutputLocation(outputDirFile);
             writer.run(dao);
             writer.close();
-            
+
             System.out.println("✅ OneBusAway : GTFS nettoyé -> " + outputDir);
-            
-            // Vérification des fichiers générés
+
             verifyCleanedOutput(outputDirFile);
-            
+
         } catch (Exception e) {
             System.err.println("❌ Erreur OneBusAway: " + e.getMessage());
             e.printStackTrace();
@@ -329,22 +327,22 @@ public class GTFSFilter {
         }
         System.out.println("📊 " + fileCount + "/" + REQUIRED_FILES.size() + " fichiers requis générés");
     }
-    
+
     public static void pruneAllFiles(File outDir) throws Exception {
         System.out.println("🔄 Nettoyage des références croisées...");
-        
+
         Set<String> stopIds = readIdsFromFile(new File(outDir, "stops.txt"), "stop_id");
         Set<String> tripIds = readIdsFromFile(new File(outDir, "trips.txt"), "trip_id");
         Set<String> routeIds = readIdsFromFile(new File(outDir, "routes.txt"), "route_id");
 
-        System.out.println("📊 IDs collectés - Stops: " + stopIds.size() + 
+        System.out.println("📊 IDs collectés - Stops: " + stopIds.size() +
                           ", Trips: " + tripIds.size() + ", Routes: " + routeIds.size());
 
         pruneFile(new File(outDir, "stop_times.txt"), "trip_id", tripIds);
         pruneFile(new File(outDir, "trips.txt"), "trip_id", tripIds);
         pruneFile(new File(outDir, "stops.txt"), "stop_id", stopIds);
         pruneFile(new File(outDir, "routes.txt"), "route_id", routeIds);
-        
+
         System.out.println("✅ Nettoyage des références terminé");
     }
 
@@ -354,25 +352,25 @@ public class GTFSFilter {
             System.err.println("⚠️ Fichier introuvable: " + file.getName());
             return ids;
         }
-        
+
         char sep = detectSeparator(file);
         try (CSVReader reader = new CSVReaderBuilder(new FileReader(file))
                 .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build()) {
             String[] header = reader.readNext();
             if (header == null) return ids;
-            
+
             int idx = -1;
             for (int i = 0; i < header.length; i++) {
-                if (header[i].trim().equalsIgnoreCase(colName)) { 
-                    idx = i; 
-                    break; 
+                if (header[i].trim().equalsIgnoreCase(colName)) {
+                    idx = i;
+                    break;
                 }
             }
             if (idx < 0) {
                 System.err.println("⚠️ Colonne '" + colName + "' introuvable dans " + file.getName());
                 return ids;
             }
-            
+
             String[] line;
             while ((line = reader.readNext()) != null) {
                 if (line.length > idx && !line[idx].trim().isEmpty()) {
@@ -385,12 +383,12 @@ public class GTFSFilter {
 
     private static void pruneFile(File file, String keyCol, Set<String> keepIds) throws Exception {
         if (!file.exists()) return;
-        
+
         File temp = new File(file.getAbsolutePath() + ".tmp");
         char sep = detectSeparator(file);
         int keptRows = 0;
         int totalRows = 0;
-        
+
         try (
             CSVReader reader = new CSVReaderBuilder(new FileReader(file))
                 .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build();
@@ -398,21 +396,21 @@ public class GTFSFilter {
         ) {
             String[] header = reader.readNext();
             if (header == null) return;
-            writer.write(String.join(String.valueOf(sep), header)); 
+            writer.write(String.join(String.valueOf(sep), header));
             writer.newLine();
-            
+
             int idx = -1;
             for (int i = 0; i < header.length; i++) {
-                if (header[i].trim().equalsIgnoreCase(keyCol)) { 
-                    idx = i; 
-                    break; 
+                if (header[i].trim().equalsIgnoreCase(keyCol)) {
+                    idx = i;
+                    break;
                 }
             }
             if (idx < 0) {
                 System.err.println("⚠️ Colonne '" + keyCol + "' introuvable dans " + file.getName());
                 return;
             }
-            
+
             String[] row;
             while ((row = reader.readNext()) != null) {
                 totalRows++;
@@ -423,7 +421,7 @@ public class GTFSFilter {
                 }
             }
         }
-        
+
         Files.move(temp.toPath(), file.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         System.out.println("✅ " + file.getName() + " nettoyé: " + keptRows + "/" + totalRows + " lignes conservées");
     }
@@ -438,18 +436,18 @@ public class GTFSFilter {
         }
     }
 
-    private static void filterAndWriteFile(String filename, File inDir, File outDir, RowPredicate keepRow) 
+    private static void filterAndWriteFile(String filename, File inDir, File outDir, RowPredicate keepRow)
             throws IOException, CsvValidationException {
         File inFile = new File(inDir, filename);
         if (!inFile.exists()) {
             System.err.println("⚠️ Fichier source manquant: " + filename);
             return;
         }
-        
+
         char sep = detectSeparator(inFile);
         int totalRows = 0;
         int keptRows = 0;
-        
+
         try (
             Reader reader = new BufferedReader(new FileReader(inFile));
             CSVReader csvReader = new CSVReaderBuilder(reader)
@@ -458,13 +456,13 @@ public class GTFSFilter {
         ) {
             String[] header = csvReader.readNext();
             if (header == null) return;
-            writer.write(String.join(String.valueOf(sep), header)); 
+            writer.write(String.join(String.valueOf(sep), header));
             writer.newLine();
-            
+
             Map<String, Integer> headerIdx = new HashMap<>();
-            for (int i = 0; i < header.length; i++) 
+            for (int i = 0; i < header.length; i++)
                 headerIdx.put(header[i].trim().toLowerCase(), i);
-            
+
             String[] row;
             while ((row = csvReader.readNext()) != null) {
                 if (row.length == 0) continue;
@@ -481,78 +479,69 @@ public class GTFSFilter {
 
     public static ValidationResult validateWithGtfsValidator(String outputDirPath) throws Exception {
         File filteredDir = new File(outputDirPath);
-        
-        // Recherche du fichier JAR du validateur
+
         File projectRoot = filteredDir.getAbsoluteFile();
         while (projectRoot != null && !(new File(projectRoot, "lib").exists())) {
             projectRoot = projectRoot.getParentFile();
         }
-        
+
         if (projectRoot == null) {
             throw new RuntimeException("Impossible de localiser le dossier 'lib' depuis : " + outputDirPath);
         }
-        
+
         String validatorJar = new File(projectRoot, "lib/gtfs-validator-7.1.0-cli.jar").getAbsolutePath();
         File jarFile = new File(validatorJar);
         if (!jarFile.exists()) {
-            throw new RuntimeException("Fichier gtfs-validator-7.1.0-cli.jar introuvable à : " + 
+            throw new RuntimeException("Fichier gtfs-validator-7.1.0-cli.jar introuvable à : " +
                                      jarFile.getAbsolutePath());
         }
-        
+
         String validationOut = outputDirPath + File.separator + "validation";
         File validationDir = new File(validationOut);
         if (!validationDir.exists()) {
             validationDir.mkdirs();
         }
-        
-        // Construction de la commande
+
         List<String> command = new ArrayList<>();
         command.add("java");
         command.add("-jar");
         command.add(validatorJar);
         command.add("--input");
         command.add(outputDirPath);
-        // Optionnel: spécifier le dossier de sortie selon votre version
-        // command.add("--output");
-        // command.add(validationOut);
-        
+
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.directory(new File(outputDirPath).getParentFile());
-        
-        // Capture des sorties
+
         ByteArrayOutputStream stdout = new ByteArrayOutputStream();
         ByteArrayOutputStream stderr = new ByteArrayOutputStream();
-        
+
         try {
             Process proc = pb.start();
-            
-            // Redirection des flux
+
             Thread stdoutThread = new Thread(() -> {
                 try (InputStream is = proc.getInputStream()) {
                     is.transferTo(stdout);
                 } catch (IOException e) {
-                    // Ignore
                 }
             });
-            
+
             Thread stderrThread = new Thread(() -> {
                 try (InputStream is = proc.getErrorStream()) {
                     is.transferTo(stderr);
                 } catch (IOException e) {
-                    // Ignore
                 }
             });
-            
+
             stdoutThread.start();
             stderrThread.start();
-            
+
             int code = proc.waitFor();
             stdoutThread.join(5000);
             stderrThread.join(5000);
-            
+
             String stdoutStr = stdout.toString();
             String stderrStr = stderr.toString();
-            
+
             System.out.println("📊 GTFS-Validator terminé avec code: " + code);
             if (!stdoutStr.isEmpty()) {
                 System.out.println("📝 Sortie standard: " + stdoutStr);
@@ -560,35 +549,31 @@ public class GTFSFilter {
             if (!stderrStr.isEmpty()) {
                 System.err.println("⚠️ Erreurs/Avertissements: " + stderrStr);
             }
-            
-            // Analyse des résultats
+
             return analyzeValidationResults(validationDir, code, stdoutStr, stderrStr);
-            
+
         } catch (Exception e) {
             throw new RuntimeException("Erreur lors de l'exécution du GTFS-Validator: " + e.getMessage(), e);
         }
     }
-    
-    private static ValidationResult analyzeValidationResults(File validationDir, int exitCode, 
+
+    private static ValidationResult analyzeValidationResults(File validationDir, int exitCode,
                                                            String stdout, String stderr) {
         ValidationResult result = new ValidationResult(validationDir.getAbsolutePath(), exitCode);
-        
-        // Recherche des fichiers de rapport
-        File[] reportFiles = validationDir.listFiles((dir, name) -> 
+
+        File[] reportFiles = validationDir.listFiles((dir, name) ->
             name.endsWith(".json") || name.endsWith(".html") || name.endsWith(".txt"));
-        
+
         if (reportFiles != null) {
             for (File reportFile : reportFiles) {
                 result.addReportFile(reportFile.getAbsolutePath());
                 System.out.println("📋 Rapport trouvé: " + reportFile.getName());
             }
         }
-        
-        // Analyse basique du contenu pour déterminer la sévérité
+
         if (exitCode != 0) {
             result.setHasErrors(true);
-            
-            // Détection d'erreurs critiques vs avertissements
+
             String combined = (stdout + " " + stderr).toLowerCase();
             if (combined.contains("error") || combined.contains("invalid") || combined.contains("missing")) {
                 if (combined.contains("fatal") || combined.contains("critical")) {
@@ -596,7 +581,7 @@ public class GTFSFilter {
                 }
             }
         }
-        
+
         return result;
     }
 
@@ -604,8 +589,7 @@ public class GTFSFilter {
     interface RowPredicate {
         boolean keep(Map<String, Integer> header, String[] row);
     }
-    
-    // Classe pour encapsuler les résultats de validation
+
     public static class ValidationResult {
         private String validationPath;
         private int exitCode;
@@ -613,22 +597,34 @@ public class GTFSFilter {
         private boolean criticalErrors = false;
         private List<String> reportFiles = new ArrayList<>();
         private int errorCount = 0;
-        
+
         public ValidationResult(String validationPath, int exitCode) {
             this.validationPath = validationPath;
             this.exitCode = exitCode;
         }
-        
+
         public String getValidationPath() { return validationPath; }
         public int getExitCode() { return exitCode; }
         public boolean hasErrors() { return hasErrors; }
         public boolean hasCriticalErrors() { return criticalErrors; }
         public List<String> getReportFiles() { return reportFiles; }
         public int getErrorCount() { return errorCount; }
-        
+
         public void setHasErrors(boolean hasErrors) { this.hasErrors = hasErrors; }
         public void setCriticalErrors(boolean criticalErrors) { this.criticalErrors = criticalErrors; }
         public void addReportFile(String filePath) { this.reportFiles.add(filePath); }
         public void setErrorCount(int count) { this.errorCount = count; }
+    }
+
+    // --------------------------
+    // AJOUT : suppression d’un dossier récursivement
+    // --------------------------
+    public static void deleteDirectoryRecursively(File dir) {
+        if (dir.isDirectory()) {
+            for (File file : dir.listFiles()) {
+                deleteDirectoryRecursively(file);
+            }
+        }
+        dir.delete();
     }
 }

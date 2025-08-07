@@ -2,7 +2,7 @@ model GraphesParShape
 
 global {
     // --- Paramètres
-    string gtfs_dir <- "../../includes/ToulouseFilter_gtfs_cleaned"; 
+    string gtfs_dir <- "../../includes/tisseo_gtfs_v2"; 
     
     // --- Variables globales
     gtfs_file gtfs_f;

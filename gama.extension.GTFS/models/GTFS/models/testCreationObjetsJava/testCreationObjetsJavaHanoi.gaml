@@ -16,8 +16,6 @@ global {
 	
 	geometry shape <- envelope(boundary_shp);
 
-
-	
 	
     // Initialization section
     init {
@@ -29,16 +27,14 @@ global {
        }
 
     }
-    
- 
+
 }
 
 // Species representing each transport stop
 species bus_stop skills: [TransportStopSkill] {
 
      aspect base {
-     	
-     	
+
 		draw circle (100.0) at: location color:#blue;	
      }
 }
@@ -64,5 +60,3 @@ experiment GTFSExperiment type: gui {
         }
     }
 }
-
-

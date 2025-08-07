@@ -12,7 +12,7 @@ global {
     date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
 
-    date starting_date <- date("2025-05-18T00:00:00");
+    date starting_date <- date("2025-05-17T00:00:00");
     
     // Counters and storage
     int total_stops_with_info <- 0;

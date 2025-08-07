@@ -172,8 +172,9 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
         Set<String> requiredFilesSet = new HashSet<>(Set.of(REQUIRED_FILES));
         System.out.println("Required GTFS files: " + requiredFilesSet);
+        //System.out.println("➡️ Vérification du dossier GTFS : " + getName(null));
         File[] files = folder.listFiles();
-        System.out.println("Liste des fichiers trouvés : " + Arrays.toString(files));
+        //System.out.println("Liste des fichiers trouvés : " + Arrays.toString(files));
         if (files != null) {
             for (File file : files) {
                 String fileName = file.getName();
@@ -211,14 +212,12 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     	Map<String, Integer> headerMap = new HashMap<>();
                         	// 3.1 Lit le fichier CSV et récupère le contenu
                     	List<String[]> fileContent = readCsvFileOpenCSV(file, headerMap);
-                    	//System.out.println("Headers trouvés dans " + file.getName() + " : " + headerMap.keySet());
                     	String sepStr;
                         if (separator == ',') sepStr = "virgule (,)";
                         else if (separator == ';') sepStr = "point-virgule (;)";
                         else if (separator == '\t') sepStr = "tabulation";
                         else sepStr = String.valueOf(separator);
 
-                        //System.out.println(file.getName() + "\t" + fileContent.size() + "\t" + sepStr);
                         	// 4. Stocke le contenu du fichier et le header dans les maps
                     	gtfsData.put(file.getName(), fileContent);
                     	IMap<String, Integer> headerIMap = GamaMapFactory.wrap(Types.STRING, Types.INT, headerMap);
@@ -505,13 +504,13 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
 
         // 7. Résumé et computeDepartureInfo (communs)
-//        System.out.println("---- Récapitulatif création objets GTFS ----");
-//        System.out.println("Nombre de stops lus dans stops.txt          : " + (stopsData != null ? stopsData.size() : 0));
-//        System.out.println("Nombre de stops créés (stopsMap)            : " + stopsMap.size());
-//        System.out.println("Nombre de trips créés (tripsMap)            : " + tripsMap.size());
-//        System.out.println("Nombre de shapes lus dans shapes.txt        : " + (shapesData != null ? shapesData.size() : 0));
-//        System.out.println("Nombre de shapes créés (shapesMap)          : " + shapesMap.size());
-//        System.out.println("--------------------------------------------");
+        System.out.println("---- Récapitulatif création objets GTFS ----");
+        System.out.println("Nombre de stops lus dans stops.txt          : " + (stopsData != null ? stopsData.size() : 0));
+        System.out.println("Nombre de stops créés (stopsMap)            : " + stopsMap.size());
+        System.out.println("Nombre de trips créés (tripsMap)            : " + tripsMap.size());
+        System.out.println("Nombre de shapes lus dans shapes.txt        : " + (shapesData != null ? shapesData.size() : 0));
+        System.out.println("Nombre de shapes créés (shapesMap)          : " + shapesMap.size());
+        System.out.println("--------------------------------------------");
 
         System.out.println("[INFO] Finished assigning routeType to TransportShape and TransportTrip.");
         System.out.println("[INFO] Calling computeDepartureInfo...");
@@ -630,7 +629,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     headerMap.put(col, i);
                 }
             }
-            System.out.println("Headers trouvés dans " + file.getName() + " : " + headerMap.keySet());
+            //System.out.println("Headers trouvés dans " + file.getName() + " : " + headerMap.keySet());
             String[] line;
             while ((line = reader.readNext()) != null) {
                 // Complète les champs manquants (à droite)
@@ -654,6 +653,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 content.add(line); // Ajoute le tableau de champs
             }
         }
+        //System.out.println("⇒ Fichier '" + file.getName() + "' : " + content.size() + " lignes lues.");
         return content;
     }
 
@@ -738,29 +738,51 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         try {
             Object startingDateObj = scope != null ? scope.getGlobalVarValue("starting_date") : null;
             
+         // ✅ LOGS DEBUG CAS 3
+            System.out.println("🔍 DEBUG CAS 3 - starting_date check:");
+            System.out.println("   → scope: " + scope);
+            System.out.println("   → scope != null: " + (scope != null));
+            System.out.println("   → startingDateObj: " + startingDateObj);
+            System.out.println("   → startingDateObj == null: " + (startingDateObj == null));
             if (startingDateObj != null) {
-                // ✅ PARSING CORRECT DE LA DATE GAML
+                System.out.println("   → startingDateObj type: " + startingDateObj.getClass());
+                System.out.println("   → startingDateObj toString: '" + startingDateObj.toString() + "'");
+            }
+            
+            boolean isDefaultDate = false;
+            simulationDate = null; // reset avant
+
+            if (startingDateObj != null) {
                 if (startingDateObj instanceof gama.core.util.GamaDate) {
                     gama.core.util.GamaDate gamaDate = (gama.core.util.GamaDate) startingDateObj;
-                    // ✅ UTILISATION DIRECTE DE getLocalDateTime()
                     LocalDateTime localDateTime = gamaDate.getLocalDateTime();
-                    simulationDate = localDateTime.toLocalDate();
+                    LocalDate dateValue = localDateTime.toLocalDate();
+
+                    // Détecter la date par défaut de GAML (1970-01-01)
+                    if (dateValue.equals(LocalDate.of(1970, 1, 1))) {
+                        isDefaultDate = true;
+                        System.out.println("[INFO] Date par défaut GAML détectée (1970-01-01) → CAS 3 forcé");
+                    } else {
+                        simulationDate = dateValue;
+                    }
                 } else if (startingDateObj instanceof java.util.Date) {
                     java.util.Date date = (java.util.Date) startingDateObj;
                     simulationDate = date.toInstant().atZone(java.time.ZoneId.systemDefault()).toLocalDate();
                 } else {
                     // Tentative de parsing en String
                     String dateStr = startingDateObj.toString();
-                    if (dateStr.contains("-")) {
-                        // Format "2025-07-22" ou "2025-07-22 00:00:00"
+                    if (dateStr.length() >= 10 && dateStr.charAt(4) == '-' && dateStr.charAt(7) == '-') {
                         String datePart = dateStr.substring(0, 10);
                         simulationDate = LocalDate.parse(datePart);
                     }
                 }
+            }
+
+            if (startingDateObj != null && !isDefaultDate && simulationDate != null) {
                 startingDateDefini = true;
                 System.out.println("[INFO] starting_date DÉFINI: " + simulationDate);
             } else {
-                // ✅ CAS 3 : starting_date non défini
+                // ✅ CAS 3 : starting_date non défini OU date par défaut
                 startingDateDefini = false;
                 useAllTrips = true;
                 System.out.println("[INFO] starting_date NON DÉFINI → TOUS LES TRIPS SERONT UTILISÉS");

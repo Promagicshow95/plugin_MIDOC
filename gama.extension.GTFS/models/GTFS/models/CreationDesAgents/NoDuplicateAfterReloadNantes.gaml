@@ -4,7 +4,7 @@
  * Author: tiend
  */
 
-model NoDuplicateAfterReload
+model NoDuplicateAfterReloadNantes
 
 global {
     // ------------ PARAMÈTRES ------------
@@ -150,25 +150,38 @@ global {
         write "ℹ️ Aucun transport_shape (shapes.txt absent) — check ignoré.";
     }
 
-    // ----- tripId (unicité réelle, pas d’occurrences multiples dans les stops) -----
+    // ----- tripId : vérifier les VRAIS doublons dans les arrêts de DÉPART -----
     if length(bus_stop) > 0 {
-        list<string> all_tripIds <- [];
+        // Collecter tous les tripId présents dans departureStopsInfo (arrêts de départ uniquement)
+        map<string, int> tripId_depart_counts <- [];
         ask bus_stop {
-            if tripShapeMap != nil and tripShapeMap is map {
-                list<string> trip_keys <- tripShapeMap.keys;
-                all_tripIds <- all_tripIds + trip_keys;
+            if (departureStopsInfo != nil and departureStopsInfo is map and length(departureStopsInfo) > 0) {
+                loop tripId over: departureStopsInfo.keys {
+                    if not(tripId_depart_counts contains_key tripId) {
+                        tripId_depart_counts[tripId] <- 0;
+                    }
+                    tripId_depart_counts[tripId] <- tripId_depart_counts[tripId] + 1;
+                }
             }
         }
-        list<string> unique_tripIds <- remove_duplicates(all_tripIds);
-        int total_trips <- length(unique_tripIds);
 
-        // Teste si au moins un tripId est dupliqué (devrait être impossible car remove_duplicates)
-        int dupTrips <- length(all_tripIds) - total_trips;
-        // Ici, le test est juste pour info, mais normalement dupTrips > 0 n’indique plus un doublon « réel »
+        // Détecter les tripId présents dans plus d'un stop de départ (anormal !)
+        list<string> true_trip_duplicates <- [];
+        int dupTrips <- 0;
+        loop tripId over: tripId_depart_counts.keys {
+            if tripId_depart_counts[tripId] > 1 {
+                true_trip_duplicates <- true_trip_duplicates + tripId;
+                dupTrips <- dupTrips + (tripId_depart_counts[tripId] - 1);
+            }
+        }
 
-        write "✅ Tous les tripId sont uniques (" + string(total_trips) + " trips uniques trouvés)";
-        // Optionnel : tu peux aussi afficher la liste si besoin :
-        // write "Liste tripId uniques : " + string(unique_tripIds);
+        if length(true_trip_duplicates) > 0 {
+            write "❌ TripId 'départ' dupliqué dans plusieurs bus_stop : " + string(true_trip_duplicates);
+            write "   → Un trip ne peut avoir qu'UN SEUL arrêt de départ !";
+            errors <- errors + dupTrips;
+        } else {
+            write "✅ Tous les tripId de départ sont uniques par bus_stop (" + string(length(tripId_depart_counts.keys)) + " trips de départ trouvés)";
+        }
     }
 
     if errors = 0 {
