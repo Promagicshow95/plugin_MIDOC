@@ -5,7 +5,7 @@ global {
     // Path to the GTFS file
     gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
      
-    shape_file boundary_shp <- shape_file("../../includes/ShapeFileNantes.shp");
+    shape_file boundary_shp <- shape_file("../../includes/shapeFileNantes.shp");
     
     geometry shape <- envelope(boundary_shp);
     

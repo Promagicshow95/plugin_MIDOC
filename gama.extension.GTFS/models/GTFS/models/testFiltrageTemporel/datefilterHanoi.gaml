@@ -5,7 +5,7 @@ global {
     // Path to the GTFS file
     gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
      
-    shape_file boundary_shp <- shape_file("../../includes/ShapeFileHanoishp.shp");
+    shape_file boundary_shp <- shape_file("../../includes/shapeFileHanoishp.shp");
     
     geometry shape <- envelope(boundary_shp);
     

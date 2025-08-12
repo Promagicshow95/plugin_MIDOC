@@ -84,20 +84,21 @@ public class GTFSFilter {
         });
         System.out.println("✅ " + keptStopIds.size() + " arrêts conservés");
 
-        // --- stop_times.txt ---
-        Set<String> keptTripIds = new HashSet<>();
-        System.out.println("🔄 Filtrage des horaires (stop_times.txt)...");
-        filterAndWriteFile("stop_times.txt", gtfsDir, outDir, (header, row) -> {
-            int idxStopId = header.getOrDefault("stop_id", -1);
-            int idxTripId = header.getOrDefault("trip_id", -1);
-            if (row.length <= Math.max(idxStopId, idxTripId) || idxStopId < 0 || idxTripId < 0) return false;
-            if (keptStopIds.contains(row[idxStopId])) {
-                keptTripIds.add(row[idxTripId]);
-                return true;
-            }
-            return false;
+     // --- stop_times.txt (TRI + RÉINDEX PAR TRIP) ---
+        System.out.println("🔄 Filtrage/tri/réindex des horaires (stop_times.txt)...");
+        StopTimesResult stRes = filterSortRenumberStopTimes(gtfsDir, outDir, keptStopIds);
+        Set<String> keptTripIds = stRes.tripIds;                    // trips encore valides (>= 2 stops)
+        Set<String> usedStopsAfter = stRes.stopIds;                 // stops réellement utilisés après réindex
+        System.out.println("✅ stop_times.txt écrit. Trips gardés: " + keptTripIds.size());
+        
+     // ✅ Overwrite stops.txt to keep only stops that are still referenced after reindex
+        filterAndWriteFile("stops.txt", gtfsDir, outDir, (header, row) -> {
+            int idxStop = header.getOrDefault("stop_id", -1);
+            if (idxStop < 0 || row.length <= idxStop) return false;
+            return usedStopsAfter.contains(row[idxStop]);
         });
-        System.out.println("✅ " + keptTripIds.size() + " voyages conservés");
+
+
 
         // --- trips.txt ---
         Set<String> routesToKeep = new HashSet<>();
@@ -111,7 +112,7 @@ public class GTFSFilter {
             String tripId = row[idxTripId];
             if (keptTripIds.contains(tripId)) {
                 routesToKeep.add(row[idxRouteId]);
-                if (idxShapeId >= 0) {
+                if (idxShapeId >= 0 && row[idxShapeId] != null && !row[idxShapeId].isBlank()) {
                     shapesToKeep.add(row[idxShapeId]);
                 }
                 return true;
@@ -128,31 +129,91 @@ public class GTFSFilter {
             return routesToKeep.contains(row[idxRouteId]);
         });
 
-        // --- shapes.txt (filtrage spatial des points) ---
+       
+     // --- shapes.txt : garder TOUTE shape référencée + trier par sequence + s'assurer que shape_id est numérique
         File shapesFile = new File(gtfsDir, "shapes.txt");
+        Map<String,String> shapeIdRemap = new LinkedHashMap<>(); // oldSid -> new numeric string
+
         if (shapesFile.exists()) {
-            System.out.println("🔄 Filtrage spatial des points de shape (shapes.txt)…");
-            filterAndWriteFile("shapes.txt", gtfsDir, outDir, (header, row) -> {
-                int idxId  = header.getOrDefault("shape_id",     -1);
-                int idxLat = header.getOrDefault("shape_pt_lat", -1);
-                int idxLon = header.getOrDefault("shape_pt_lon", -1);
-                if (idxId < 0 || idxLat < 0 || idxLon < 0) return false;
-                String shapeId = row[idxId];
-                // ne traiter que les shapes déjà référencés par un voyage filtré
-                if (!shapesToKeep.contains(shapeId)) return false;
-                try {
-                  double lat = Double.parseDouble(row[idxLat]);
-                  double lon = Double.parseDouble(row[idxLon]);
-                  // conserver uniquement les points à l’intérieur de l’enveloppe OSM
-                  return env.contains(lon, lat);
-                } catch (NumberFormatException e) {
-                  return false;
+            System.out.println("🔄 Préparation shapes : garder toutes les shapes référencées par trips, triées par sequence, mapping numérique si nécessaire...");
+            char sep = detectSeparator(shapesFile);
+
+            // 1) lire toutes les lignes et regrouper par shape_id
+            Map<String,Integer> head = new HashMap<>();
+            String[] headerRow = null;
+            int iId, iLat, iLon, iSeq;
+
+            Map<String, List<String[]>> byShape = new HashMap<>();
+            try (CSVReader r = new CSVReaderBuilder(new FileReader(shapesFile))
+                    .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build()) {
+                headerRow = r.readNext();
+                if (headerRow == null) throw new IOException("shapes.txt vide");
+                for (int i=0;i<headerRow.length;i++) head.put(headerRow[i].trim().toLowerCase(), i);
+                iId  = head.getOrDefault("shape_id", -1);
+                iLat = head.getOrDefault("shape_pt_lat", -1);
+                iLon = head.getOrDefault("shape_pt_lon", -1);
+                iSeq = head.getOrDefault("shape_pt_sequence", -1);
+                if (iId<0 || iLat<0 || iLon<0) throw new IOException("Colonnes shape_id / shape_pt_lat / shape_pt_lon requises");
+
+                String[] row;
+                while ((row = r.readNext()) != null) {
+                    if (row.length <= Math.max(iLon, iLat)) continue;
+                    String sid = row[iId];
+                    if (!shapesToKeep.contains(sid)) continue; // uniquement les shapes référencées par les trips filtrés
+                    byShape.computeIfAbsent(sid, k -> new ArrayList<>()).add(row);
                 }
+            }
+
+            // 2) construire un mapping numérique si nécessaire (si au moins un shape_id n'est pas un int)
+            boolean needsNumeric = shapesToKeep.stream().anyMatch(s -> {
+                try { Integer.parseInt(s.trim()); return false; } catch (Exception e) { return true; }
             });
-            System.out.println("✅ Points de shapes filtrés selon l’enveloppe");
+            int nextSid = 1;
+            for (String sid : shapesToKeep) {
+                String newSid = needsNumeric ? String.valueOf(nextSid++) : sid.trim();
+                shapeIdRemap.put(sid, newSid);
+            }
+
+            // 3) écrire shapes.txt trié par sequence et avec shape_id remappé si besoin
+            File out = new File(outDir, "shapes.txt");
+            try (BufferedWriter w = Files.newBufferedWriter(out.toPath())) {
+                w.write(String.join(String.valueOf(sep), headerRow));
+                w.newLine();
+
+                int kept = 0, total = 0;
+                for (String sid : shapesToKeep) {
+                    List<String[]> rows = byShape.get(sid);
+                    if (rows == null || rows.isEmpty()) continue;
+                    // tri par shape_pt_sequence si dispo, sinon ordre original
+                    if (iSeq >= 0) {
+                        rows.sort((a,b) -> {
+                            try {
+                                int sa = Integer.parseInt(a[iSeq].trim());
+                                int sb = Integer.parseInt(b[iSeq].trim());
+                                return Integer.compare(sa, sb);
+                            } catch (Exception e) { return 0; }
+                        });
+                    }
+                    String newSid = shapeIdRemap.get(sid);
+                    for (String[] r : rows) {
+                        r[iId] = newSid;
+                        w.write(String.join(String.valueOf(sep), r));
+                        w.newLine();
+                        kept++; total++;
+                    }
+                }
+                System.out.println("✅ shapes.txt écrit : " + kept + " lignes (triées), shapes=" + shapesToKeep.size() + ", mapping numérique=" + needsNumeric);
+            }
+
+            // 4) si on a remappé, remapper aussi trips.txt (champ shape_id)
+            if (needsNumeric) {
+                remapShapeIdsInTrips(new File(outDir, "trips.txt"), shapeIdRemap);
+            }
         } else {
             System.out.println("ℹ️ Aucun shapes.txt trouvé, skip filtrage spatial");
         }
+
+
 
         // --- fichiers optionnels ---
         System.out.println("🔄 Copie des fichiers optionnels...");
@@ -189,6 +250,12 @@ public class GTFSFilter {
         if (!ok) {
             System.err.println("⚠️ Erreur lors du renommage du dossier nettoyé !");
         }
+        
+        try {
+            postSortShapes(new File(outputDirPath));
+        } catch (Exception e) {
+            System.err.println("⚠️ postSortShapes a échoué: " + e.getMessage());
+        }
 
         // Validation sur le dossier FINAL
         System.out.println("🔄 Validation avec GTFS-Validator...");
@@ -209,6 +276,86 @@ public class GTFSFilter {
         System.out.println("✅ Filtrage GTFS terminé avec succès!");
         System.out.println("📁 Résultats dans: " + outputDirPath);
     }
+    
+    private static void postSortShapes(File outDir) throws IOException, CsvValidationException {
+        File shapes = new File(outDir, "shapes.txt");
+        if (!shapes.exists()) return;
+        char sep = detectSeparator(shapes);
+
+        List<String[]> rows = new ArrayList<>();
+        String[] header;
+        Map<String,Integer> idx;
+
+        try (CSVReader r = new CSVReaderBuilder(new FileReader(shapes))
+                .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build()) {
+            header = r.readNext();
+            if (header == null) return;
+            idx = parseHeader(header);
+            String[] row;
+            while ((row = r.readNext()) != null) rows.add(row);
+        }
+
+        int iId  = idx.getOrDefault("shape_id", -1);
+        int iSeq = idx.getOrDefault("shape_pt_sequence", -1);
+
+        rows.sort((a,b) -> {
+            int c = a[iId].compareTo(b[iId]);
+            if (c != 0) return c;
+            if (iSeq < 0) return 0;
+            try {
+                int sa = Integer.parseInt(a[iSeq].trim());
+                int sb = Integer.parseInt(b[iSeq].trim());
+                return Integer.compare(sa, sb);
+            } catch (Exception e) { return 0; }
+        });
+
+        File tmp = new File(shapes.getAbsolutePath() + ".tmp");
+        try (BufferedWriter w = Files.newBufferedWriter(tmp.toPath())) {
+            w.write(String.join(String.valueOf(sep), header));
+            w.newLine();
+            for (String[] row : rows) {
+                w.write(String.join(String.valueOf(sep), row));
+                w.newLine();
+            }
+        }
+        Files.move(tmp.toPath(), shapes.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        System.out.println("✅ shapes.txt post-trié (shape_id, shape_pt_sequence)");
+    }
+
+    
+    private static void remapShapeIdsInTrips(File tripsOutFile, Map<String,String> shapeIdRemap) throws IOException, CsvValidationException {
+        if (!tripsOutFile.exists()) return;
+        char sep = detectSeparator(tripsOutFile);
+
+        File tmp = new File(tripsOutFile.getAbsolutePath() + ".tmp");
+        try (CSVReader r = new CSVReaderBuilder(new FileReader(tripsOutFile))
+                .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build();
+             BufferedWriter w = Files.newBufferedWriter(tmp.toPath())) {
+
+            String[] header = r.readNext();
+            if (header == null) return;
+            w.write(String.join(String.valueOf(sep), header));
+            w.newLine();
+
+            Map<String,Integer> idx = parseHeader(header);
+            int iShape = idx.getOrDefault("shape_id", -1);
+
+            String[] row;
+            while ((row = r.readNext()) != null) {
+                if (iShape >= 0 && row.length > iShape) {
+                    String oldSid = row[iShape];
+                    if (shapeIdRemap.containsKey(oldSid)) {
+                        row[iShape] = shapeIdRemap.get(oldSid);
+                    }
+                }
+                w.write(String.join(String.valueOf(sep), row));
+                w.newLine();
+            }
+        }
+        Files.move(tmp.toPath(), tripsOutFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        System.out.println("✅ trips.txt remappé avec shape_id numériques");
+    }
+
 
     private static void handleAgencyFile(File gtfsDir, File outDir, String osmFilePath) throws IOException {
         File agencySrc = new File(gtfsDir, "agency.txt");
@@ -475,6 +622,111 @@ public class GTFSFilter {
             }
         }
         System.out.println("✅ " + filename + ": " + keptRows + "/" + totalRows + " lignes conservées");
+    }
+    static class StopTimesResult {
+        Set<String> tripIds = new HashSet<>();
+        Set<String> stopIds = new HashSet<>();
+    }
+    
+    private static Map<String, Integer> parseHeader(String[] headers) {
+        Map<String, Integer> m = new HashMap<>();
+        for (int i = 0; i < headers.length; i++) {
+            m.put(headers[i].trim().toLowerCase(), i);
+        }
+        return m;
+    }
+    
+    private static StopTimesResult filterSortRenumberStopTimes(File gtfsDir, File outDir, Set<String> keptStopIds) throws Exception {
+        StopTimesResult res = new StopTimesResult();
+        File inFile = new File(gtfsDir, "stop_times.txt");
+        if (!inFile.exists()) throw new FileNotFoundException("stop_times.txt manquant");
+        char sep = detectSeparator(inFile);
+
+        // lecture
+        Map<String, Integer> idx;
+        List<String[]> allRows = new ArrayList<>();
+        
+          // On lit le header pour déterminer les index des colonnes
+        String[] headerRow = null;
+        
+        try (CSVReader r = new CSVReaderBuilder(new FileReader(inFile))
+                .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build()) {
+        	headerRow = r.readNext();
+        	if (headerRow == null) throw new IOException("stop_times.txt vide");
+        	idx = parseHeader(headerRow);
+            String[] row;
+            while ((row = r.readNext()) != null) allRows.add(row);
+        }
+
+        int iTrip = idx.getOrDefault("trip_id", -1);
+        int iStop = idx.getOrDefault("stop_id", -1);
+        int iSeq  = idx.getOrDefault("stop_sequence", -1);
+        int iDep  = idx.getOrDefault("departure_time", -1);
+        if (iTrip < 0 || iStop < 0 || iSeq < 0 || iDep < 0) {
+            throw new IllegalStateException("Colonnes requises absentes de stop_times.txt");
+        }
+
+        // groupement par trip + filtre bbox
+        Map<String, List<String[]>> byTrip = new HashMap<>();
+        for (String[] row : allRows) {
+            if (row.length <= Math.max(Math.max(iTrip,iStop), Math.max(iSeq,iDep))) continue;
+            if (!keptStopIds.contains(row[iStop])) continue; // on garde seulement les stops dans la bbox
+            byTrip.computeIfAbsent(row[iTrip], k -> new ArrayList<>()).add(row);
+        }
+
+     // écriture triée + réindexée
+        File outFile = new File(outDir, "stop_times.txt");
+        try (BufferedWriter w = new BufferedWriter(new FileWriter(outFile))) {
+            // on réécrit bien le header original
+        	w.write(String.join(String.valueOf(sep), headerRow));
+            w.newLine();
+
+            int tripsKept = 0, tripsDropped = 0, rowsWritten = 0;
+
+            for (Map.Entry<String, List<String[]>> e : byTrip.entrySet()) {
+                String tripId = e.getKey();
+                List<String[]> L = e.getValue();
+
+                // trier par stop_sequence (fallback léger si parse échoue)
+                L.sort((a,b) -> {
+                    try {
+                        int sa = Integer.parseInt(a[iSeq].trim());
+                        int sb = Integer.parseInt(b[iSeq].trim());
+                        return Integer.compare(sa, sb);
+                    } catch (Exception ex) {
+                        return a[iDep].compareTo(b[iDep]);
+                    }
+                });
+
+                // enlever doublons éventuels de stop_sequence
+                List<String[]> uniq = new ArrayList<>();
+                Integer lastSeq = null;
+                for (String[] row : L) {
+                    Integer cur = null;
+                    try { cur = Integer.parseInt(row[iSeq].trim()); } catch (Exception ignore) {}
+                    if (lastSeq != null && cur != null && cur.equals(lastSeq)) continue;
+                    lastSeq = cur;
+                    uniq.add(row);
+                }
+
+                if (uniq.size() < 2) { tripsDropped++; continue; } // on ne garde pas les trips à 0/1 stop
+
+                // réindex 1..N
+                int seq = 1;
+                for (String[] row : uniq) {
+                    row[iSeq] = String.valueOf(seq++);
+                    w.write(String.join(String.valueOf(sep), row));
+                    w.newLine();
+                    rowsWritten++;
+                    res.stopIds.add(row[iStop]);
+                }
+                res.tripIds.add(tripId);
+                tripsKept++;
+            }
+
+            System.out.println("📊 stop_times réindexé: trips gardés=" + tripsKept + ", supprimés=" + tripsDropped + ", lignes écrites=" + rowsWritten);
+        }
+        return res;
     }
 
     public static ValidationResult validateWithGtfsValidator(String outputDirPath) throws Exception {

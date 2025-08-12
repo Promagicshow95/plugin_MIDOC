@@ -47,7 +47,7 @@ public class GTFSShapeExporter {
 
     // Export des routes (LineString)
     public static void exportRouteShapesFromGTFS(File gtfsDir, String outputPath) throws Exception {
-        Map<String, List<double[]>> shapePoints = new HashMap<>();
+    	Map<String, List<double[]>> shapePointsBySeq = new HashMap<>(); 
         Map<String, String> shapeToRoute = new HashMap<>();
         Map<String, String> shapeToTrip = new HashMap<>();
         Map<String, Map<String, String>> routeInfo = new HashMap<>();
@@ -62,24 +62,35 @@ public class GTFSShapeExporter {
                 .withCSVParser(new CSVParserBuilder().withSeparator(sepShapes).build())
                 .build()
         ) {
-            String[] header = reader.readNext();
-            if (header == null) throw new IOException("shapes.txt vide");
-            Map<String, Integer> idx = parseHeader(header);
+        	String[] header = reader.readNext();
+        	if (header == null) throw new IOException("shapes.txt vide");
+        	Map<String, Integer> idx = parseHeader(header);
+        	boolean hasSeq = idx.containsKey("shape_pt_sequence");
 
-            String[] line;
-            while ((line = reader.readNext()) != null) {
-                if (isLineTooShort(line, idx, "shape_id", "shape_pt_lat", "shape_pt_lon")) continue;
-                String shapeId = line[idx.get("shape_id")];
-                double lat, lon;
-                try {
-                    lat = Double.parseDouble(line[idx.get("shape_pt_lat")]);
-                    lon = Double.parseDouble(line[idx.get("shape_pt_lon")]);
-                } catch (Exception e) { continue; }
-                shapePoints.computeIfAbsent(shapeId, k -> new ArrayList<>()).add(new double[]{lon, lat});
-            }
+        	String[] line;
+        	while ((line = reader.readNext()) != null) {
+        	    if (isLineTooShort(line, idx, "shape_id", "shape_pt_lat", "shape_pt_lon")) continue;
+        	    String shapeId = line[idx.get("shape_id")];
+        	    if (shapeId == null || shapeId.isEmpty()) continue;
+
+        	    double lat, lon;
+        	    try {
+        	        lat = Double.parseDouble(line[idx.get("shape_pt_lat")]);
+        	        lon = Double.parseDouble(line[idx.get("shape_pt_lon")]);
+        	    } catch (Exception e) { continue; }
+
+        	    int seq = -1;
+        	    if (hasSeq) {
+        	        try { seq = Integer.parseInt(line[idx.get("shape_pt_sequence")]); } catch (Exception ignore) {}
+        	    }
+
+        	    // on stocke [seq, lon, lat]
+        	    shapePointsBySeq.computeIfAbsent(shapeId, k -> new ArrayList<>())
+        	                    .add(new double[]{ seq, lon, lat });
+        	}
         }
 
-        // 2. trips.txt
+     // 2. trips.txt
         File tripsFile = new File(gtfsDir, "trips.txt");
         if (!tripsFile.exists()) throw new IOException("trips.txt non trouvé !");
         char sepTrips = detectSeparator(tripsFile);
@@ -95,16 +106,20 @@ public class GTFSShapeExporter {
 
             String[] line;
             while ((line = reader.readNext()) != null) {
+                // trips.txt ne contient PAS shape_pt_lat/lon/sequence
                 if (isLineTooShort(line, idx, "shape_id", "route_id", "trip_id")) continue;
+
                 String shapeId = line[idx.get("shape_id")];
                 String routeId = line[idx.get("route_id")];
-                String tripId = line[idx.get("trip_id")];
+                String tripId  = line[idx.get("trip_id")];
+
                 if (shapeId != null && !shapeId.isEmpty()) {
                     shapeToRoute.put(shapeId, routeId);
                     shapeToTrip.put(shapeId, tripId);
                 }
             }
         }
+
 
         // 3. routes.txt
         File routesFile = new File(gtfsDir, "routes.txt");
@@ -150,6 +165,11 @@ public class GTFSShapeExporter {
         final SimpleFeatureType TYPE = builder.buildFeatureType();
 
         File newFile = new File(outputPath, "routes_wgs84.shp");
+        File outDirMk = new File(outputPath);
+        if (!outDirMk.exists() && !outDirMk.mkdirs()) {
+            throw new IOException("Impossible de créer le dossier de sortie : " + outputPath);
+        }
+
      // Supprimer tous les fragments shapefile existants pour éviter les verrous/erreurs GeoTools
         String base = newFile.getAbsolutePath().replace(".shp", "");
         String[] exts = {".shp", ".shx", ".dbf", ".prj", ".cpg", ".qix", ".fix"};
@@ -175,11 +195,41 @@ public class GTFSShapeExporter {
         DefaultFeatureCollection collection = new DefaultFeatureCollection();
         GeometryFactory geomFactory = new GeometryFactory();
 
-        for (String shapeId : shapePoints.keySet()) {
-            List<double[]> points = shapePoints.get(shapeId);
-            Coordinate[] coords = points.stream().map(arr -> new Coordinate(arr[0], arr[1])).toArray(Coordinate[]::new);
-            LineString ls = geomFactory.createLineString(coords);
+        for (String shapeId : shapePointsBySeq.keySet()) {
+            List<double[]> pts = shapePointsBySeq.get(shapeId);
 
+         // Normaliser: si un point est au format [lon,lat] (longueur 2), on le convertit en [-1,lon,lat]
+            List<double[]> norm = new ArrayList<>(pts.size());
+            for (double[] a : pts) {
+                if (a == null) continue;
+                if (a.length >= 3) {
+                    norm.add(a);
+                } else if (a.length == 2) {
+                    norm.add(new double[]{ -1, a[0], a[1] });
+                } else {
+                    System.err.println("⚠️ Point ignoré (shape " + shapeId + ") : longueur=" + a.length);
+                }
+            }
+
+            // Trier par séquence
+            norm.sort(Comparator.comparingDouble(a -> a[0]));
+
+            // Construire la liste de coordonnées
+            List<Coordinate> coordsList = new ArrayList<>(norm.size());
+            for (double[] a : norm) {
+                coordsList.add(new Coordinate(a[1], a[2])); // lon, lat
+            }
+
+
+            // Sécurité : ignorer les shapes avec < 2 points
+            if (coordsList.size() < 2) {
+                System.err.println("⚠️ Shape " + shapeId + " ignorée (moins de 2 points après lecture/tri)");
+                continue;
+            }
+
+            LineString ls = geomFactory.createLineString(coordsList.toArray(new Coordinate[0]));
+
+            // Construction de la feature comme avant
             SimpleFeatureBuilder featureBuilder = new SimpleFeatureBuilder(TYPE);
             featureBuilder.add(ls);
             featureBuilder.add(shapeId);
@@ -199,6 +249,7 @@ public class GTFSShapeExporter {
         try {
             featureStore.setTransaction(transaction);
             featureStore.addFeatures(collection);
+            System.out.println("📦 Features écrites : " + collection.size());
             transaction.commit();
             System.out.println("✅ Shapefile écrit (GCS_WGS_1984, degrés) : " + newFile.getAbsolutePath());
         } catch (Exception e) {
