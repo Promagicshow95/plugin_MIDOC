@@ -1,0 +1,435 @@
+      Type de données brut : [['03A_1_S1','49200'],['03A_1_S2','49325'],['03A_1_S3','49444'],['03A_1_S4','49545'],['03A_1_S5','49737'],['03A_1_S6','49837'],['03A_1_S7','49950'],['03A_1_S8','50070'],['03A_1_S9','50203'],['03A_1_S10','50337'],['03A_1_S11','50460'],['03A_1_S12','50565'],['03A_1_S13','50670'],['03A_1_S14','50756'],['03A_1_S15','50874'],['03A_1_S16','51045'],['03A_1_S17','51152'],['03A_1_S18','51463'],['03A_1_S19','51973'],['03A_1_S20','52420']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 27 : 03A_1_MD_27
+      Type de données brut : [['03A_1_S1','49800'],['03A_1_S2','49925'],['03A_1_S3','50044'],['03A_1_S4','50145'],['03A_1_S5','50337'],['03A_1_S6','50437'],['03A_1_S7','50550'],['03A_1_S8','50670'],['03A_1_S9','50803'],['03A_1_S10','50937'],['03A_1_S11','51060'],['03A_1_S12','51165'],['03A_1_S13','51270'],['03A_1_S14','51356'],['03A_1_S15','51474'],['03A_1_S16','51645'],['03A_1_S17','51752'],['03A_1_S18','52063'],['03A_1_S19','52573'],['03A_1_S20','53020']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 28 : 03A_1_MD_28
+      Type de données brut : [['03A_1_S1','50400'],['03A_1_S2','50525'],['03A_1_S3','50644'],['03A_1_S4','50745'],['03A_1_S5','50937'],['03A_1_S6','51037'],['03A_1_S7','51150'],['03A_1_S8','51270'],['03A_1_S9','51403'],['03A_1_S10','51537'],['03A_1_S11','51660'],['03A_1_S12','51765'],['03A_1_S13','51870'],['03A_1_S14','51956'],['03A_1_S15','52074'],['03A_1_S16','52245'],['03A_1_S17','52352'],['03A_1_S18','52663'],['03A_1_S19','53173'],['03A_1_S20','53620']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 29 : 03A_1_MD_29
+      Type de données brut : [['03A_1_S1','51000'],['03A_1_S2','51125'],['03A_1_S3','51244'],['03A_1_S4','51345'],['03A_1_S5','51537'],['03A_1_S6','51637'],['03A_1_S7','51750'],['03A_1_S8','51870'],['03A_1_S9','52003'],['03A_1_S10','52137'],['03A_1_S11','52260'],['03A_1_S12','52365'],['03A_1_S13','52470'],['03A_1_S14','52556'],['03A_1_S15','52674'],['03A_1_S16','52845'],['03A_1_S17','52952'],['03A_1_S18','53263'],['03A_1_S19','53773'],['03A_1_S20','54220']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 30 : 03A_1_MD_30
+      Type de données brut : [['03A_1_S1','51600'],['03A_1_S2','51725'],['03A_1_S3','51844'],['03A_1_S4','51945'],['03A_1_S5','52137'],['03A_1_S6','52237'],['03A_1_S7','52350'],['03A_1_S8','52470'],['03A_1_S9','52603'],['03A_1_S10','52737'],['03A_1_S11','52860'],['03A_1_S12','52965'],['03A_1_S13','53070'],['03A_1_S14','53156'],['03A_1_S15','53274'],['03A_1_S16','53445'],['03A_1_S17','53552'],['03A_1_S18','53863'],['03A_1_S19','54373'],['03A_1_S20','54820']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 31 : 03A_1_MD_31
+      Type de données brut : [['03A_1_S1','52200'],['03A_1_S2','52325'],['03A_1_S3','52444'],['03A_1_S4','52545'],['03A_1_S5','52737'],['03A_1_S6','52837'],['03A_1_S7','52950'],['03A_1_S8','53070'],['03A_1_S9','53203'],['03A_1_S10','53337'],['03A_1_S11','53460'],['03A_1_S12','53565'],['03A_1_S13','53670'],['03A_1_S14','53756'],['03A_1_S15','53874'],['03A_1_S16','54045'],['03A_1_S17','54152'],['03A_1_S18','54463'],['03A_1_S19','54973'],['03A_1_S20','55420']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 32 : 03A_1_MD_32
+      Type de données brut : [['03A_1_S1','52800'],['03A_1_S2','52925'],['03A_1_S3','53044'],['03A_1_S4','53145'],['03A_1_S5','53337'],['03A_1_S6','53437'],['03A_1_S7','53550'],['03A_1_S8','53670'],['03A_1_S9','53803'],['03A_1_S10','53937'],['03A_1_S11','54060'],['03A_1_S12','54165'],['03A_1_S13','54270'],['03A_1_S14','54356'],['03A_1_S15','54474'],['03A_1_S16','54645'],['03A_1_S17','54752'],['03A_1_S18','55063'],['03A_1_S19','55573'],['03A_1_S20','56020']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 33 : 03A_1_MD_33
+      Type de données brut : [['03A_1_S1','53400'],['03A_1_S2','53525'],['03A_1_S3','53644'],['03A_1_S4','53745'],['03A_1_S5','53937'],['03A_1_S6','54037'],['03A_1_S7','54150'],['03A_1_S8','54270'],['03A_1_S9','54403'],['03A_1_S10','54537'],['03A_1_S11','54660'],['03A_1_S12','54765'],['03A_1_S13','54870'],['03A_1_S14','54956'],['03A_1_S15','55074'],['03A_1_S16','55245'],['03A_1_S17','55352'],['03A_1_S18','55663'],['03A_1_S19','56173'],['03A_1_S20','56620']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 34 : 03A_1_MD_34
+      Type de données brut : [['03A_1_S1','54000'],['03A_1_S2','54125'],['03A_1_S3','54244'],['03A_1_S4','54345'],['03A_1_S5','54537'],['03A_1_S6','54637'],['03A_1_S7','54750'],['03A_1_S8','54870'],['03A_1_S9','55003'],['03A_1_S10','55137'],['03A_1_S11','55260'],['03A_1_S12','55365'],['03A_1_S13','55470'],['03A_1_S14','55556'],['03A_1_S15','55674'],['03A_1_S16','55845'],['03A_1_S17','55952'],['03A_1_S18','56263'],['03A_1_S19','56773'],['03A_1_S20','57220']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 35 : 03A_1_MD_35
+      Type de données brut : [['03A_1_S1','54600'],['03A_1_S2','54725'],['03A_1_S3','54844'],['03A_1_S4','54945'],['03A_1_S5','55137'],['03A_1_S6','55237'],['03A_1_S7','55350'],['03A_1_S8','55470'],['03A_1_S9','55603'],['03A_1_S10','55737'],['03A_1_S11','55860'],['03A_1_S12','55965'],['03A_1_S13','56070'],['03A_1_S14','56156'],['03A_1_S15','56274'],['03A_1_S16','56445'],['03A_1_S17','56552'],['03A_1_S18','56863'],['03A_1_S19','57373'],['03A_1_S20','57820']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 36 : 03A_1_MD_36
+      Type de données brut : [['03A_1_S1','55200'],['03A_1_S2','55325'],['03A_1_S3','55444'],['03A_1_S4','55545'],['03A_1_S5','55737'],['03A_1_S6','55837'],['03A_1_S7','55950'],['03A_1_S8','56070'],['03A_1_S9','56203'],['03A_1_S10','56337'],['03A_1_S11','56460'],['03A_1_S12','56565'],['03A_1_S13','56670'],['03A_1_S14','56756'],['03A_1_S15','56874'],['03A_1_S16','57045'],['03A_1_S17','57152'],['03A_1_S18','57463'],['03A_1_S19','57973'],['03A_1_S20','58420']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 37 : 03A_1_MD_37
+      Type de données brut : [['03A_1_S1','55800'],['03A_1_S2','55925'],['03A_1_S3','56044'],['03A_1_S4','56145'],['03A_1_S5','56337'],['03A_1_S6','56437'],['03A_1_S7','56550'],['03A_1_S8','56670'],['03A_1_S9','56803'],['03A_1_S10','56937'],['03A_1_S11','57060'],['03A_1_S12','57165'],['03A_1_S13','57270'],['03A_1_S14','57356'],['03A_1_S15','57474'],['03A_1_S16','57645'],['03A_1_S17','57752'],['03A_1_S18','58063'],['03A_1_S19','58573'],['03A_1_S20','59020']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 38 : 03A_1_MD_38
+      Type de données brut : [['03A_1_S1','56400'],['03A_1_S2','56525'],['03A_1_S3','56644'],['03A_1_S4','56745'],['03A_1_S5','56937'],['03A_1_S6','57037'],['03A_1_S7','57150'],['03A_1_S8','57270'],['03A_1_S9','57403'],['03A_1_S10','57537'],['03A_1_S11','57660'],['03A_1_S12','57765'],['03A_1_S13','57870'],['03A_1_S14','57956'],['03A_1_S15','58074'],['03A_1_S16','58245'],['03A_1_S17','58352'],['03A_1_S18','58663'],['03A_1_S19','59173'],['03A_1_S20','59620']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 39 : 03A_1_MD_39
+      Type de données brut : [['03A_1_S1','57000'],['03A_1_S2','57125'],['03A_1_S3','57244'],['03A_1_S4','57345'],['03A_1_S5','57537'],['03A_1_S6','57637'],['03A_1_S7','57750'],['03A_1_S8','57870'],['03A_1_S9','58003'],['03A_1_S10','58137'],['03A_1_S11','58260'],['03A_1_S12','58365'],['03A_1_S13','58470'],['03A_1_S14','58556'],['03A_1_S15','58674'],['03A_1_S16','58845'],['03A_1_S17','58952'],['03A_1_S18','59263'],['03A_1_S19','59773'],['03A_1_S20','60220']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 40 : 03A_1_MD_40
+      Type de données brut : [['03A_1_S1','57600'],['03A_1_S2','57725'],['03A_1_S3','57844'],['03A_1_S4','57945'],['03A_1_S5','58137'],['03A_1_S6','58237'],['03A_1_S7','58350'],['03A_1_S8','58470'],['03A_1_S9','58603'],['03A_1_S10','58737'],['03A_1_S11','58860'],['03A_1_S12','58965'],['03A_1_S13','59070'],['03A_1_S14','59156'],['03A_1_S15','59274'],['03A_1_S16','59445'],['03A_1_S17','59552'],['03A_1_S18','59863'],['03A_1_S19','60373'],['03A_1_S20','60820']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 41 : 03A_1_MD_41
+      Type de données brut : [['03A_1_S1','58200'],['03A_1_S2','58325'],['03A_1_S3','58444'],['03A_1_S4','58545'],['03A_1_S5','58737'],['03A_1_S6','58837'],['03A_1_S7','58950'],['03A_1_S8','59070'],['03A_1_S9','59203'],['03A_1_S10','59337'],['03A_1_S11','59460'],['03A_1_S12','59565'],['03A_1_S13','59670'],['03A_1_S14','59756'],['03A_1_S15','59874'],['03A_1_S16','60045'],['03A_1_S17','60152'],['03A_1_S18','60463'],['03A_1_S19','60973'],['03A_1_S20','61420']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 42 : 03A_1_MD_42
+      Type de données brut : [['03A_1_S1','58800'],['03A_1_S2','58925'],['03A_1_S3','59044'],['03A_1_S4','59145'],['03A_1_S5','59337'],['03A_1_S6','59437'],['03A_1_S7','59550'],['03A_1_S8','59670'],['03A_1_S9','59803'],['03A_1_S10','59937'],['03A_1_S11','60060'],['03A_1_S12','60165'],['03A_1_S13','60270'],['03A_1_S14','60356'],['03A_1_S15','60474'],['03A_1_S16','60645'],['03A_1_S17','60752'],['03A_1_S18','61063'],['03A_1_S19','61573'],['03A_1_S20','62020']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+   
+   🚌 TRIP 43 : 03A_1_MD_43
+      Type de données brut : [['03A_1_S1','59400'],['03A_1_S2','59525'],['03A_1_S3','59644'],['03A_1_S4','59745'],['03A_1_S5','59937'],['03A_1_S6','60037'],['03A_1_S7','60150'],['03A_1_S8','60270'],['03A_1_S9','60403'],['03A_1_S10','60537'],['03A_1_S11','60660'],['03A_1_S12','60765'],['03A_1_S13','60870'],['03A_1_S14','60956'],['03A_1_S15','61074'],['03A_1_S16','61245'],['03A_1_S17','61352'],['03A_1_S18','61663'],['03A_1_S19','62173'],['03A_1_S20','62620']]
+      ✅ Conversion en list<unknown> réussie
+      Nombre d'éléments : 432
+      
+      📍 ÉLÉMENT 1 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 2 : [
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      
+      📍 ÉLÉMENT 3 : '
+         ✅ Conversion en list<string> réussie
+         Longueur : 1
+         ❌ ERREUR : pair_data trop court (1)
+      📊 Paires valides dans ce trip : 0/432
+      ❌ TRIP INVALIDE : aucune paire valide
+
+📊 RÉSUMÉ DEBUG :
+   Arrêts analysés : 5
+   Arrêts avec trips : 5
+   Trips valides trouvés : 0
+
+💡 DIAGNOSTIC :
+   CAUSE : Trips présents mais invalides
+   SOLUTION : Vérifiez le format des données trip
+✅ Parsing terminé : 224 arrêts, 0 trips
+Construction map stopId -> agent...
+7670 conversions créées
+Conversion vers structure finale...
+0 trips convertis avec agents + horaires
+Construction liaison trip -> route OSM...
+0 trips liés à des routes OSM
+Structures optimisées construites avec succès
+
+VALIDATION ENVELOPPE
+Enveloppe définie : 74299.5102676205 x 86511.04103337787
+
+STATISTIQUES OPTIMISÉES
+Routes Bus : 139143
+Arrêts GTFS : 7670
+Trips trouvés : 0
+Conversions réussies : 0
+Fichier JSON utilisé : ../../results/stopReseau/departure_stops_info_stopid.json
+Structures en mémoire :
+  - stop_to_all_trips : 224
+  - stopId_to_agent : 7670
+  - trip_to_agents_with_times : 0
+  - trip_to_osm_route : 0
+
+DIAGNOSTIC STRUCTURES VIDES :
+  CAUSE : Conversion stopId->agents échouée
+  SOLUTION : Vérifiez correspondance JSON/shapefile
+
+VALIDATION DONNÉES
+Échantillon Route : Bến xe Giáp Bát
+Échantillon Arrêt : 01_1_S1
+VALIDATION TERMINÉE
