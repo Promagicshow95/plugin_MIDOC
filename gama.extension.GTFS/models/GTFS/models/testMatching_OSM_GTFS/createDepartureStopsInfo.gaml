@@ -89,11 +89,9 @@ global {
                     write "  Nombre de trips : " + length(departureStopsInfo);
                 }
                 
-                // Début du stop
+                // Début du stop - SUPPRIMÉ location et routeType
                 json_content <- json_content + "{";
                 json_content <- json_content + "\"stopId\":\"" + stopId + "\",";
-                json_content <- json_content + "\"location\":[" + int(location.x) + "," + int(location.y) + "],";
-                json_content <- json_content + "\"routeType\":" + routeType + ",";
                 json_content <- json_content + "\"departureStopsInfo\":{";
                 
                 // Traitement des trips
@@ -260,7 +258,7 @@ global {
                     first_stop <- false;
                     exported_stops <- exported_stops + 1;
                     
-                    json_content <- json_content + "{\"s\":\"" + stopId + "\",\"d\":{";
+                    json_content <- json_content + "{\"stopId\":\"" + stopId + "\",\"departureStopsInfo\":{";
                     
                     bool first_trip <- true;
                     loop trip_id over: departureStopsInfo.keys {
@@ -472,7 +470,7 @@ global {
         write "\n=== TEST AVEC JSON MINIMAL EN DUR ===";
         
         // JSON correct directement dans le code (format que le parser attend)
-        string test_json_content <- "{\"departure_stops_info\":[{\"stopId\":\"BRT01_1_S1\",\"location\":[100000,200000],\"routeType\":3,\"departureStopsInfo\":{\"test_trip_1\":[[\"BRT01_1_S1\",\"3600\"],[\"BRT01_1_S2\",\"3900\"],[\"BRT01_1_S3\",\"4200\"]],\"test_trip_2\":[[\"BRT01_1_S1\",\"7200\"],[\"BRT01_1_S4\",\"7500\"]]}}]}";
+        string test_json_content <- "{\"departure_stops_info\":[{\"stopId\":\"BRT01_1_S1\",\"departureStopsInfo\":{\"test_trip_1\":[[\"BRT01_1_S1\",\"3600\"],[\"BRT01_1_S2\",\"3900\"],[\"BRT01_1_S3\",\"4200\"]],\"test_trip_2\":[[\"BRT01_1_S1\",\"7200\"],[\"BRT01_1_S4\",\"7500\"]]}}]}";
         
         write "📋 JSON test en dur :\n" + test_json_content;
         
@@ -542,13 +540,11 @@ global {
         
         // JSON test avec format parfaitement correct
         string test_content <- "{\"departure_stops_info\":[";
-        test_content <- test_content + "{\"stopId\":\"TEST_STOP_1\",\"location\":[100000,200000],\"routeType\":3,";
-        test_content <- test_content + "\"departureStopsInfo\":{";
+        test_content <- test_content + "{\"stopId\":\"TEST_STOP_1\",\"departureStopsInfo\":{";
         test_content <- test_content + "\"trip_1\":[[\"TEST_STOP_1\",\"3600\"],[\"TEST_STOP_2\",\"3900\"]],";
         test_content <- test_content + "\"trip_2\":[[\"TEST_STOP_1\",\"7200\"],[\"TEST_STOP_3\",\"7500\"]]";
         test_content <- test_content + "}},";
-        test_content <- test_content + "{\"stopId\":\"TEST_STOP_2\",\"location\":[200000,300000],\"routeType\":3,";
-        test_content <- test_content + "\"departureStopsInfo\":{";
+        test_content <- test_content + "{\"stopId\":\"TEST_STOP_2\",\"departureStopsInfo\":{";
         test_content <- test_content + "\"trip_3\":[[\"TEST_STOP_2\",\"10800\"],[\"TEST_STOP_4\",\"11100\"]]";
         test_content <- test_content + "}}";
         test_content <- test_content + "]}";

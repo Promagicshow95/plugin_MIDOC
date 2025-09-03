@@ -697,63 +697,55 @@ global {
         }
     }
     
-    // 🆕 EXPORT DEPARTUREINFO COMPLET AVEC STRUCTURE PRÉSERVÉE
-    action export_departure_info_complete {
-        write "\n🆕 === EXPORT DEPARTUREINFO COMPLET (STRUCTURE PRÉSERVÉE) ===";
+    // Action simplifiée pour exporter uniquement departureStopsInfo
+    action export_departure_stops_info_only {
+        write "\n=== EXPORT DEPARTUREINFO SEULEMENT ===";
         
-        string json_path <- export_folder + "departure_stops_info_complete.json";
+        string json_path <- export_folder + "departure_stops_info_stopid.json";
         
         try {
-            string json_content <- "{\n  \"stops_departure_info\": [\n";
+            string json_content <- "{\"departure_stops_info\":[";
             bool first_stop <- true;
             int stops_exported <- 0;
             
             // Exporter seulement les arrêts ayant departureStopsInfo non vide
             ask bus_stop where (each.departureStopsInfo != nil and !empty(each.departureStopsInfo)) {
                 if !first_stop {
-                    json_content <- json_content + ",\n";
+                    json_content <- json_content + ",";
                 }
                 first_stop <- false;
                 stops_exported <- stops_exported + 1;
                 
-                json_content <- json_content + "    {\n";
-                json_content <- json_content + "      \"stopId\": \"" + stopId + "\",\n";
-                json_content <- json_content + "      \"name\": \"" + (name != nil ? name : "") + "\",\n";
-                json_content <- json_content + "      \"location\": [" + location.x + ", " + location.y + "],\n";
-                json_content <- json_content + "      \"closest_route_id\": \"" + (closest_route_id != nil ? closest_route_id : "") + "\",\n";
-                json_content <- json_content + "      \"is_matched\": " + (is_matched ? "true" : "false") + ",\n";
-                
-                // STRUCTURE COMPLÈTE : map<string, map<string, list<string>>> departureStopsInfo
-                json_content <- json_content + "      \"departureStopsInfo\": {\n";
+                json_content <- json_content + "{";
+                json_content <- json_content + "\"stopId\":\"" + stopId + "\",";
+                json_content <- json_content + "\"departureStopsInfo\":{";
                 
                 bool first_trip <- true;
                 loop trip_id over: departureStopsInfo.keys {
                     if !first_trip {
-                        json_content <- json_content + ",\n";
+                        json_content <- json_content + ",";
                     }
                     first_trip <- false;
                     
-                    // trip_id -> map<string, list<string>>
-                    json_content <- json_content + "        \"" + trip_id + "\": {\n";
+                    json_content <- json_content + "\"" + trip_id + "\":{";
                     
-                    map<string, list<string>> trip_stops_info <- departureStopsInfo[trip_id];
+                    map<string, list<string>> trip_info <- departureStopsInfo[trip_id];
                     bool first_route <- true;
                     
-                    loop route_key over: trip_stops_info.keys {
+                    loop route_key over: trip_info.keys {
                         if !first_route {
-                            json_content <- json_content + ",\n";
+                            json_content <- json_content + ",";
                         }
                         first_route <- false;
                         
-                        // route_key -> list<string>
-                        json_content <- json_content + "          \"" + route_key + "\": [";
+                        json_content <- json_content + "\"" + route_key + "\":[";
                         
-                        list<string> stop_details <- trip_stops_info[route_key];
+                        list<string> details <- trip_info[route_key];
                         bool first_detail <- true;
                         
-                        loop detail over: stop_details {
+                        loop detail over: details {
                             if !first_detail {
-                                json_content <- json_content + ", ";
+                                json_content <- json_content + ",";
                             }
                             first_detail <- false;
                             json_content <- json_content + "\"" + detail + "\"";
@@ -762,22 +754,32 @@ global {
                         json_content <- json_content + "]";
                     }
                     
-                    json_content <- json_content + "\n        }";
+                    json_content <- json_content + "}";
                 }
                 
-                json_content <- json_content + "\n      }\n    }";
+                json_content <- json_content + "}}";
             }
             
-            json_content <- json_content + "\n  ]\n}";
+            json_content <- json_content + "]}";
             
             save json_content to: json_path format: "text";
-            write "✅ DEPARTUREINFO JSON STRUCTURE COMPLÈTE EXPORTÉE : " + json_path;
+            write "✅ EXPORT DEPARTUREINFO RÉUSSI : " + json_path;
             write "📊 " + stops_exported + " arrêts avec departureStopsInfo exportés";
-            write "📋 Structure : map<string, map<string, list<string>>> préservée";
             
         } catch {
-            write "❌ Erreur export departureInfo JSON structure complète";
+            write "❌ Erreur export departureStopsInfo";
         }
+    }
+    
+    // Action principale modifiée - supprimer les autres exports
+    action export_departure_only {
+        write "\n🎯 === EXPORT DEPARTUREINFO UNIQUEMENT ===";
+        
+        // Export uniquement departureStopsInfo
+        do export_departure_stops_info_only;
+        
+        write "\n✅ === EXPORT TERMINÉ ===";
+        write "📁 Fichier créé: departure_stops_info_stopid.json";
     }
     
     // 📋 EXPORT RÉSUMÉ STATISTIQUES 
@@ -828,7 +830,7 @@ global {
             summary_content <- summary_content + "FICHIERS EXPORTÉS:\n";
             summary_content <- summary_content + "- gtfs_stops_complete.shp : Arrêts avec matching + departureInfo\n";
             summary_content <- summary_content + "- trip_to_route_mapping.csv : Correspondances trips\n";
-            summary_content <- summary_content + "- departure_stops_info_complete.json : DepartureInfo structure complète\n";
+            summary_content <- summary_content + "- departure_stops_info_stopid.json : DepartureInfo seulement\n";
             summary_content <- summary_content + "- stops_matching_summary.txt : Ce résumé\n\n";
             
             summary_content <- summary_content + "UTILISATION:\n";
@@ -836,8 +838,7 @@ global {
             summary_content <- summary_content + "2. Utiliser 'closest_id' pour lier avec routes existantes\n";
             summary_content <- summary_content + "3. Utiliser 'departure_json' pour info trips détaillées\n";
             summary_content <- summary_content + "4. Utiliser CSV pour mapping trips → routes OSM\n";
-            summary_content <- summary_content + "5. Utiliser JSON pour analyses complètes departureInfo\n";
-            summary_content <- summary_content + "6. JSON préserve la structure map<string, map<string, list<string>>>\n";
+            summary_content <- summary_content + "5. Utiliser JSON pour structure departureInfo complète\n";
             
             save summary_content to: summary_path format: "text";
             write "✅ RÉSUMÉ EXPORTÉ : " + summary_path;
@@ -857,8 +858,8 @@ global {
         // 2. Export mapping trips
         do export_trip_mapping_simple;
         
-        // 3. Export departureInfo JSON avec structure complète préservée
-        do export_departure_info_complete;
+        // 3. Export departureInfo JSON seulement
+        do export_departure_stops_info_only;
         
         // 4. Export résumé
         do export_summary_simple;
@@ -868,11 +869,11 @@ global {
         write "📊 Fichiers créés:";
         write "  - gtfs_stops_complete.shp (arrêts + tous attributs + matching + departureInfo)";
         write "  - trip_to_route_mapping.csv (correspondances trip → route)";
-        write "  - departure_stops_info_complete.json (departureInfo structure complète préservée)";
+        write "  - departure_stops_info_stopid.json (departureInfo structure seulement)";
         write "  - stops_matching_summary.txt (résumé qualité)";
         write "💡 Utilisez 'closest_id' pour lier avec vos routes existantes";
         write "💡 Utilisez 'departure_json' dans le shapefile pour info trips de base";
-        write "💡 JSON préserve map<string, map<string, list<string>>> pour rechargement exact";
+        write "💡 JSON contient uniquement la structure departureStopsInfo";
     }
 }
 
