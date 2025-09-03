@@ -285,7 +285,7 @@ global {
                                 list<unknown> element_data <- list<unknown>(element);
                                 if length(element_data) >= 2 {
                                     string sid <- string(element_data[0]);
-                                    int time_sec <- parse_time_robust(string(element_data[1]));
+                                    int time_sec <- parse_time_robust(element_data[1]);
                                     
                                     if sid != "" and time_sec > 0 {
                                         result <+ pair(sid, time_sec);
@@ -731,7 +731,7 @@ species bus_stop {
 }
 
 // EXPERIMENT
-experiment network_robust_fixed type: gui {
+experiment network_robust type: gui {
     
     action reload_all {
         ask world {
