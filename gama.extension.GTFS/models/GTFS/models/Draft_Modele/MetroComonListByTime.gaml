@@ -26,13 +26,13 @@ global{
 	map<string, string> trip_first_departure_time;
 	map<string, string> sorted_trips_id_time;
 	map<string,string>trips_id_time;
-	string formatted_time;
+	int formatted_time;
 	map<string, bool> trips_already_launched;
 	list<string> launched_trips;
 	
 	 
 	date starting_date <- date("2024-02-21T20:55:00");
-	float step <- 1#mn;
+	float step <- 5#s;
 	
 	init{
 
@@ -72,23 +72,25 @@ global{
 		
 	}
 	
-		reflex update_formatted_time{
-	 	int current_hour <- current_date.hour;
-        int current_minute <- current_date.minute;
-        int current_second <- current_date.second;
-        
+	
+	 
+	 reflex update_formatted_time {
+		int current_hour <- current_date.hour;
+		int current_minute <- current_date.minute;
+		int current_second <- current_date.second;
+		write "current_date: " + current_date;
+		write "current_hour: "+ current_hour;
+		write "current_minute: " + current_minute;
+		write "current_second: " + current_second;
 
-        string current_hour_string <- (current_hour < 10 ? "0" + string(current_hour) : string(current_hour));
-        string current_minute_string <- (current_minute < 10 ? "0" + string(current_minute) : string(current_minute));
-        string current_second_string <- (current_second < 10 ? "0" + string(current_second) : string(current_second));
-
-        formatted_time <- current_hour_string + ":" + current_minute_string + ":" + current_second_string;
-        
-	 }
+		int current_total_seconds <- current_hour * 3600 + current_minute * 60 + current_second;
+		formatted_time <- current_total_seconds mod 86400;
+		
+	}
 	 
 	 reflex launch_bus_dynamic{
 	 	 loop trip_id over: all_trips_to_launch  {
-	 	 	if (formatted_time = sorted_trips_id_time[trip_id] and not trips_already_launched[trip_id]){
+	 	 	if (formatted_time = int(sorted_trips_id_time[trip_id]) and not trips_already_launched[trip_id]){
 	 	 		write "Lancement du bus pour trip: " + trip_id + " à l'heure: " + formatted_time;
 	 	 		
 	 	 		int shape_found <- -1;
@@ -138,7 +140,7 @@ species bus skills: [moving] {
 	int trip_id;
 	graph local_network;
 	
-	init { 	speed <- 0.5; 
+	init { 	speed <- 35#km/#h; 
 			local_network <- as_edge_graph(transport_shape where (each.shapeId = shape_id_test));
 	}
 	
@@ -165,6 +167,19 @@ experiment GTFSExperiment type: gui {
 			species bus aspect: base;
 			species transport_shape aspect: default;
 		}
+		
+				 display monitor {
+//            chart "Mean arrival time diff" type: series
+//            {
+//                data "Mean Early" value: mean(bus collect mean(each.arrival_time_diffs_pos)) color: # green marker_shape: marker_empty style: spline;
+//                data "Mean Late" value: mean(bus collect mean(each.arrival_time_diffs_neg)) color: # red marker_shape: marker_empty style: spline;
+//            }
+
+						chart "Mean arrival time diff" type: series 
+			{
+				data "Total bus" value: length(bus);
+			}
+        }
 	}
 }
 

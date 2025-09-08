@@ -31,17 +31,6 @@ public class TransportStopCreator implements GTFSAgentCreator {
 
         for (int i = 0; i < limit; i++) {
             TransportStop stop = stops.get(i);
-
-            // ⚠️ Assurer que les structures ne sont jamais nulles
-            if (stop.getDepartureTripsInfo() == null) {
-                stop.setDepartureTripsInfo(GamaMapFactory.create(Types.STRING, Types.LIST));
-            }
-
-            if (stop.getDepartureShapeIndexes() == null) {
-                stop.addDepartureShapeIndexes("__dummy__", GamaListFactory.create(Types.FLOAT));
-                stop.getDepartureShapeIndexes().remove("__dummy__");
-            }
-
             Map<String, Object> stopInit = new HashMap<>();
             stopInit.put("stopId", stop.getStopId());
             stopInit.put("stopName", stop.getStopName());
@@ -49,9 +38,8 @@ public class TransportStopCreator implements GTFSAgentCreator {
             stopInit.put("routeType", stop.getRouteType());
             stopInit.put("departureTripsInfo", stop.getDepartureTripsInfo());
             stopInit.put("tripShapeMap", stop.getTripShapeMap());
-            stopInit.put("departureShapeIndexes", stop.getDepartureShapeIndexes());
             stopInit.put("name", stop.getStopName());
-
+            stopInit.put("tripNumber", stop.getTripNumber()); 
             inits.add(stopInit);
         }
     }
@@ -92,6 +80,9 @@ public class TransportStopCreator implements GTFSAgentCreator {
             }
 
             agent.setAttribute("departureStopsInfo", departureStopsInfo);
+
+            // 🔥 Important : departureShapeDistances n'a pas besoin de conversion, donc on le laisse comme il est
+            // (déjà chargé dans addInits)
         }
 
         return createdAgents;

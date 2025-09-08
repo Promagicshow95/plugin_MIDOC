@@ -6,6 +6,7 @@ import gama.core.util.GamaMapFactory;
 import gama.core.util.GamaPair;
 import gama.core.util.IList;
 import gama.core.util.IMap;
+
 import GamaGTFSUtils.SpatialUtils;
 import gama.gaml.types.Types;
 
@@ -13,32 +14,41 @@ public class TransportStop {
 
     private String stopId;
     private String stopName;
+    private double stopLat;   // Latitude originale du GTFS
+    private double stopLon;   // Longitude originale du GTFS
     private GamaPoint location;
     private int routeType = -1;
-
+    private int tripNumber = 0; 
     private IMap<String, IList<GamaPair<String, String>>> departureTripsInfo;
     private IMap<String, Integer> tripShapeMap;
-    private IMap<String, IList<Integer>> departureShapeIndexes; 
+    private IMap<String, IList<Double>> departureShapeDistances;
 
     @SuppressWarnings("unchecked")
     public TransportStop(String stopId, String stopName, double stopLat, double stopLon, IScope scope) {
         this.stopId = stopId;
         this.stopName = stopName;
+        this.stopLat = stopLat;
+        this.stopLon = stopLon;
+        // Conversion pour la simulation GAMA (en CRS interne)
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
         this.departureTripsInfo = null;
         this.tripShapeMap = GamaMapFactory.create(Types.STRING, Types.INT);
-        this.departureShapeIndexes = GamaMapFactory.create(Types.STRING, Types.LIST);  // 🔥
+        this.departureShapeDistances = GamaMapFactory.create(Types.STRING, Types.LIST);
+        //System.out.println("[TEST] Coordonnées projetées pour " + stopName + ": " + location);
     }
 
+    // --- ACCESSEURS classiques
     public String getStopId() { return stopId; }
     public String getStopName() { return stopName; }
     public GamaPoint getLocation() { return location; }
     public int getRouteType() { return routeType; }
     public void setRouteType(int routeType) { this.routeType = routeType; }
 
-    public IMap<String, IList<GamaPair<String, String>>> getDepartureTripsInfo() {
-        return departureTripsInfo;
-    }
+  
+    public double getStopLat() { return stopLat; }
+    public double getStopLon() { return stopLon; }
+
+    public IMap<String, IList<GamaPair<String, String>>> getDepartureTripsInfo() { return departureTripsInfo; }
 
     public void addStopPairs(String tripId, IList<GamaPair<String, String>> stopPairs) {
         departureTripsInfo.put(tripId, stopPairs);
@@ -48,6 +58,7 @@ public class TransportStop {
         this.departureTripsInfo = departureTripsInfo;
     }
 
+    @SuppressWarnings("unchecked")
     public void ensureDepartureTripsInfo() {
         if (this.departureTripsInfo == null) {
             this.departureTripsInfo = GamaMapFactory.create(Types.STRING, Types.LIST);
@@ -61,13 +72,21 @@ public class TransportStop {
     public void addTripShapePair(String tripId, int shapeId) {
         this.tripShapeMap.put(tripId, shapeId);
     }
-
-    public IMap<String, IList<Integer>> getDepartureShapeIndexes() {
-        return departureShapeIndexes;
+    
+    public IMap<String, IList<Double>> getDepartureShapeDistances() {
+        return departureShapeDistances;
     }
 
-    public void addDepartureShapeIndexes(String tripId, IList<Integer> indexes) {
-        departureShapeIndexes.put(tripId, indexes);
+    public void addDepartureShapeDistances(String tripId, IList<Double> distances) {
+        departureShapeDistances.put(tripId, distances);
+    }
+    
+    public int getTripNumber() {
+        return tripNumber;
+    }
+    
+    public void setTripNumber(int tripNumber) {
+        this.tripNumber = tripNumber;
     }
 
     @Override
@@ -79,5 +98,9 @@ public class TransportStop {
                 + "', location={" + locationStr + "}, "
                 + "routeType=" + routeType + ", "
                 + "tripShapeMap=" + tripShapeMap + "}";
+    }
+
+    public GamaPoint getGeometry() {
+        return location;
     }
 }

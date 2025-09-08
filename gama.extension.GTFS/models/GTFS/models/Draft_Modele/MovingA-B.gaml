@@ -2,7 +2,7 @@ model MovingAB
 
 global {
     gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");    
-    shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
+    shape_file boundary_shp <- shape_file("../../includes/shapeFileToulouse.shp");
     geometry shape <- envelope(boundary_shp);
     graph road_network;
     
@@ -14,25 +14,31 @@ global {
 	
 	//if true, keep only the main connected components of the network
 	bool reduce_to_main_connected_components <- true;
+	
+	date starting_date <- date("2018-12-31T00:00:00");
+	
+	
+	
+	float step <- 5 #s;
 
     init {
         write "Loading GTFS contents from: " + gtfs_f;
 
         create bus_stop from: gtfs_f {}
         
-        create transport_shape from: gtfs_f {}
+        //create transport_shape from: gtfs_f {}
         
-        list<geometry> clean_lines <- clean_network(transport_shape collect each.shape, tolerance, split_lines, reduce_to_main_connected_components) ;
+        //list<geometry> clean_lines <- clean_network(transport_shape collect each.shape, tolerance, split_lines, reduce_to_main_connected_components) ;
 
-        create road from: clean_lines{
-        	if(self.shape intersects world.shape){}
-        	else {
-        		do die;
-        	}
-      
-        }
+//        create road from: clean_lines{
+//        	if(self.shape intersects world.shape){}
+//        	else {
+//        		do die;
+//        	}
+//      
+//        }
         
-        road_network <- as_edge_graph(road);
+//        road_network <- as_edge_graph(road);
 
         bus_stop start_stop <- bus_stop first_with (each.stopName = "Sept Deniers - Salvador Dali");
         bus_stop end_stop <- one_of(bus_stop where (each.stopName = "Fonsegrives Entiore"));
@@ -61,14 +67,14 @@ species transport_shape skills: [TransportShapeSkill] {
 
 }
 
-species road {
-    aspect default {
-        if (routeType = 3)  { draw shape color: #yellow; }
-        if (routeType != 3)  { draw shape color: #black; }
-    }
-    int routeType; 
-    int shapeId;
-}
+//species road {
+//    aspect default {
+//        if (routeType = 3)  { draw shape color: #yellow; }
+//        if (routeType != 3)  { draw shape color: #black; }
+//    }
+//    int routeType; 
+//    int shapeId;
+//}
 
 species bus skills: [moving] {
     point target_location;
@@ -78,7 +84,7 @@ species bus skills: [moving] {
     }
 
     reflex move when: target_location != nil {
-        do goto target: target_location on: road_network speed: speed;
+        do goto target: target_location speed: speed;
 
         if (self.location = target_location) {
             write "Bus arrived at destination: " + target_location;
@@ -96,7 +102,7 @@ experiment GTFSExperiment type: gui {
         display "Bus Simulation" {
             species bus_stop aspect: base;
             species bus aspect: base;
-            species road aspect: default;
+            
         }
     }
 }

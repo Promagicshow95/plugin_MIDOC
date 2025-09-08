@@ -1,0 +1,66 @@
+/**
+* Name: testCreationObjetsJava
+* Based on the internal empty template. 
+* Author: tiend
+* Tags: 
+*/
+
+
+model testCreationObjetsJava
+
+global {
+    // Path to the GTFS file
+    gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+     
+	shape_file boundary_shp <- shape_file("../../includes/shapeFileToulouse.shp");
+	
+	geometry shape <- envelope(boundary_shp);
+
+	
+    // Initialization section
+    init {
+      
+        // Create bus_stop agents from the GTFS data
+       create bus_stop from: gtfs_f  {
+       	
+				
+       }
+
+    }
+    
+ 
+}
+
+// Species representing each transport stop
+species bus_stop skills: [TransportStopSkill] {
+
+     aspect base {
+     	
+     	
+		draw circle (100.0) at: location color:#blue;	
+     }
+}
+
+species my_species skills: [TransportStopSkill] {
+
+    aspect base {
+    	draw circle (100.0) at: location color:#blue;
+    }
+}
+
+// GUI-based experiment for visualization
+experiment GTFSExperiment type: gui {
+    
+    // Output section to define the display
+    output {
+        // Display the bus stops on the map
+        display "Bus Stops And Envelope" {
+
+            // Display the bus_stop agents on the map
+            species bus_stop aspect: base;
+            
+        }
+    }
+}
+
+

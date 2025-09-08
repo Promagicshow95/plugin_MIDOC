@@ -12,6 +12,7 @@ line:76,network:1,27,Toulouse-Lautrec Négreneys / Ramonville,58ac25,ffffff,3
 line:84,network:1,29,Jeanne d'Arc / Aucamville Collège ou Fonbeauzard Mermoz,dc006b,ffffff,3
 line:96,network:1,30,Aéroport / MEETT,0098d4,ffffff,3
 line:139,network:1,31,Guyenne - Berry / Aéroport,dc006b,ffffff,3
+line:225,network:1,31p,Aéroport / Arènes,dc006b,ffffff,3
 line:14,network:1,32,Colomiers Ramassiers Gare SNCF / Brax Maudinat,a0670f,ffffff,3
 line:63,network:1,33,Argoulets / Gratentour Gravette,0098d4,ffffff,3
 line:73,network:1,34,Université Paul Sabatier / Arènes,e46809,ffffff,3
@@ -116,8 +117,10 @@ line:174,network:1,L9,L'Union Grande Halle / Saint-Orens Centre Commercial,ff671
 line:209,network:1,L10,La Vache / Fenouillet Centre Commercial - Entrée Nord,ff671b,ffffff,3
 line:216,network:1,L11,Basso Cambo / Frouzins Complexe Sportif,ff671b,ffffff,3
 line:264,network:1,L14,Basso Cambo / Marengo - SNCF,ff671b,ffffff,3
+line:268,network:1,NVACC,Navette Access,e675a7,ffffff,3
 line:223,network:1,NVBOY,Navette Bonnefoy,00758d,ffffff,3
 line:267,network:1,NVSTO,Navette Saint-Orens,a0670f,ffffff,3
 line:68,network:1,T1,Palais de Justice / MEETT,004687,ffffff,0
+line:213,network:1,T1p,Palais de Justice / MEETT,004687,ffffff,3
 line:204,network:1,TELEO,Université Paul Sabatier / Oncopole - Lise Enjalbert,dc006b,ffffff,6
 line:107,network:1,VILLE,Navette Centre Ville,e675a7,ffffff,3

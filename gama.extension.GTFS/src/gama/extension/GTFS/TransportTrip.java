@@ -11,14 +11,14 @@ public class TransportTrip {
 
     private String routeId; 
     private String serviceId; 
-    private int tripId;
+    private String tripId;
     private int shapeId;
     private int routeType = -1;
     private IList<String> stopIdsInOrder; 
     private IList<IMap<String, Object>> stopDetails; 
 
     // Constructor
-    public TransportTrip(String routeId, String serviceId, int tripId, int directionId, int shapeId) {
+    public TransportTrip(String routeId, String serviceId, String tripId, int directionId, int shapeId) {
         this.routeId = routeId;
         this.serviceId = serviceId;
         this.tripId = tripId;
@@ -33,7 +33,6 @@ public class TransportTrip {
 
     public void setRouteType(int routeType) {
         this.routeType = routeType;
-        System.out.println("[DEBUG] Trip ID " + tripId + " assigned routeType: " + routeType);
     }
 
     // Add a stop_id in sequence order
@@ -89,11 +88,11 @@ public class TransportTrip {
         this.serviceId = serviceId;
     }
 
-    public int getTripId() {
-        return tripId;
-    }
+	public String getTripId() {
+		return tripId;
+	}
 
-    public void setTripId(int tripId) {
+    public void setTripId(String tripId) {
         this.tripId = tripId;
     }
 
