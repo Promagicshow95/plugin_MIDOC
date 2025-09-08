@@ -1,0 +1,17 @@
+agency_id,route_id,route_short_name,route_long_name,route_type,route_color,route_text_color
+network:1,line:107,VILLE,Navette Centre Ville,3,e675a7,ffffff
+network:1,line:108,CIMTR,Navette Cimetières,3,0098d4,ffffff
+network:1,line:144,L1,Sept Deniers - Salvador Dali / Fonsegrives Entiore,3,ff671b,ffffff
+network:1,line:16,39,Jeanne d'Arc / Amouroux,3,007c52,ffffff
+network:1,line:172,L8,Marengo - SNCF / Gonin,3,ff671b,ffffff
+network:1,line:174,L9,L'Union Grande Halle / Saint-Orens Centre Commercial,3,ff671b,ffffff
+network:1,line:223,NVBOY,Navette Bonnefoy,3,00758d,ffffff
+network:1,line:264,L14,Basso Cambo / Marengo - SNCF,3,ff671b,ffffff
+network:1,line:42,70,Jeanne d'Arc / Aéroconstellation,3,e675a7,ffffff
+network:1,line:61,A,Basso Cambo / Balma - Gramont,1,db001b,ffffff
+network:1,line:69,B,Borderouge / Ramonville,1,ffdd00,000000
+network:1,line:74,23,Jeanne d'Arc / Rangueil,3,a0670f,ffffff
+network:1,line:8,15,Jeanne d'Arc / Etats-Unis Fondeyre,3,a0670f,ffffff
+network:1,line:84,29,Jeanne d'Arc / Aucamville Collège ou Fonbeauzard Mermoz,3,dc006b,ffffff
+network:1,line:97,45,Jeanne d'Arc / Pelletier Purpan,3,58ac25,ffffff
+network:1,line:99,AERO,Navette Aéroport,3,e46809,ffffff
