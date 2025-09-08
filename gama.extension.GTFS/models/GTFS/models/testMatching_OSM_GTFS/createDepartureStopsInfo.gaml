@@ -1,12 +1,12 @@
 /**
- * Name: createDepartureStopsInfo_Optimized_Fixed
- * Author: tiend (modifié - Fix double encodage JSON)
- * Tags: export, departureStopsInfo, JSON, GTFS, optimized, fixed
- * Description: Export departureStopsInfo CORRIGÉ pour générer de vrais tableaux JSON
- *              Fix: Assure que departureStopsInfo[tripId] = [...] et non "..."
+ * Name: createDepartureStopsInfo_Separated_Format
+ * Author: tiend (modifié - Nouveau format JSON séparé)
+ * Tags: export, departureStopsInfo, JSON, GTFS, separated, optimized
+ * Description: Export departureStopsInfo avec NOUVEAU FORMAT SÉPARÉ
+ *              Format: trip_to_stop_ids et trip_to_departure_times (dictionnaires parallèles)
  */
 
-model createDepartureStopsInfo_Optimized_Fixed
+model createDepartureStopsInfo_Separated_Format
 
 global {
     gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
@@ -18,22 +18,21 @@ global {
     int total_stops <- 0;
     int departure_stops_count <- 0;
     
-    // Paramètres d'optimisation
+    // Parametres d'optimisation
     int min_trips_threshold <- 1;
     int max_stops_per_trip <- 100;
-    bool compact_format <- true;
     
     // Debug parameters
     bool debug_mode <- true;
     bool validate_json_format <- true;
 
     init {
-        write "=== CRÉATION AGENTS BUS_STOP + EXPORT JSON CORRIGÉ ===";
+        write "=== CREATION AGENTS BUS_STOP + EXPORT JSON FORMAT SEPARE ===";
         
         create bus_stop from: gtfs_f;
         
         total_stops <- length(bus_stop);
-        write "Agents bus_stop créés depuis GTFS : " + total_stops;
+        write "Agents bus_stop crees depuis GTFS : " + total_stops;
         
         list<bus_stop> non_bus_stops <- bus_stop where (each.routeType != 3);
         if !empty(non_bus_stops) {
@@ -41,370 +40,327 @@ global {
                 do die;
             }
             total_stops <- length(bus_stop);
-            write "Filtrage : " + total_stops + " arrêts de bus conservés";
+            write "Filtrage : " + total_stops + " arrets de bus conserves";
         }
         
         departure_stops_count <- length(bus_stop where (each.departureStopsInfo != nil and !empty(each.departureStopsInfo)));
-        write "Arrêts de départ détectés : " + departure_stops_count + "/" + total_stops;
+        write "Arrets de depart detectes : " + departure_stops_count + "/" + total_stops;
         
         // Debug structure avant export
         if debug_mode {
             do debug_departure_structure;
         }
         
-        // Export format compact corrigé
-        do export_departure_stops_compact_fixed;
+        // Export nouveau format separe
+        do export_departure_stops_separated_format;
         
         // Validation post-export
         if validate_json_format {
-            do validate_exported_json;
+            do validate_exported_separated_json;
         }
         
         do display_final_stats;
     }
     
-    // EXPORT COMPACT CORRIGÉ - GÉNÈRE VRAIS TABLEAUX JSON
-    action export_departure_stops_compact_fixed {
-        write "\n=== EXPORT COMPACT CORRIGÉ (VRAIS TABLEAUX JSON) ===";
+    // EXPORT NOUVEAU FORMAT SEPARE - DICTIONNAIRES PARALLELES
+    action export_departure_stops_separated_format {
+        write "\n=== EXPORT FORMAT SEPARE (DICTIONNAIRES PARALLELES) ===";
         
-        string json_path <- export_folder + "departure_stops_info_stopid.json";
+        string json_path <- export_folder + "departure_stops_separated.json";
         
         try {
-            string json_content <- "{\"departure_stops_info\":[";
-            bool first_stop <- true;
-            int exported_stops <- 0;
-            int total_trips_exported <- 0;
-            int total_pairs_exported <- 0;
+            // Structures pour collecter les donnees par trip
+            map<string, list<string>> trip_to_stop_ids <- map<string, list<string>>([]);
+            map<string, list<int>> trip_to_departure_times <- map<string, list<int>>([]);
             
+            int total_trips_processed <- 0;
+            int total_stops_processed <- 0;
+            
+            // Collecte des donnees depuis tous les arrets de depart
             ask bus_stop where (each.departureStopsInfo != nil and !empty(each.departureStopsInfo)) {
-                if !first_stop { 
-                    json_content <- json_content + ",";
-                }
-                first_stop <- false;
-                exported_stops <- exported_stops + 1;
                 
-                // Debug pour le premier stop
-                if debug_mode and exported_stops = 1 {
-                    write "DEBUG - Premier stop : " + stopId;
-                    write "  Nombre de trips : " + length(departureStopsInfo);
-                }
-                
-                // Début du stop - SUPPRIMÉ location et routeType
-                json_content <- json_content + "{";
-                json_content <- json_content + "\"stopId\":\"" + stopId + "\",";
-                json_content <- json_content + "\"departureStopsInfo\":{";
-                
-                // Traitement des trips
-                bool first_trip <- true;
                 loop trip_id over: departureStopsInfo.keys {
-                    if !first_trip { 
-                        json_content <- json_content + ",";
-                    }
-                    first_trip <- false;
-                    total_trips_exported <- total_trips_exported + 1;
-                    
-                    // CRITIQUE: Début du tableau pour ce trip
-                    json_content <- json_content + "\"" + trip_id + "\":[";
-                    
-                    list<pair<bus_stop, string>> stop_time_pairs <- departureStopsInfo[trip_id];
-                    bool first_pair <- true;
-                    
-                    // Debug pour le premier trip du premier stop
-                    if debug_mode and exported_stops = 1 and total_trips_exported = 1 {
-                        write "  DEBUG - Premier trip : " + trip_id;
-                        write "    Nombre de paires : " + length(stop_time_pairs);
-                    }
-                    
-                    // Traitement des paires (stop, time)
-                    loop stop_time_pair over: stop_time_pairs {
-                        if !first_pair { 
-                            json_content <- json_content + ",";
+                    // Si ce trip n'a pas encore ete traite
+                    if !(trip_to_stop_ids contains_key trip_id) {
+                        list<pair<bus_stop, string>> stop_time_pairs <- departureStopsInfo[trip_id];
+                        
+                        list<string> stop_ids_for_trip <- [];
+                        list<int> times_for_trip <- [];
+                        
+                        // Traitement ordonne des paires (stop, time)
+                        loop stop_time_pair over: stop_time_pairs {
+                            bus_stop stop_agent <- stop_time_pair.key;
+                            string departure_time_str <- stop_time_pair.value;
+                            
+                            string stop_id_in_trip <- stop_agent.stopId;
+                            int departure_time_int <- 0;
+                            
+                            // Conversion temps en secondes inline
+                            if departure_time_str != nil and departure_time_str != "" {
+                                try {
+                                    departure_time_int <- int(departure_time_str);
+                                } catch {
+                                    if departure_time_str contains ":" {
+                                        list<string> parts <- departure_time_str split_with ":";
+                                        if length(parts) >= 2 {
+                                            try {
+                                                int hours <- int(parts[0]);
+                                                int minutes <- int(parts[1]);
+                                                int seconds <- length(parts) >= 3 ? int(parts[2]) : 0;
+                                                departure_time_int <- hours * 3600 + minutes * 60 + seconds;
+                                            } catch {
+                                                departure_time_int <- 0;
+                                            }
+                                        }
+                                    } else {
+                                        try {
+                                            float time_float <- float(departure_time_str);
+                                            departure_time_int <- int(time_float);
+                                        } catch {
+                                            departure_time_int <- 0;
+                                        }
+                                    }
+                                }
+                            }
+                            
+                            if stop_id_in_trip != "" and departure_time_int > 0 {
+                                stop_ids_for_trip <+ stop_id_in_trip;
+                                times_for_trip <+ departure_time_int;
+                                total_stops_processed <- total_stops_processed + 1;
+                            }
                         }
-                        first_pair <- false;
-                        total_pairs_exported <- total_pairs_exported + 1;
                         
-                        bus_stop stop_agent <- stop_time_pair.key;
-                        string departure_time <- stop_time_pair.value;
-                        string stop_id_in_trip <- stop_agent.stopId;
-                        
-                        // CRITIQUE: Chaque paire est un tableau [stopId, time]
-                        json_content <- json_content + "[\"" + stop_id_in_trip + "\",\"" + departure_time + "\"]";
-                        
-                        // Debug pour les 3 premières paires du premier trip
-                        if debug_mode and exported_stops = 1 and total_trips_exported = 1 and total_pairs_exported <= 3 {
-                            write "    Paire " + total_pairs_exported + " : [\"" + stop_id_in_trip + "\",\"" + departure_time + "\"]";
+                        // Stocker seulement si le trip a des donnees valides
+                        if !empty(stop_ids_for_trip) and length(stop_ids_for_trip) = length(times_for_trip) {
+                            trip_to_stop_ids[trip_id] <- stop_ids_for_trip;
+                            trip_to_departure_times[trip_id] <- times_for_trip;
+                            total_trips_processed <- total_trips_processed + 1;
                         }
                     }
-                    
-                    // CRITIQUE: Fin du tableau pour ce trip
-                    json_content <- json_content + "]";
                 }
-                
-                // Fin du stop
-                json_content <- json_content + "}}";
             }
             
-            // Fermeture du JSON
-            json_content <- json_content + "]}";
+            write "Donnees collectees :";
+            write "  - Trips uniques : " + total_trips_processed;
+            write "  - Stops totaux : " + total_stops_processed;
             
-            // Sauvegarde avec validation
+            // Debug pour le premier trip
+            if debug_mode and !empty(trip_to_stop_ids.keys) {
+                string sample_trip <- first(trip_to_stop_ids.keys);
+                list<string> sample_stops <- trip_to_stop_ids[sample_trip];
+                list<int> sample_times <- trip_to_departure_times[sample_trip];
+                
+                write "Exemple trip : " + sample_trip;
+                write "  Stops : " + length(sample_stops);
+                write "  Times : " + length(sample_times);
+                write "  Alignement OK : " + (length(sample_stops) = length(sample_times));
+                
+                int max_display <- min(3, length(sample_stops));
+                loop i from: 0 to: (max_display - 1) {
+                    write "    " + i + " : " + sample_stops[i] + " -> " + sample_times[i] + "s";
+                }
+            }
+            
+            // Construction JSON avec nouveau format
+            string json_content <- "{";
+            
+            // 1. trip_to_stop_ids
+            json_content <- json_content + "\"trip_to_stop_ids\":{";
+            bool first_trip_stops <- true;
+            
+            loop trip_id over: trip_to_stop_ids.keys {
+                if !first_trip_stops { 
+                    json_content <- json_content + ",";
+                }
+                first_trip_stops <- false;
+                
+                json_content <- json_content + "\"" + trip_id + "\":[";
+                
+                list<string> stops_list <- trip_to_stop_ids[trip_id];
+                bool first_stop <- true;
+                
+                loop stop_id over: stops_list {
+                    if !first_stop { 
+                        json_content <- json_content + ",";
+                    }
+                    first_stop <- false;
+                    json_content <- json_content + "\"" + stop_id + "\"";
+                }
+                
+                json_content <- json_content + "]";
+            }
+            
+            json_content <- json_content + "},";
+            
+            // 2. trip_to_departure_times
+            json_content <- json_content + "\"trip_to_departure_times\":{";
+            bool first_trip_times <- true;
+            
+            loop trip_id over: trip_to_departure_times.keys {
+                if !first_trip_times { 
+                    json_content <- json_content + ",";
+                }
+                first_trip_times <- false;
+                
+                json_content <- json_content + "\"" + trip_id + "\":[";
+                
+                list<int> times_list <- trip_to_departure_times[trip_id];
+                bool first_time <- true;
+                
+                loop time_int over: times_list {
+                    if !first_time { 
+                        json_content <- json_content + ",";
+                    }
+                    first_time <- false;
+                    json_content <- json_content + string(time_int);
+                }
+                
+                json_content <- json_content + "]";
+            }
+            
+            json_content <- json_content + "}";
+            json_content <- json_content + "}";
+            
+            // Sauvegarde
             save json_content to: json_path format: "text";
             
-            write "✅ EXPORT COMPACT CORRIGÉ RÉUSSI : " + json_path;
-            write "   Arrêts exportés : " + exported_stops;
-            write "   Trips exportés : " + total_trips_exported;
-            write "   Paires (stop,time) exportées : " + total_pairs_exported;
+            write "EXPORT FORMAT SEPARE REUSSI : " + json_path;
+            write "   Trips exportes : " + total_trips_processed;
+            write "   Stops totaux : " + total_stops_processed;
             
-            // Debug: Afficher un extrait du JSON généré
+            // Debug: Afficher un extrait du JSON genere
             if debug_mode {
-                string json_sample <- length(json_content) > 500 ? copy(json_content, 0, 500) + "..." : json_content;
-                write "📋 Extrait JSON généré :\n" + json_sample;
+                string json_sample <- length(json_content) > 800 ? copy(json_content, 0, 800) + "..." : json_content;
+                write "Extrait JSON genere :\n" + json_sample;
             }
             
         } catch {
-            write "❌ ERREUR export compact corrigé";
+            write "ERREUR export format separe";
         }
     }
     
-    // VALIDATION DU JSON EXPORTÉ
-    action validate_exported_json {
-        write "\n=== VALIDATION JSON EXPORTÉ ===";
+    // VALIDATION DU JSON SEPARE EXPORTE
+    action validate_exported_separated_json {
+        write "\n=== VALIDATION JSON FORMAT SEPARE ===";
         
-        string json_path <- export_folder + "departure_stops_info_stopid.json";
+        string json_path <- export_folder + "departure_stops_separated.json";
         
         try {
             file json_f <- text_file(json_path);
             string content <- string(json_f);
             
-            write "📏 Taille fichier : " + length(content) + " caractères";
+            write "Taille fichier : " + length(content) + " caracteres";
             
             // Test de parsing
             try {
                 map<string, unknown> parsed <- from_json(content);
-                write "✅ JSON parsing réussi";
+                write "JSON parsing reussi";
                 
-                if parsed contains_key "departure_stops_info" {
-                    list<map<string, unknown>> stops_list <- list<map<string, unknown>>(parsed["departure_stops_info"]);
-                    write "✅ Structure attendue : " + length(stops_list) + " stops";
+                if (parsed contains_key "trip_to_stop_ids") and (parsed contains_key "trip_to_departure_times") {
+                    map<string, unknown> trip_stops <- map<string, unknown>(parsed["trip_to_stop_ids"]);
+                    map<string, unknown> trip_times <- map<string, unknown>(parsed["trip_to_departure_times"]);
                     
-                    if length(stops_list) > 0 {
-                        map<string, unknown> first_stop <- stops_list[0];
-                        write "✅ Premier stop keys : " + first_stop.keys;
+                    write "Structure attendue : trip_to_stop_ids (" + length(trip_stops) + " trips)";
+                    write "Structure attendue : trip_to_departure_times (" + length(trip_times) + " trips)";
+                    
+                    // Verification de l'alignement
+                    if length(trip_stops) = length(trip_times) {
+                        write "Nombre de trips aligne entre les deux dictionnaires";
                         
-                        if first_stop contains_key "departureStopsInfo" {
-                            map<string, unknown> dep_info <- map<string, unknown>(first_stop["departureStopsInfo"]);
-                            write "✅ departureStopsInfo avec " + length(dep_info) + " trips";
+                        // Test sur un trip echantillon
+                        if !empty(trip_stops.keys) {
+                            string sample_trip <- first(trip_stops.keys);
                             
-                            if !empty(dep_info.keys) {
-                                string first_trip <- first(dep_info.keys);
-                                unknown trip_data <- dep_info[first_trip];
-                                
-                                // TEST CRITIQUE: Vérifier que trip_data est une liste, pas une chaîne
+                            if trip_times contains_key sample_trip {
                                 try {
-                                    list<unknown> trip_array <- list<unknown>(trip_data);
-                                    write "✅ Trip " + first_trip + " est un TABLEAU avec " + length(trip_array) + " éléments";
+                                    list<string> stops_array <- list<string>(trip_stops[sample_trip]);
+                                    list<int> times_array <- list<int>(trip_times[sample_trip]);
                                     
-                                    if length(trip_array) > 0 {
-                                        unknown first_element <- trip_array[0];
-                                        try {
-                                            list<string> pair_data <- list<string>(first_element);
-                                            if length(pair_data) = 2 {
-                                                write "✅ Premier élément est une paire valide : [" + pair_data[0] + ", " + pair_data[1] + "]";
-                                            } else {
-                                                write "⚠️ Premier élément n'a pas 2 éléments : " + length(pair_data);
-                                            }
-                                        } catch {
-                                            write "❌ Premier élément n'est pas convertible en list<string>";
+                                    write "Trip echantillon : " + sample_trip;
+                                    write "  Stops : " + length(stops_array);
+                                    write "  Times : " + length(times_array);
+                                    
+                                    if length(stops_array) = length(times_array) {
+                                        write "ALIGNEMENT PARFAIT pour " + sample_trip;
+                                        
+                                        if length(stops_array) > 0 {
+                                            write "  Premier element : " + stops_array[0] + " -> " + times_array[0] + "s";
                                         }
+                                        
+                                        write "FORMAT SEPARE VALIDE ET ALIGNE";
+                                    } else {
+                                        write "DESALIGNEMENT pour " + sample_trip + " : " + length(stops_array) + " vs " + length(times_array);
                                     }
+                                    
                                 } catch {
-                                    write "❌ PROBLÈME : Trip " + first_trip + " n'est PAS un tableau !";
-                                    write "    Type détecté : " + string(trip_data);
-                                    write "    CAUSE : Double encodage JSON détecté";
+                                    write "Erreur conversion arrays pour " + sample_trip;
                                 }
+                            } else {
+                                write "Trip " + sample_trip + " manquant dans trip_to_departure_times";
                             }
                         }
+                    } else {
+                        write "DESALIGNEMENT GLOBAL : " + length(trip_stops) + " trips stops vs " + length(trip_times) + " trips times";
                     }
+                    
+                } else {
+                    write "Cles manquantes : trip_to_stop_ids ou trip_to_departure_times";
                 }
                 
             } catch {
-                write "❌ JSON invalide ou non parsable";
+                write "JSON invalide ou non parsable";
             }
             
         } catch {
-            write "❌ Impossible de lire le fichier exporté";
+            write "Impossible de lire le fichier exporte";
         }
     }
     
-    // Export ultra-léger corrigé
-    action export_departure_stops_light_fixed {
-        write "\n=== EXPORT ULTRA-LÉGER CORRIGÉ ===";
-        
-        string json_path <- export_folder + "departure_stops_info_stopid.json";
+    // CONVERSION TEMPS EN SECONDES
+    int parse_time_to_seconds(string time_str) {
+        if time_str = nil or time_str = "" {
+            return 0;
+        }
         
         try {
-            string json_content <- "{\"departure_stops_info\":[";
-            bool first_stop <- true;
-            int exported_stops <- 0;
-            int skipped_stops <- 0;
-            
-            ask bus_stop where (each.departureStopsInfo != nil and !empty(each.departureStopsInfo)) {
-                if length(departureStopsInfo) < min_trips_threshold {
-                    skipped_stops <- skipped_stops + 1;
-                } else {
-                    if !first_stop { 
-                        json_content <- json_content + ","; 
-                    }
-                    first_stop <- false;
-                    exported_stops <- exported_stops + 1;
-                    
-                    json_content <- json_content + "{\"stopId\":\"" + stopId + "\",\"departureStopsInfo\":{";
-                    
-                    bool first_trip <- true;
-                    loop trip_id over: departureStopsInfo.keys {
-                        if !first_trip { 
-                            json_content <- json_content + ","; 
-                        }
-                        first_trip <- false;
-                        
-                        // CRITIQUE: Début tableau pour ce trip
-                        json_content <- json_content + "\"" + trip_id + "\":[";
-                        
-                        list<pair<bus_stop, string>> pairs <- departureStopsInfo[trip_id];
-                        bool first_pair <- true;
-                        
-                        int stops_to_export <- min(length(pairs), max_stops_per_trip);
-                        
-                        loop i from: 0 to: (stops_to_export - 1) {
-                            pair<bus_stop, string> pair_i <- pairs[i];
-                            if !first_pair { 
-                                json_content <- json_content + ","; 
-                            }
-                            first_pair <- false;
-                            
-                            bus_stop stop_agent <- pair_i.key;
-                            string departure_time <- pair_i.value;
-                            
-                            // CRITIQUE: Chaque paire est un tableau
-                            json_content <- json_content + "[\"" + stop_agent.stopId + "\",\"" + departure_time + "\"]";
-                        }
-                        
-                        // CRITIQUE: Fin tableau pour ce trip
-                        json_content <- json_content + "]";
-                    }
-                    
-                    json_content <- json_content + "}}";
-                }
-            }
-            
-            json_content <- json_content + "]}";
-            
-            save json_content to: json_path format: "text";
-            
-            write "✅ EXPORT ULTRA-LÉGER CORRIGÉ RÉUSSI : " + json_path;
-            write "   Arrêts exportés : " + exported_stops;
-            write "   Arrêts ignorés : " + skipped_stops;
-            
+            // Essai direct en entier
+            int direct_int <- int(time_str);
+            return direct_int;
         } catch {
-            write "❌ Erreur export ultra-léger corrigé";
-        }
-    }
-    
-    // Export batch corrigé
-    action export_departure_stops_batch_fixed {
-        write "\n=== EXPORT PAR BATCH CORRIGÉ ===";
-        
-        list<bus_stop> departure_stops <- bus_stop where (each.departureStopsInfo != nil and !empty(each.departureStopsInfo));
-        int total_departure_stops <- length(departure_stops);
-        
-        if total_departure_stops = 0 {
-            write "Aucun arrêt de départ à exporter";
-            return;
-        }
-        
-        int batch_size <- 50;
-        int batch_number <- 1;
-        int current <- 0;
-        
-        loop while: (current < total_departure_stops) {
-            int end_idx <- min(current + batch_size - 1, total_departure_stops - 1);
-            list<bus_stop> batch <- [];
-            
-            loop i from: current to: end_idx {
-                batch <+ departure_stops[i];
-            }
-            
-            string batch_filename <- export_folder + "departure_batch_" + batch_number + "_fixed.json";
-            
-            try {
-                string json_content <- "{\"departure_stops_info\":[";
-                bool first_stop <- true;
-                
-                loop stop over: batch {
-                    if !first_stop { 
-                        json_content <- json_content + ","; 
+            // Essai format HH:MM:SS
+            if time_str contains ":" {
+                list<string> parts <- time_str split_with ":";
+                if length(parts) >= 2 {
+                    try {
+                        int hours <- int(parts[0]);
+                        int minutes <- int(parts[1]);
+                        int seconds <- length(parts) >= 3 ? int(parts[2]) : 0;
+                        
+                        return hours * 3600 + minutes * 60 + seconds;
+                    } catch {
+                        return 0;
                     }
-                    first_stop <- false;
-                    
-                    json_content <- json_content + "{\"stopId\":\"" + stop.stopId + "\",\"departureStopsInfo\":{";
-                    
-                    bool first_trip <- true;
-                    loop trip_id over: stop.departureStopsInfo.keys {
-                        if !first_trip { 
-                            json_content <- json_content + ","; 
-                        }
-                        first_trip <- false;
-                        
-                        // CRITIQUE: Début tableau
-                        json_content <- json_content + "\"" + trip_id + "\":[";
-                        
-                        list<pair<bus_stop, string>> pairs <- stop.departureStopsInfo[trip_id];
-                        bool first_pair <- true;
-                        
-                        loop stop_time_pair over: pairs {
-                            if !first_pair { 
-                                json_content <- json_content + ","; 
-                            }
-                            first_pair <- false;
-                            
-                            bus_stop stop_agent <- stop_time_pair.key;
-                            string departure_time <- stop_time_pair.value;
-                            
-                            // CRITIQUE: Chaque paire est un tableau
-                            json_content <- json_content + "[\"" + stop_agent.stopId + "\",\"" + departure_time + "\"]";
-                        }
-                        
-                        // CRITIQUE: Fin tableau
-                        json_content <- json_content + "]";
-                    }
-                    
-                    json_content <- json_content + "}}";
                 }
-                
-                json_content <- json_content + "]}";
-                
-                save json_content to: batch_filename format: "text";
-                write "Batch " + batch_number + " : " + length(batch) + " arrêts -> " + batch_filename;
-                
-            } catch {
-                write "❌ Erreur export batch " + batch_number;
             }
             
-            current <- end_idx + 1;
-            batch_number <- batch_number + 1;
+            // Essai float puis conversion
+            try {
+                float time_float <- float(time_str);
+                return int(time_float);
+            } catch {
+                return 0;
+            }
         }
-        
-        write "✅ Export batch corrigé terminé : " + (batch_number - 1) + " fichiers créés";
     }
     
     action display_final_stats {
         write "\n=== STATISTIQUES FINALES ===";
-        write "Total arrêts créés : " + total_stops;
-        write "Arrêts de départ : " + departure_stops_count;
+        write "Total arrets crees : " + total_stops;
+        write "Arrets de depart : " + departure_stops_count;
         
         if total_stops > 0 {
             float departure_rate <- (departure_stops_count / total_stops) * 100.0;
-            write "Taux arrêts de départ : " + int(departure_rate) + "%";
+            write "Taux arrets de depart : " + int(departure_rate) + "%";
         }
         
         if departure_stops_count > 0 {
@@ -426,8 +382,10 @@ global {
             }
         }
         
-        write "\n✅ FICHIER JSON CORRIGÉ - VRAIS TABLEAUX GARANTIS";
-        write "Compatible avec parser optimisé - Double encodage éliminé";
+        write "\nNOUVEAU FORMAT JSON SEPARE";
+        write "Structure: {trip_to_stop_ids: {...}, trip_to_departure_times: {...}}";
+        write "Dictionnaires paralleles indexes par tripId";
+        write "Compatible avec zip() pour reconstruction paires";
     }
     
     action debug_departure_structure {
@@ -435,11 +393,11 @@ global {
         
         bus_stop sample <- first(bus_stop where (each.departureStopsInfo != nil and !empty(each.departureStopsInfo)));
         if sample = nil {
-            write "Aucun arrêt de départ trouvé";
+            write "Aucun arret de depart trouve";
             return;
         }
         
-        write "Arrêt échantillon : " + sample.stopId;
+        write "Arret echantillon : " + sample.stopId;
         write "Nombre de trips : " + length(sample.departureStopsInfo);
         
         if !empty(sample.departureStopsInfo.keys) {
@@ -462,108 +420,122 @@ global {
             }
         }
         
-        write "✅ Structure en mémoire OK - Prête pour export corrigé";
+        write "Structure en memoire OK - Prete pour export format separe";
     }
     
-    // ACTION DE TEST AVEC JSON EN DUR
-    action test_with_hardcoded_json {
-        write "\n=== TEST AVEC JSON MINIMAL EN DUR ===";
+    // ACTION DE TEST AVEC JSON SEPARE EN DUR
+    action test_with_separated_hardcoded_json {
+        write "\n=== TEST AVEC JSON FORMAT SEPARE EN DUR ===";
         
-        // JSON correct directement dans le code (format que le parser attend)
-        string test_json_content <- "{\"departure_stops_info\":[{\"stopId\":\"BRT01_1_S1\",\"departureStopsInfo\":{\"test_trip_1\":[[\"BRT01_1_S1\",\"3600\"],[\"BRT01_1_S2\",\"3900\"],[\"BRT01_1_S3\",\"4200\"]],\"test_trip_2\":[[\"BRT01_1_S1\",\"7200\"],[\"BRT01_1_S4\",\"7500\"]]}}]}";
+        // JSON correct format separe directement dans le code
+        string test_json_content <- "{\"trip_to_stop_ids\":{\"trip_1\":[\"S1\",\"S2\",\"S3\"],\"trip_2\":[\"S5\",\"S8\"]},\"trip_to_departure_times\":{\"trip_1\":[3600,3900,4200],\"trip_2\":[7200,7500]}}";
         
-        write "📋 JSON test en dur :\n" + test_json_content;
+        write "JSON test separe en dur :\n" + test_json_content;
         
         try {
             map<string, unknown> json_data <- from_json(test_json_content);
-            write "✅ Parsing JSON dur réussi";
+            write "Parsing JSON separe reussi";
             
-            // Vérification structure
-            if json_data contains_key "departure_stops_info" {
-                list<map<string, unknown>> stops_list <- list<map<string, unknown>>(json_data["departure_stops_info"]);
-                write "✅ Structure attendue : " + length(stops_list) + " stops";
+            // Verification structure
+            if (json_data contains_key "trip_to_stop_ids") and (json_data contains_key "trip_to_departure_times") {
+                map<string, unknown> trip_stops <- map<string, unknown>(json_data["trip_to_stop_ids"]);
+                map<string, unknown> trip_times <- map<string, unknown>(json_data["trip_to_departure_times"]);
                 
-                if length(stops_list) > 0 {
-                    map<string, unknown> first_stop <- stops_list[0];
-                    write "✅ Premier stop keys : " + first_stop.keys;
+                write "Structure attendue : trip_to_stop_ids (" + length(trip_stops) + " trips)";
+                write "Structure attendue : trip_to_departure_times (" + length(trip_times) + " trips)";
+                
+                // Test alignement
+                if !empty(trip_stops.keys) {
+                    string test_trip <- first(trip_stops.keys);
                     
-                    if first_stop contains_key "departureStopsInfo" {
-                        map<string, unknown> dep_info <- map<string, unknown>(first_stop["departureStopsInfo"]);
-                        write "✅ departureStopsInfo avec " + length(dep_info) + " trips";
-                        
-                        if !empty(dep_info.keys) {
-                            string first_trip <- first(dep_info.keys);
-                            unknown trip_data <- dep_info[first_trip];
+                    if trip_times contains_key test_trip {
+                        try {
+                            list<string> stops_array <- list<string>(trip_stops[test_trip]);
+                            list<int> times_array <- list<int>(trip_times[test_trip]);
                             
-                            // TEST CRITIQUE: Vérifier que trip_data est une liste
-                            try {
-                                list<unknown> trip_array <- list<unknown>(trip_data);
-                                write "✅ Trip " + first_trip + " est un TABLEAU avec " + length(trip_array) + " éléments";
+                            write "Test trip : " + test_trip;
+                            write "  Stops : " + stops_array;
+                            write "  Times : " + times_array;
+                            
+                            if length(stops_array) = length(times_array) {
+                                write "ALIGNEMENT PARFAIT - FORMAT SEPARE VALIDE";
                                 
-                                if length(trip_array) > 0 {
-                                    unknown first_element <- trip_array[0];
-                                    try {
-                                        list<string> pair_data <- list<string>(first_element);
-                                        if length(pair_data) = 2 {
-                                            write "✅ Premier élément est une paire valide : [" + pair_data[0] + ", " + pair_data[1] + "]";
-                                            write "🎯 FORMAT JSON CORRECT CONFIRMÉ";
-                                        } else {
-                                            write "⚠️ Premier élément n'a pas 2 éléments : " + length(pair_data);
-                                        }
-                                    } catch {
-                                        write "❌ Premier élément n'est pas convertible en list<string>";
-                                    }
+                                write "Reconstruction paires :";
+                                loop i from: 0 to: (length(stops_array) - 1) {
+                                    write "  " + stops_array[i] + " -> " + times_array[i] + "s";
                                 }
-                            } catch {
-                                write "❌ PROBLÈME : Trip " + first_trip + " n'est PAS un tableau !";
-                                write "    Type détecté : " + string(trip_data);
-                                write "    CAUSE : Double encodage JSON détecté";
+                            } else {
+                                write "Desalignement detecte";
                             }
+                            
+                        } catch {
+                            write "Erreur conversion arrays";
                         }
                     }
                 }
+            } else {
+                write "Cles manquantes dans structure separee";
             }
             
         } catch {
-            write "❌ JSON dur invalide ou non parsable";
+            write "JSON separe invalide ou non parsable";
         }
         
-        write "\n🔍 Ce test valide le format JSON attendu par le parser";
-        write "Si ce test réussit, le problème est dans le fichier généré";
+        write "\nCe test valide le nouveau format JSON separe";
+        write "Si ce test reussit, le parsing cote modele sera plus simple";
     }
     
-    // CRÉATION D'UN FICHIER JSON TEST MINIMAL
-    action create_minimal_test_json {
-        write "\n=== CRÉATION FICHIER JSON TEST MINIMAL ===";
+    // CREATION D'UN FICHIER JSON TEST SEPARE MINIMAL
+    action create_minimal_separated_test_json {
+        write "\n=== CREATION FICHIER JSON TEST SEPARE MINIMAL ===";
         
-        string test_json_path <- export_folder + "test_minimal_correct.json";
+        string test_json_path <- export_folder + "test_separated_minimal.json";
         
-        // JSON test avec format parfaitement correct
-        string test_content <- "{\"departure_stops_info\":[";
-        test_content <- test_content + "{\"stopId\":\"TEST_STOP_1\",\"departureStopsInfo\":{";
-        test_content <- test_content + "\"trip_1\":[[\"TEST_STOP_1\",\"3600\"],[\"TEST_STOP_2\",\"3900\"]],";
-        test_content <- test_content + "\"trip_2\":[[\"TEST_STOP_1\",\"7200\"],[\"TEST_STOP_3\",\"7500\"]]";
-        test_content <- test_content + "}},";
-        test_content <- test_content + "{\"stopId\":\"TEST_STOP_2\",\"departureStopsInfo\":{";
-        test_content <- test_content + "\"trip_3\":[[\"TEST_STOP_2\",\"10800\"],[\"TEST_STOP_4\",\"11100\"]]";
-        test_content <- test_content + "}}";
-        test_content <- test_content + "]}";
+        // JSON test avec format separe minimal
+        string test_content <- "{";
+        test_content <- test_content + "\"trip_to_stop_ids\":{";
+        test_content <- test_content + "\"test_trip_1\":[\"STOP_A\",\"STOP_B\",\"STOP_C\"],";
+        test_content <- test_content + "\"test_trip_2\":[\"STOP_X\",\"STOP_Y\"]";
+        test_content <- test_content + "},";
+        test_content <- test_content + "\"trip_to_departure_times\":{";
+        test_content <- test_content + "\"test_trip_1\":[3600,4200,4800],";
+        test_content <- test_content + "\"test_trip_2\":[7200,7800]";
+        test_content <- test_content + "}";
+        test_content <- test_content + "}";
         
         try {
             save test_content to: test_json_path format: "text";
-            write "✅ Fichier JSON test créé : " + test_json_path;
-            write "📏 Taille : " + length(test_content) + " caractères";
+            write "Fichier JSON separe test cree " + test_json_path;
+            write "Taille " + length(test_content) + " caracteres";
             
-            // Validation immédiate
+            // Validation immediate
             try {
                 map<string, unknown> validation <- from_json(test_content);
-                write "✅ Validation réussie - JSON test parfaitement formé";
+                write "Validation reussie - JSON separe test parfaitement forme";
+                
+                // Test reconstruction
+                map<string, unknown> stops_dict <- map<string, unknown>(validation["trip_to_stop_ids"]);
+                map<string, unknown> times_dict <- map<string, unknown>(validation["trip_to_departure_times"]);
+                
+                write "Reconstruction test";
+                loop trip_id over: stops_dict.keys {
+                    if times_dict contains_key trip_id {
+                        list<string> stops <- list<string>(stops_dict[trip_id]);
+                        list<int> times <- list<int>(times_dict[trip_id]);
+                        
+                        write "  " + trip_id + " - " + length(stops) + " stops, " + length(times) + " times";
+                        if length(stops) = length(times) {
+                            write "    Alignement OK";
+                        }
+                    }
+                }
+                
             } catch {
-                write "❌ Erreur validation JSON test";
+                write "Erreur validation JSON separe test";
             }
             
         } catch {
-            write "❌ Erreur création fichier JSON test";
+            write "Erreur creation fichier JSON separe test";
         }
     }
 }
@@ -614,60 +586,50 @@ species bus_stop skills: [TransportStopSkill] {
     }
 }
 
-experiment GTFSExperimentFixed type: gui {
+experiment GTFSExperimentSeparated type: gui {
     
     parameter "Seuil min trips" var: min_trips_threshold min: 1 max: 10;
     parameter "Max stops/trip" var: max_stops_per_trip min: 10 max: 200;
     parameter "Mode debug" var: debug_mode;
     parameter "Valider JSON" var: validate_json_format;
     
-    action export_compact_fixed {
-        ask world { do export_departure_stops_compact_fixed; }
-    }
-    
-    action export_light_fixed {
-        ask world { do export_departure_stops_light_fixed; }
-    }
-    
-    action export_batch_fixed {
-        ask world { do export_departure_stops_batch_fixed; }
+    action export_separated {
+        ask world { do export_departure_stops_separated_format; }
     }
     
     action debug_structure {
         ask world { do debug_departure_structure; }
     }
     
-    action validate_json {
-        ask world { do validate_exported_json; }
+    action validate_separated_json {
+        ask world { do validate_exported_separated_json; }
     }
     
-    action test_json_hardcoded {
-        ask world { do test_with_hardcoded_json; }
+    action test_separated_hardcoded {
+        ask world { do test_with_separated_hardcoded_json; }
     }
     
-    action create_test_json {
-        ask world { do create_minimal_test_json; }
+    action create_separated_test_json {
+        ask world { do create_minimal_separated_test_json; }
     }
     
-    user_command "Export Compact CORRIGÉ" action: export_compact_fixed;
-    user_command "Export Ultra-Léger CORRIGÉ" action: export_light_fixed;
-    user_command "Export Batch CORRIGÉ" action: export_batch_fixed;
+    user_command "Export Format Separe" action: export_separated;
     user_command "Debug Structure" action: debug_structure;
-    user_command "Valider JSON Exporté" action: validate_json;
-    user_command "Test JSON En Dur" action: test_json_hardcoded;
-    user_command "Créer JSON Test Minimal" action: create_test_json;
+    user_command "Valider JSON Separe" action: validate_separated_json;
+    user_command "Test JSON Separe En Dur" action: test_separated_hardcoded;
+    user_command "Creer JSON Separe Test" action: create_separated_test_json;
 
     output {
-        display "Export JSON CORRIGÉ - Vrais Tableaux" background: #white {
+        display "Export JSON FORMAT SEPARE" background: #white {
             species bus_stop aspect: detailed;
             
-            overlay position: {10, 10} size: {450 #px, 160 #px} background: #white transparency: 0.9 border: #black {
-                draw "=== EXPORT JSON CORRIGÉ - VRAIS TABLEAUX ===" at: {10#px, 20#px} color: #black font: font("Arial", 11, #bold);
+            overlay position: {10, 10} size: {480 #px, 180 #px} background: #white transparency: 0.9 border: #black {
+                draw "=== EXPORT JSON FORMAT SEPARE ===" at: {10#px, 20#px} color: #black font: font("Arial", 11, #bold);
                 
-                draw "Total arrêts : " + length(bus_stop) at: {20#px, 40#px} color: #black;
+                draw "Total arrets : " + length(bus_stop) at: {20#px, 40#px} color: #black;
                 
                 int departure_stops <- length(bus_stop where (each.departureStopsInfo != nil and !empty(each.departureStopsInfo)));
-                draw "Arrêts départ : " + departure_stops at: {20#px, 60#px} color: #green;
+                draw "Arrets depart : " + departure_stops at: {20#px, 60#px} color: #green;
                 
                 if departure_stops > 0 {
                     int total_trips <- 0;
@@ -677,9 +639,10 @@ experiment GTFSExperimentFixed type: gui {
                     draw "Total trips : " + total_trips at: {20#px, 80#px} color: #purple;
                 }
                 
-                draw "✅ DOUBLE ENCODAGE ÉLIMINÉ" at: {20#px, 105#px} color: #green size: 9;
-                draw "✅ Format: [...] au lieu de \"[...]\"" at: {20#px, 125#px} color: #green size: 9;
-                draw "Compatible avec parser GAMA optimisé" at: {20#px, 145#px} color: #black size: 9;
+                draw "NOUVEAU FORMAT SEPARE" at: {20#px, 105#px} color: #green size: 9;
+                draw "trip_to_stop_ids + trip_to_departure_times" at: {20#px, 125#px} color: #green size: 9;
+                draw "Dictionnaires paralleles indexes par tripId" at: {20#px, 145#px} color: #black size: 8;
+                draw "Compatible zip() - parsing plus simple" at: {20#px, 165#px} color: #black size: 8;
             }
         }
     }
