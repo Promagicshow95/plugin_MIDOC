@@ -19,8 +19,8 @@ global {
     point bottom_right <- CRS_transform({shape.width, shape.height}, "EPSG:4326").location;
     string adress <- "http://overpass-api.de/api/xapi_meta?*[bbox=" + top_left.x + "," + bottom_right.y + "," + bottom_right.x + "," + top_left.y + "]";
     file<geometry> osm_geometries <- osm_file<geometry>(adress, osm_data_to_generate);
-    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
-    file data_file <- shape_file("../../includes/shapeFileHanoishp.shp");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
+    file data_file <- shape_file("../../includes/shapeFileNantes.shp");
     geometry shape <- envelope(data_file);
 
     // --- FILTRES OSM ---
