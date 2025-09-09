@@ -283,11 +283,19 @@ public class GTFSFilter {
             }
         }
 
-        // 1) Écrire la nouvelle shapes.txt (1 sous-shape par trip gardé)
+     // 1) Écrire la nouvelle shapes.txt (tous les tronçons internes à la bbox, ordonnés)
         File outShapes = new File(outDir, "shapes.txt");
         try (BufferedWriter w = Files.newBufferedWriter(outShapes.toPath())) {
-            // header standard
-            w.write("shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence");
+
+            // -- 1a) Choisir un séparateur de sortie cohérent avec les autres fichiers écrits
+            char outSep = ',';
+            for (String probe : List.of("stops.txt","trips.txt","routes.txt","stop_times.txt")) {
+                File f = new File(outDir, probe);
+                if (f.exists()) { outSep = detectSeparator(f); break; }
+            }
+
+            // -- 1b) Écrire le header en utilisant ce séparateur
+            w.write("shape_id" + outSep + "shape_pt_lat" + outSep + "shape_pt_lon" + outSep + "shape_pt_sequence");
             w.newLine();
 
             int nextNewShapeId = 1;
@@ -298,52 +306,104 @@ public class GTFSFilter {
                 List<StopRef> stops = byTrip.get(tripId);
                 if (stops == null || stops.size() < 2) continue;
 
-                // candidate = sous-ligne de la shape d’origine (si dispo), clippée à la bbox
-                LineString candidate = null;
+                String newSid = String.valueOf(nextNewShapeId++);
+                tripToNewShape.put(tripId, newSid);
 
+                int seq = 1;              // compteur shape_pt_sequence
+                boolean wroteAny = false; // avons-nous écrit au moins un point ?
+
+                // -- 1c) Si on a une shape source : sous-ligne (1er -> dernier stop) puis clip bbox
                 String origSid = tripToShapeId.get(tripId);
                 if (origSid != null) {
                     List<Coordinate> coords = byShape.get(origSid);
                     if (coords != null && coords.size() >= 2) {
-                        LineString line = toLineString(GF, coords);
+                        LineString full = toLineString(GF, coords);
+
                         StopRef sFirst = stops.get(0), sLast = stops.get(stops.size()-1);
-                        Coordinate cFirst = new Coordinate(sFirst.lon, sFirst.lat);
+                        Coordinate cFirst = new Coordinate(sFirst.lon, sFirst.lat); // x=lon,y=lat
                         Coordinate cLast  = new Coordinate(sLast.lon,  sLast.lat);
-                        LineString sub = subLineBetweenStops(line, cFirst, cLast);
-                        Geometry clipped = clipToBbox(sub, env, GF);
-                        candidate = longestLine(clipped, GF);
+
+                        LineString sub = subLineBetweenStops(full, cFirst, cLast);
+                        if (sub != null && !sub.isEmpty()) {
+                            LengthIndexedLine lil = new LengthIndexedLine(sub);
+                            Geometry clipped = clipToBbox(sub, env, GF);
+
+                            // -- 1d) Récupérer TOUS les LineString internes à la bbox
+                            List<LineString> parts = new ArrayList<>();
+                            List<Double> starts = new ArrayList<>();
+
+                            if (clipped instanceof LineString) {
+                                LineString ls = (LineString) clipped;
+                                if (!ls.isEmpty()) {
+                                    parts.add(ls);
+                                    starts.add(lil.project(ls.getCoordinateN(0)));
+                                }
+                            } else {
+                                for (int i = 0; i < clipped.getNumGeometries(); i++) {
+                                    Geometry gi = clipped.getGeometryN(i);
+                                    if (gi instanceof LineString && !gi.isEmpty()) {
+                                        LineString ls = (LineString) gi;
+                                        parts.add(ls);
+                                        starts.add(lil.project(ls.getCoordinateN(0)));
+                                    }
+                                }
+                            }
+
+                            // -- 1e) Ordonner les morceaux selon leur position le long de 'sub'
+                            List<Integer> order = new ArrayList<>();
+                            for (int i = 0; i < parts.size(); i++) order.add(i);
+                            order.sort(Comparator.comparingDouble(starts::get));
+
+                            // -- 1f) Écrire tous les points, sans doublon consécutif
+                            Coordinate last = null;
+                            for (int k : order) {
+                                Coordinate[] pc = parts.get(k).getCoordinates();
+                                for (Coordinate c : pc) {
+                                    if (last != null && last.equals2D(c)) continue;
+                                    String[] row = new String[] {
+                                        newSid,
+                                        String.valueOf(c.y),      // lat
+                                        String.valueOf(c.x),      // lon
+                                        String.valueOf(seq++)
+                                    };
+                                    w.write(String.join(String.valueOf(outSep), row));
+                                    w.newLine();
+                                    written++;
+                                    wroteAny = true;
+                                    last = c;
+                                }
+                            }
+                        }
                     }
                 }
 
-                // fallback : polyline depuis la chaîne d’arrêts
-                if (candidate == null || candidate.getNumPoints() < 2) {
-                    List<Coordinate> seq = new ArrayList<>();
-                    for (StopRef s : stops) seq.add(new Coordinate(s.lon, s.lat));
-                    if (seq.size() >= 2) candidate = toLineString(GF, seq);
-                }
-                if (candidate == null || candidate.getNumPoints() < 2) continue;
-
-                String newSid = String.valueOf(nextNewShapeId++);
-                tripToNewShape.put(tripId, newSid);
-
-                Coordinate[] out = candidate.getCoordinates();
-                for (int i=0;i<out.length;i++) {
-                    String[] row = new String[] {
-                        newSid,
-                        String.valueOf(out[i].y), // lat
-                        String.valueOf(out[i].x), // lon
-                        String.valueOf(i+1)       // sequence
-                    };
-                    w.write(String.join(",", row));
-                    w.newLine();
-                    written++;
+                // -- 1g) Fallback : si rien écrit (pas de shape source utilisable), relier les arrêts
+                if (!wroteAny) {
+                    List<Coordinate> seqStops = new ArrayList<>();
+                    for (StopRef s : stops) seqStops.add(new Coordinate(s.lon, s.lat));
+                    if (seqStops.size() >= 2) {
+                        Coordinate[] out = toLineString(GF, seqStops).getCoordinates();
+                        for (Coordinate c : out) {
+                            String[] row = new String[] {
+                                newSid,
+                                String.valueOf(c.y),          // lat
+                                String.valueOf(c.x),          // lon
+                                String.valueOf(seq++)
+                            };
+                            w.write(String.join(String.valueOf(outSep), row));
+                            w.newLine();
+                            written++;
+                        }
+                    }
                 }
             }
-            System.out.println("✅ shapes.txt (sous-shape par trip) écrit : " + written + " lignes, new shapes=" + (nextNewShapeId-1));
 
-            // 2) Remapper trips.txt -> nouveau shape_id
+            System.out.println("✅ shapes.txt écrit (tous tronçons intra-bbox) : " + written + " lignes, shapes=" + (nextNewShapeId-1));
+
+            // -- 1h) Remapper trips.txt -> nouveau shape_id
             remapTripsShapeIdsPerTrip(new File(outDir, "trips.txt"), tripToNewShape);
         }
+
         
 
         // --- fichiers optionnels ---
