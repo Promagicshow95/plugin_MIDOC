@@ -11,11 +11,20 @@ import com.opencsv.CSVParserBuilder;
 import com.opencsv.CSVReaderBuilder;
 import com.opencsv.exceptions.CsvValidationException;
 
+import org.locationtech.jts.geom.Coordinate;
+import org.locationtech.jts.geom.Geometry;
+import org.locationtech.jts.geom.GeometryFactory;
+import org.locationtech.jts.geom.LineString;
+import org.locationtech.jts.linearref.LengthIndexedLine;
+
+
 import java.io.*;
 import java.nio.file.Files;
 import java.util.*;
 
 public class GTFSFilter {
+	
+	
 
     // Fichiers obligatoires
     private static final Set<String> REQUIRED_FILES = Set.of(
@@ -130,90 +139,212 @@ public class GTFSFilter {
         });
 
        
-     // --- shapes.txt : garder TOUTE shape référencée + trier par sequence + s'assurer que shape_id est numérique
-        File shapesFile = new File(gtfsDir, "shapes.txt");
-        Map<String,String> shapeIdRemap = new LinkedHashMap<>(); // oldSid -> new numeric string
+     // --- shapes.txt : sous-shape par trip (clippée bbox) ---
+        File shapesSrc = new File(gtfsDir, "shapes.txt");
+        GeometryFactory GF = new GeometryFactory();
 
-        if (shapesFile.exists()) {
-            System.out.println("🔄 Préparation shapes : garder toutes les shapes référencées par trips, triées par sequence, mapping numérique si nécessaire...");
-            char sep = detectSeparator(shapesFile);
+        // 0) Index utilitaires à construire
 
-            // 1) lire toutes les lignes et regrouper par shape_id
-            Map<String,Integer> head = new HashMap<>();
-            String[] headerRow = null;
-            int iId, iLat, iLon, iSeq;
-
-            Map<String, List<String[]>> byShape = new HashMap<>();
-            try (CSVReader r = new CSVReaderBuilder(new FileReader(shapesFile))
-                    .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build()) {
-                headerRow = r.readNext();
-                if (headerRow == null) throw new IOException("shapes.txt vide");
-                for (int i=0;i<headerRow.length;i++) head.put(headerRow[i].trim().toLowerCase(), i);
-                iId  = head.getOrDefault("shape_id", -1);
-                iLat = head.getOrDefault("shape_pt_lat", -1);
-                iLon = head.getOrDefault("shape_pt_lon", -1);
-                iSeq = head.getOrDefault("shape_pt_sequence", -1);
-                if (iId<0 || iLat<0 || iLon<0) throw new IOException("Colonnes shape_id / shape_pt_lat / shape_pt_lon requises");
-
-                String[] row;
-                while ((row = r.readNext()) != null) {
-                    if (row.length <= Math.max(iLon, iLat)) continue;
-                    String sid = row[iId];
-                    if (!shapesToKeep.contains(sid)) continue; // uniquement les shapes référencées par les trips filtrés
-                    byShape.computeIfAbsent(sid, k -> new ArrayList<>()).add(row);
-                }
-            }
-
-            // 2) construire un mapping numérique si nécessaire (si au moins un shape_id n'est pas un int)
-            boolean needsNumeric = shapesToKeep.stream().anyMatch(s -> {
-                try { Integer.parseInt(s.trim()); return false; } catch (Exception e) { return true; }
-            });
-            int nextSid = 1;
-            for (String sid : shapesToKeep) {
-                String newSid = needsNumeric ? String.valueOf(nextSid++) : sid.trim();
-                shapeIdRemap.put(sid, newSid);
-            }
-
-            // 3) écrire shapes.txt trié par sequence et avec shape_id remappé si besoin
-            File out = new File(outDir, "shapes.txt");
-            try (BufferedWriter w = Files.newBufferedWriter(out.toPath())) {
-                w.write(String.join(String.valueOf(sep), headerRow));
-                w.newLine();
-
-                int kept = 0, total = 0;
-                for (String sid : shapesToKeep) {
-                    List<String[]> rows = byShape.get(sid);
-                    if (rows == null || rows.isEmpty()) continue;
-                    // tri par shape_pt_sequence si dispo, sinon ordre original
-                    if (iSeq >= 0) {
-                        rows.sort((a,b) -> {
-                            try {
-                                int sa = Integer.parseInt(a[iSeq].trim());
-                                int sb = Integer.parseInt(b[iSeq].trim());
-                                return Integer.compare(sa, sb);
-                            } catch (Exception e) { return 0; }
-                        });
-                    }
-                    String newSid = shapeIdRemap.get(sid);
-                    for (String[] r : rows) {
-                        r[iId] = newSid;
-                        w.write(String.join(String.valueOf(sep), r));
-                        w.newLine();
-                        kept++; total++;
+        // 0.1 stopsMap: stop_id -> (lat, lon) depuis stops.txt (filtré)
+        Map<String, Coordinate> stopsCoord = new HashMap<>();
+        {
+            File stopsOut = new File(outDir, "stops.txt");
+            if (stopsOut.exists()) {
+                char sep = detectSeparator(stopsOut);
+                try (CSVReader r = new CSVReaderBuilder(new FileReader(stopsOut))
+                        .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build()) {
+                    String[] h = r.readNext();
+                    if (h != null) {
+                        Map<String,Integer> idx = parseHeader(h);
+                        int iId  = idx.getOrDefault("stop_id", -1);
+                        int iLat = idx.getOrDefault("stop_lat", -1);
+                        int iLon = idx.getOrDefault("stop_lon", -1);
+                        String[] row;
+                        while ((row = r.readNext()) != null) {
+                            if (row.length > Math.max(iLon,iLat) && iId>=0) {
+                                String sid = row[iId].trim();
+                                try {
+                                    double lat = Double.parseDouble(row[iLat]);
+                                    double lon = Double.parseDouble(row[iLon]);
+                                    stopsCoord.put(sid, new Coordinate(lon, lat)); // JTS: x=lon, y=lat
+                                } catch (NumberFormatException e) {
+                                    System.err.println("Erreur parsing lat/lon pour stop " + sid + ": " + e.getMessage());
+                                } catch (Exception e) {
+                                    System.err.println("Erreur inattendue stop " + sid + ": " + e.getMessage());
+                                }
+                            }
+                        }
                     }
                 }
-                System.out.println("✅ shapes.txt écrit : " + kept + " lignes (triées), shapes=" + shapesToKeep.size() + ", mapping numérique=" + needsNumeric);
             }
-
-            // 4) si on a remappé, remapper aussi trips.txt (champ shape_id)
-            if (needsNumeric) {
-                remapShapeIdsInTrips(new File(outDir, "trips.txt"), shapeIdRemap);
-            }
-        } else {
-            System.out.println("ℹ️ Aucun shapes.txt trouvé, skip filtrage spatial");
         }
 
+        // 0.2 byTrip: trip_id -> liste ordonnée des arrêts gardés (avec lat/lon) depuis stop_times.txt (filtré)
+        Map<String, List<StopRef>> byTrip = new HashMap<>();
+        {
+            File stOut = new File(outDir, "stop_times.txt");
+            char sep = detectSeparator(stOut);
+            try (CSVReader r = new CSVReaderBuilder(new FileReader(stOut))
+                    .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build()) {
+                String[] h = r.readNext();
+                if (h == null) throw new IOException("stop_times.txt vide (outDir)");
+                Map<String,Integer> idx = parseHeader(h);
+                int iTrip = idx.getOrDefault("trip_id", -1);
+                int iStop = idx.getOrDefault("stop_id", -1);
+                int iSeq  = idx.getOrDefault("stop_sequence", -1);
+                String[] row;
+                while ((row = r.readNext()) != null) {
+                    if (row.length <= Math.max(iTrip, Math.max(iStop, iSeq))) continue;
+                    String trip = row[iTrip].trim();
+                    String sid  = row[iStop].trim();
+                    Coordinate c = stopsCoord.get(sid);
+                    if (c == null) continue; // stop absent (sécurité)
+                    byTrip.computeIfAbsent(trip, k -> new ArrayList<>())
+                          .add(new StopRef(sid, c.y, c.x)); // (lat,lon)
+                }
+            }
+            // trier par stop_sequence (déjà réindexé, mais au cas où)
+            for (List<StopRef> L : byTrip.values()) {
+                // rien à faire ici car on n'a pas stocké stop_sequence; stop_times.txt filtré l'a déjà remis en ordre
+                // si besoin: relire stop_sequence et trier; ici on suppose outFile déjà trié
+            }
+        }
 
+        // 0.3 tripToShapeId (depuis trips.txt filtré)
+        Map<String,String> tripToShapeId = new HashMap<>();
+        {
+            File tripsOut = new File(outDir, "trips.txt");
+            char sep = detectSeparator(tripsOut);
+            try (CSVReader r = new CSVReaderBuilder(new FileReader(tripsOut))
+                    .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build()) {
+                String[] h = r.readNext();
+                if (h != null) {
+                    Map<String,Integer> idx = parseHeader(h);
+                    int iTrip  = idx.getOrDefault("trip_id", -1);
+                    int iShape = idx.getOrDefault("shape_id", -1);
+                    String[] row;
+                    while ((row = r.readNext()) != null) {
+                        if (iTrip >= 0 && row.length > iTrip) {
+                            String t = row[iTrip].trim();
+                            String s = (iShape >= 0 && row.length > iShape) ? row[iShape].trim() : null;
+                            if (s != null && !s.isEmpty()) tripToShapeId.put(t, s);
+                        }
+                    }
+                }
+            }
+        }
+
+        // 0.4 byShape: shape_id -> liste ordonnée de Coordinates (x=lon,y=lat) depuis shapes.txt source (si existe)
+        Map<String, List<Coordinate>> byShape = new HashMap<>();
+        if (shapesSrc.exists()) {
+            char sep = detectSeparator(shapesSrc);
+            try (CSVReader r = new CSVReaderBuilder(new FileReader(shapesSrc))
+                    .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build()) {
+                String[] h = r.readNext();
+                if (h != null) {
+                    Map<String,Integer> idx = parseHeader(h);
+                    int iId  = idx.getOrDefault("shape_id", -1);
+                    int iLat = idx.getOrDefault("shape_pt_lat", -1);
+                    int iLon = idx.getOrDefault("shape_pt_lon", -1);
+                    int iSeq = idx.getOrDefault("shape_pt_sequence", -1);
+                    Map<String, List<String[]>> tmp = new HashMap<>();
+                    String[] row;
+                    while ((row = r.readNext()) != null) {
+                        if (iId<0 || iLat<0 || iLon<0) continue;
+                        String sid = row[iId];
+                        tmp.computeIfAbsent(sid, k -> new ArrayList<>()).add(row);
+                    }
+                    for (Map.Entry<String,List<String[]>> e : tmp.entrySet()) {
+                        List<String[]> rows = e.getValue();
+                        if (iSeq >= 0) {
+                            rows.sort((a,b) -> {
+                                try {
+                                    int sa = Integer.parseInt(a[iSeq].trim());
+                                    int sb = Integer.parseInt(b[iSeq].trim());
+                                    return Integer.compare(sa, sb);
+                                } catch (Exception ex) { return 0; }
+                            });
+                        }
+                        List<Coordinate> coords = new ArrayList<>();
+                        for (String[] rr : rows) {
+                            try {
+                                double lat = Double.parseDouble(rr[iLat]);
+                                double lon = Double.parseDouble(rr[iLon]);
+                                coords.add(new Coordinate(lon, lat));
+                            } catch (NumberFormatException ex) {
+                                System.err.println("Erreur parsing lat/lon pour shape " + e.getKey() + ": " + ex.getMessage());
+                            } catch (Exception ex) {
+                                System.err.println("Erreur inattendue shape " + e.getKey() + ": " + ex.getMessage());
+                            }
+                        }
+                        if (coords.size() >= 2) byShape.put(e.getKey(), coords);
+                    }
+                }
+            }
+        }
+
+        // 1) Écrire la nouvelle shapes.txt (1 sous-shape par trip gardé)
+        File outShapes = new File(outDir, "shapes.txt");
+        try (BufferedWriter w = Files.newBufferedWriter(outShapes.toPath())) {
+            // header standard
+            w.write("shape_id,shape_pt_lat,shape_pt_lon,shape_pt_sequence");
+            w.newLine();
+
+            int nextNewShapeId = 1;
+            Map<String,String> tripToNewShape = new HashMap<>();
+            int written = 0;
+
+            for (String tripId : keptTripIds) {
+                List<StopRef> stops = byTrip.get(tripId);
+                if (stops == null || stops.size() < 2) continue;
+
+                // candidate = sous-ligne de la shape d’origine (si dispo), clippée à la bbox
+                LineString candidate = null;
+
+                String origSid = tripToShapeId.get(tripId);
+                if (origSid != null) {
+                    List<Coordinate> coords = byShape.get(origSid);
+                    if (coords != null && coords.size() >= 2) {
+                        LineString line = toLineString(GF, coords);
+                        StopRef sFirst = stops.get(0), sLast = stops.get(stops.size()-1);
+                        Coordinate cFirst = new Coordinate(sFirst.lon, sFirst.lat);
+                        Coordinate cLast  = new Coordinate(sLast.lon,  sLast.lat);
+                        LineString sub = subLineBetweenStops(line, cFirst, cLast);
+                        Geometry clipped = clipToBbox(sub, env, GF);
+                        candidate = longestLine(clipped, GF);
+                    }
+                }
+
+                // fallback : polyline depuis la chaîne d’arrêts
+                if (candidate == null || candidate.getNumPoints() < 2) {
+                    List<Coordinate> seq = new ArrayList<>();
+                    for (StopRef s : stops) seq.add(new Coordinate(s.lon, s.lat));
+                    if (seq.size() >= 2) candidate = toLineString(GF, seq);
+                }
+                if (candidate == null || candidate.getNumPoints() < 2) continue;
+
+                String newSid = String.valueOf(nextNewShapeId++);
+                tripToNewShape.put(tripId, newSid);
+
+                Coordinate[] out = candidate.getCoordinates();
+                for (int i=0;i<out.length;i++) {
+                    String[] row = new String[] {
+                        newSid,
+                        String.valueOf(out[i].y), // lat
+                        String.valueOf(out[i].x), // lon
+                        String.valueOf(i+1)       // sequence
+                    };
+                    w.write(String.join(",", row));
+                    w.newLine();
+                    written++;
+                }
+            }
+            System.out.println("✅ shapes.txt (sous-shape par trip) écrit : " + written + " lignes, new shapes=" + (nextNewShapeId-1));
+
+            // 2) Remapper trips.txt -> nouveau shape_id
+            remapTripsShapeIdsPerTrip(new File(outDir, "trips.txt"), tripToNewShape);
+        }
+        
 
         // --- fichiers optionnels ---
         System.out.println("🔄 Copie des fichiers optionnels...");
@@ -277,6 +408,41 @@ public class GTFSFilter {
         System.out.println("📁 Résultats dans: " + outputDirPath);
     }
     
+ // Helpers simples
+    static class StopRef { String stopId; double lat, lon; StopRef(String s,double la,double lo){stopId=s;lat=la;lon=lo;} }
+    
+    private static LineString subLineBetweenStops(LineString line, Coordinate a, Coordinate b) {
+        LengthIndexedLine lil = new LengthIndexedLine(line);
+        double ia = lil.project(a), ib = lil.project(b);
+        double from = Math.min(ia, ib), to = Math.max(ia, ib);
+        return (LineString) lil.extractLine(from, to);
+    }
+
+
+    private static LineString toLineString(GeometryFactory gf, List<Coordinate> coords) {
+        return gf.createLineString(coords.toArray(new Coordinate[0]));
+    }
+
+    private static Geometry clipToBbox(Geometry g, Envelope env, GeometryFactory gf) {
+        Geometry bbox = gf.toGeometry(env);
+        return g.intersection(bbox);
+    }
+
+    private static LineString longestLine(Geometry geom, GeometryFactory gf) {
+        if (geom == null || geom.isEmpty()) return null;
+        if (geom instanceof LineString) return (LineString) geom;
+        double best = -1; LineString pick = null;
+        for (int i=0;i<geom.getNumGeometries();i++) {
+            Geometry gi = geom.getGeometryN(i);
+            if (gi instanceof LineString) {
+                double L = gi.getLength();
+                if (L > best) { best = L; pick = (LineString) gi; }
+            }
+        }
+        return pick;
+    }
+
+    
     private static void postSortShapes(File outDir) throws IOException, CsvValidationException {
         File shapes = new File(outDir, "shapes.txt");
         if (!shapes.exists()) return;
@@ -306,7 +472,10 @@ public class GTFSFilter {
                 int sa = Integer.parseInt(a[iSeq].trim());
                 int sb = Integer.parseInt(b[iSeq].trim());
                 return Integer.compare(sa, sb);
-            } catch (Exception e) { return 0; }
+            } catch (Exception e) {
+                System.err.println("Erreur parsing stop_sequence: " + e.getMessage());
+                return 0;
+            }
         });
 
         File tmp = new File(shapes.getAbsolutePath() + ".tmp");
@@ -321,6 +490,41 @@ public class GTFSFilter {
         Files.move(tmp.toPath(), shapes.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
         System.out.println("✅ shapes.txt post-trié (shape_id, shape_pt_sequence)");
     }
+    
+    private static void remapTripsShapeIdsPerTrip(File tripsFile, Map<String,String> tripToNewShape)
+            throws IOException, CsvValidationException {
+        if (!tripsFile.exists()) return;
+        char sep = detectSeparator(tripsFile);
+        File tmp = new File(tripsFile.getAbsolutePath() + ".tmp");
+
+        try (CSVReader r = new CSVReaderBuilder(new FileReader(tripsFile))
+                .withCSVParser(new CSVParserBuilder().withSeparator(sep).build()).build();
+             BufferedWriter w = Files.newBufferedWriter(tmp.toPath())) {
+
+            String[] header = r.readNext();
+            if (header == null) return;
+            w.write(String.join(String.valueOf(sep), header));
+            w.newLine();
+
+            Map<String,Integer> idx = parseHeader(header);
+            int iTrip  = idx.getOrDefault("trip_id", -1);
+            int iShape = idx.getOrDefault("shape_id", -1);
+
+            String[] row;
+            while ((row = r.readNext()) != null) {
+                if (iTrip >= 0 && iShape >= 0 && row.length > Math.max(iTrip,iShape)) {
+                    String t = row[iTrip].trim();
+                    String newSid = tripToNewShape.get(t);
+                    if (newSid != null) row[iShape] = newSid;
+                }
+                w.write(String.join(String.valueOf(sep), row));
+                w.newLine();
+            }
+        }
+        Files.move(tmp.toPath(), tripsFile.toPath(), java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+        System.out.println("✅ trips.txt remappé avec shape_id par trip");
+    }
+
 
     
     private static void remapShapeIdsInTrips(File tripsOutFile, Map<String,String> shapeIdRemap) throws IOException, CsvValidationException {

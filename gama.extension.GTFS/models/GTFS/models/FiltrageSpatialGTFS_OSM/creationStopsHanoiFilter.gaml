@@ -1,8 +1,8 @@
 model GTFSreader
 
 global  {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/NantesFilter_gtfs");
-    shape_file boundary_shp <- shape_file("../../includes/shapeFileNantesFilter.shp");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/HanoiFilter_gtfs");
+    shape_file boundary_shp <- shape_file("../../includes/shapeFileHanoiFilter.shp");
     
 
     geometry shape <- envelope(boundary_shp);

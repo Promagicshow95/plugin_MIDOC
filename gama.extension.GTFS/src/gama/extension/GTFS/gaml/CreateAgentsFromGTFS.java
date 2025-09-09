@@ -7,7 +7,6 @@ import gama.core.util.IList;
 import gama.core.metamodel.agent.IAgent;
 import gama.core.metamodel.population.IPopulation;
 import gama.extension.GTFS.GTFS_reader;
-import gama.extension.GTFS.TransportShape;
 
 import gama.gaml.expressions.IExpression;
 import gama.gaml.operators.Cast;
