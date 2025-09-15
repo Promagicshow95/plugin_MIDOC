@@ -14,10 +14,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-import org.locationtech.jts.algorithm.ConvexHull;
-import org.locationtech.jts.geom.Coordinate;
-import org.locationtech.jts.geom.Geometry;
-import org.locationtech.jts.geom.GeometryFactory;
 
 import gama.core.util.GamaPair;
 import gama.annotations.precompiler.GamlAnnotations.doc;
@@ -33,7 +29,6 @@ import gama.core.util.GamaMapFactory;
 import gama.core.util.IList;
 import gama.core.util.IMap;
 import gama.core.util.file.GamaFile;
-import gama.gaml.types.IContainerType;
 import gama.gaml.types.IType;
 import gama.gaml.types.Types;
 import com.opencsv.CSVParser;
@@ -695,13 +690,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             System.out.println("gtfsData is null, no attributes to retrieve.");
             return GamaListFactory.createWithoutCasting(Types.STRING);
         }
-    }
-
-	@SuppressWarnings("unchecked")
-	@Override
-    public IContainerType<IList<String>> getGamlType() {
-    	System.out.println("Returning GAML type for GTFS file.");
-        return Types.FILE.of(Types.STRING, Types.STRING);
     }
 
     @Override

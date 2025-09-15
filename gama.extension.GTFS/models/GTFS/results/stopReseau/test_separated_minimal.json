@@ -1,0 +1,1 @@
+{"trip_to_stop_ids":{"test_trip_1":["STOP_A","STOP_B","STOP_C"],"test_trip_2":["STOP_X","STOP_Y"]},"trip_to_departure_times":{"test_trip_1":[3600,4200,4800],"test_trip_2":[7200,7800]}}
