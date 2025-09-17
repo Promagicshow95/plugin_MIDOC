@@ -1,1 +1,0 @@
-{"departure_stops_info":[{"stopId":"TEST_STOP_1","departureStopsInfo":{"trip_1":[["TEST_STOP_1","3600"],["TEST_STOP_2","3900"]],"trip_2":[["TEST_STOP_1","7200"],["TEST_STOP_3","7500"]]}},{"stopId":"TEST_STOP_2","departureStopsInfo":{"trip_3":[["TEST_STOP_2","10800"],["TEST_STOP_4","11100"]]}}]}

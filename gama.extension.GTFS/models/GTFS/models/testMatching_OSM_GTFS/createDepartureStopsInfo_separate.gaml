@@ -36,7 +36,12 @@ global {
     map<string, list<int>> trip_to_departure_times;
     map<string, list<pair<bus_stop,int>>> trip_to_pairs;  // ← MODIFIÉ: bus_stop au lieu de string
     
-    // CACHE DE PERFORMANCE
+    // NOUVELLES VARIABLES POUR LIAISON TRIP → ROUTE
+    map<string, bus_route> tripId_to_main_route;
+    map<string, list<bus_route>> tripId_to_all_routes;  // optionnel pour cas complexes
+    map<string, map<string, int>> tripId_to_route_frequencies;  // debug/analyse
+    
+    // CACHE DE PERFORMANCE  
     bool use_performance_cache <- true;
     
     // ====================================
@@ -384,6 +389,10 @@ global {
             // RECONSTRUIRE LES PAIRES AVEC AGENTS
             if aligned_count > 0 {
                 do reconstruct_departure_pairs_with_agents;
+                
+                // NOUVELLE PHASE : LIAISON TRIP → ROUTE
+                do build_trip_to_route_mapping;
+                
                 do show_json_examples;
             }
             
@@ -441,6 +450,10 @@ global {
                     if !empty(trip_to_stop_ids) {
                         write "✅ Parsing réussi avec obj1=stops, obj2=times";
                         do reconstruct_departure_pairs_with_agents;
+                        
+                        // NOUVELLE PHASE : LIAISON TRIP → ROUTE (AJOUT MANQUANT)
+                        do build_trip_to_route_mapping;
+                        
                         do show_json_examples;
                         return;
                     }
@@ -452,6 +465,10 @@ global {
                     if !empty(trip_to_stop_ids) {
                         write "✅ Parsing réussi avec obj1=times, obj2=stops";
                         do reconstruct_departure_pairs_with_agents;
+                        
+                        // NOUVELLE PHASE : LIAISON TRIP → ROUTE (AJOUT MANQUANT)
+                        do build_trip_to_route_mapping;
+                        
                         do show_json_examples;
                         return;
                     }
@@ -531,6 +548,10 @@ global {
             
             write "✅ Conversion réussie vers format interne";
             do reconstruct_departure_pairs_with_agents;
+            
+            // NOUVELLE PHASE : LIAISON TRIP → ROUTE (AJOUT MANQUANT)
+            do build_trip_to_route_mapping;
+            
             do show_json_examples;
         } else {
             write "❌ Aucun trip trouvé dans l'ancien format";
@@ -693,7 +714,7 @@ global {
     }
     
     // ####################################
-    // NOUVELLE SECTION : TRANSFORMATION VERS AGENTS
+    // NOUVELLE SECTION : TRANSFORMATION VERS AGENTS (CORRIGÉE)
     // ####################################
     
     action reconstruct_departure_pairs_with_agents {
@@ -702,6 +723,7 @@ global {
         trip_to_pairs <- map<string, list<pair<bus_stop,int>>>([]);
         int successful_conversions <- 0;
         int failed_conversions <- 0;
+        int nil_agents_found <- 0;
         
         loop trip over: trip_to_stop_ids.keys {
             list<string> stops <- trip_to_stop_ids[trip];
@@ -713,23 +735,53 @@ global {
                 string stop_id <- stops[i];
                 int time <- times[i];
                 
-                // TRANSFORMATION stopId → agent
-                if stopId_to_agent contains_key stop_id {
+                // APPROCHE SIMPLE : Toujours ajouter la paire d'abord
+                if stop_id in stopId_to_agent.keys {
                     bus_stop stop_agent <- stopId_to_agent[stop_id];
-					pairs <- pairs + pair(stop_agent, time);
+                    pairs <- pairs + pair(stop_agent, time);
                     successful_conversions <- successful_conversions + 1;
                 } else {
-                    // Log les stopId non trouvés (seulement les premiers pour éviter spam)
-                    if debug_mode and failed_conversions < 10 {
-                        write "⚠ Agent non trouvé pour stopId: " + stop_id;
-                    }
                     failed_conversions <- failed_conversions + 1;
+                    if failed_conversions <= 10 {
+                        write "⚠️ STOP_ID MANQUANT: " + stop_id;
+                    }
+                }
+            }
+            
+            // POST-FILTRAGE : Nettoyer les agents NIL APRÈS création
+            list<pair<bus_stop,int>> clean_pairs <- [];
+            loop p over: pairs {
+                bus_stop stop_agent <- p.key;
+                int time <- p.value;
+                
+                // LOGIQUE CORRIGÉE : Ajouter directement les agents valides
+                if stop_agent = nil {
+                    nil_agents_found <- nil_agents_found + 1;
+                    if nil_agents_found <= 5 {
+                        write "🔴 AGENT RÉELLEMENT NIL détecté";
+                    }
+                    // Ne pas ajouter à clean_pairs
+                } else {
+                    clean_pairs <- clean_pairs + p;
+                    
+                    // Debug des premiers agents valides (limité pour éviter spam)
+                    if length(clean_pairs) <= 3 and length(clean_pairs) mod 1 = 1 {
+                        write "✅ AGENT VALIDE: " + stop_agent.stopId + " (type: " + string(type_of(stop_agent)) + ")";
+                    }
                 }
             }
             
             // Ne garder que les trips avec au moins une paire valide
-            if !empty(pairs) {
-                trip_to_pairs[trip] <- pairs;
+            if !empty(clean_pairs) {
+                trip_to_pairs[trip] <- clean_pairs;
+            }
+            
+            // Debug pour le premier trip
+            if trip = trip_to_stop_ids.keys[0] {
+                write "DEBUG Premier trip: " + trip;
+                write "  - Paires brutes: " + length(pairs);
+                write "  - Paires nettoyées: " + length(clean_pairs);
+                write "  - Agents nil trouvés: " + (length(pairs) - length(clean_pairs));
             }
         }
         
@@ -738,9 +790,136 @@ global {
         write "  - Conversions réussies : " + successful_conversions;
         write "  - Conversions échouées : " + failed_conversions;
         
+        // Statistiques corrigées : calculer le vrai nombre d'agents dans les résultats finaux
+        int final_pairs_count <- 0;
+        loop trip over: trip_to_pairs.keys {
+            final_pairs_count <- final_pairs_count + length(trip_to_pairs[trip]);
+        }
+        
+        write "  - Paires finales (agents valides) : " + final_pairs_count;
+        
+        if nil_agents_found > 0 {
+            write "  - Agents NIL détectés et filtrés : " + nil_agents_found;
+        }
+        
         if (successful_conversions + failed_conversions) > 0 {
             float success_rate <- (successful_conversions * 100.0) / (successful_conversions + failed_conversions);
             write "  - Taux de succès : " + success_rate + "%";
+        }
+        
+        if successful_conversions > 0 and nil_agents_found > 0 {
+            float nil_rate <- (nil_agents_found * 100.0) / successful_conversions;
+            write "  - Taux d'agents nil : " + nil_rate + "%";
+        }
+    }
+    
+    // ####################################
+    // NOUVELLE SECTION : LIAISON TRIP → ROUTE
+    // ####################################
+    
+    action build_trip_to_route_mapping {
+        write "\n9. CONSTRUCTION LIAISON TRIP → ROUTE";
+        
+        tripId_to_main_route <- map<string, bus_route>([]);
+        tripId_to_all_routes <- map<string, list<bus_route>>([]);
+        tripId_to_route_frequencies <- map<string, map<string, int>>([]);
+        
+        int trips_processed <- 0;
+        int trips_with_routes <- 0;
+        int trips_multiple_routes <- 0;
+        
+        loop trip over: trip_to_pairs.keys {
+            trips_processed <- trips_processed + 1;
+            
+            list<pair<bus_stop,int>> pairs <- trip_to_pairs[trip];
+            map<string, int> route_frequency <- map<string, int>([]);
+            list<bus_route> all_routes_for_trip <- [];
+            
+            // COMPTER FRÉQUENCE DES ROUTES POUR CE TRIP
+            loop p over: pairs {
+                bus_stop stop_agent <- p.key;
+                if stop_agent != nil and stop_agent.is_matched and stop_agent.closest_route_id != nil and stop_agent.closest_route_id != "" {
+                    string route_osm_id <- stop_agent.closest_route_id;
+                    
+                    // Incrémenter fréquence
+                    route_frequency[route_osm_id] <- (route_frequency contains_key route_osm_id) ? 
+                        route_frequency[route_osm_id] + 1 : 1;
+                    
+                    // Ajouter à la liste des routes (sans doublon)
+                    if osmId_to_route contains_key route_osm_id {
+                        bus_route route_agent <- osmId_to_route[route_osm_id];
+                        if !(route_agent in all_routes_for_trip) {
+                            all_routes_for_trip <- all_routes_for_trip + route_agent;
+                        }
+                    }
+                }
+            }
+            
+            // ANALYSER RÉSULTATS POUR CE TRIP
+            if !empty(route_frequency.keys) {
+                trips_with_routes <- trips_with_routes + 1;
+                
+                // Stocker les fréquences (pour debug)
+                tripId_to_route_frequencies[trip] <- route_frequency;
+                
+                // Stocker toutes les routes
+                if !empty(all_routes_for_trip) {
+                    tripId_to_all_routes[trip] <- all_routes_for_trip;
+                    
+                    if length(all_routes_for_trip) > 1 {
+                        trips_multiple_routes <- trips_multiple_routes + 1;
+                    }
+                }
+                
+                // TROUVER LA ROUTE PRINCIPALE (plus fréquente)
+                string main_route_osm_id <- "";
+                int max_frequency <- 0;
+                
+                loop route_id over: route_frequency.keys {
+                    if route_frequency[route_id] > max_frequency {
+                        max_frequency <- route_frequency[route_id];
+                        main_route_osm_id <- route_id;
+                    }
+                }
+                
+                // ASSOCIER AU BUS_ROUTE AGENT
+                if main_route_osm_id != "" and osmId_to_route contains_key main_route_osm_id {
+                    bus_route main_route_agent <- osmId_to_route[main_route_osm_id];
+                    tripId_to_main_route[trip] <- main_route_agent;
+                    
+                    // Debug des premiers cas
+                    if trips_with_routes <= 5 {
+                        write "✓ " + trip + " → Route: " + main_route_agent.osm_id + 
+                              " (" + main_route_agent.route_name + ") [" + max_frequency + " arrêts]";
+                        
+                        if length(all_routes_for_trip) > 1 {
+                            write "  Routes secondaires: ";
+                            loop r over: all_routes_for_trip {
+                                if r.osm_id != main_route_osm_id {
+                                    int freq <- route_frequency contains_key r.osm_id ? route_frequency[r.osm_id] : 0;
+                                    write "    " + r.osm_id + " (" + r.route_name + ") [" + freq + " arrêts]";
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        write "\nStatistiques liaison Trip → Route :";
+        write "  - Trips traités : " + trips_processed;
+        write "  - Trips avec routes : " + trips_with_routes;
+        write "  - Trips multi-routes : " + trips_multiple_routes;
+        write "  - Liaisons principales créées : " + length(tripId_to_main_route);
+        
+        if trips_processed > 0 {
+            float route_coverage <- (trips_with_routes * 100.0) / trips_processed;
+            write "  - Couverture routes : " + route_coverage + "%";
+        }
+        
+        if trips_with_routes > 0 {
+            float multi_route_rate <- (trips_multiple_routes * 100.0) / trips_with_routes;
+            write "  - Taux multi-routes : " + multi_route_rate + "%";
         }
     }
     
@@ -759,12 +938,18 @@ global {
             
             write "  Premières paires: ";
             loop i from: 0 to: min(2, length(example_pairs) - 1) {
-               pair<bus_stop,int> p <- example_pairs[i];
-			bus_stop stop_agent <- p.key;
-			int time <- p.value;
-write "    Agent: " + stop_agent.stopId + " (" + stop_agent.stop_name + "), Time: " + time;
-                write "      Position: " + stop_agent.location;
-                write "      Matché: " + (stop_agent.is_matched ? "✓" : "✗");
+                pair<bus_stop,int> p <- example_pairs[i];
+                bus_stop stop_agent <- p.key;
+                int time <- p.value;
+                
+                // CORRECTION DU CODE MALFORMÉ
+                if stop_agent != nil {
+                    write "    Agent: " + stop_agent.stopId + " (" + stop_agent.stop_name + "), Time: " + time;
+                    write "      Position: " + stop_agent.location;
+                    write "      Matché: " + (stop_agent.is_matched ? "✓" : "✗");
+                } else {
+                    write "    Agent: NIL, Time: " + time;
+                }
             }
             
             // STATISTIQUES FINALES
@@ -873,7 +1058,7 @@ write "    Agent: " + stop_agent.stopId + " (" + stop_agent.stop_name + "), Time
             list<pair<bus_stop,int>> filtered_pairs <- [];
             loop p over: agent_pairs {
                 bus_stop stop_agent <- p.key;
-                if stop_agent.is_matched {
+                if stop_agent != nil and stop_agent.is_matched {
                     filtered_pairs <- filtered_pairs + p;
                 }
             }
@@ -898,6 +1083,91 @@ write "    Agent: " + stop_agent.stopId + " (" + stop_agent.stop_name + "), Time
             total <- total + length(trip_to_pairs[trip]);
         }
         return total;
+    }
+    
+    // ####################################
+    // NOUVELLES APIS POUR LIAISON TRIP → ROUTE
+    // ####################################
+    
+    // Obtenir la route principale d'un trip
+    bus_route get_trip_main_route(string trip_id) {
+        if tripId_to_main_route contains_key trip_id {
+            return tripId_to_main_route[trip_id];
+        }
+        return nil;
+    }
+    
+    // Obtenir toutes les routes d'un trip
+    list<bus_route> get_trip_all_routes(string trip_id) {
+        if tripId_to_all_routes contains_key trip_id {
+            return tripId_to_all_routes[trip_id];
+        }
+        return [];
+    }
+    
+    // Obtenir les fréquences des routes pour un trip (debug/analyse)
+    map<string, int> get_trip_route_frequencies(string trip_id) {
+        if tripId_to_route_frequencies contains_key trip_id {
+            return tripId_to_route_frequencies[trip_id];
+        }
+        return map<string, int>([]);
+    }
+    
+    // Obtenir tous les trips utilisant une route spécifique
+    list<string> get_trips_using_route(string route_osm_id) {
+        list<string> trips <- [];
+        loop trip over: tripId_to_main_route.keys {
+            bus_route route <- tripId_to_main_route[trip];
+            if route != nil and route.osm_id = route_osm_id {
+                trips <- trips + trip;
+            }
+        }
+        return trips;
+    }
+    
+    // Obtenir tous les trips utilisant une route (agent)
+    list<string> get_trips_using_route_agent(bus_route route_agent) {
+        list<string> trips <- [];
+        if route_agent != nil {
+            loop trip over: tripId_to_main_route.keys {
+                bus_route trip_route <- tripId_to_main_route[trip];
+                if trip_route != nil and trip_route = route_agent {
+                    trips <- trips + trip;
+                }
+            }
+        }
+        return trips;
+    }
+    
+    // Statistiques générales des liaisons
+    int get_total_trip_route_mappings {
+        return length(tripId_to_main_route);
+    }
+    
+    int get_trips_with_multiple_routes {
+        int count <- 0;
+        loop trip over: tripId_to_all_routes.keys {
+            if length(tripId_to_all_routes[trip]) > 1 {
+                count <- count + 1;
+            }
+        }
+        return count;
+    }
+    
+    // Obtenir les routes les plus utilisées
+    map<string, int> get_route_usage_statistics {
+        map<string, int> route_usage <- map<string, int>([]);
+        
+        loop trip over: tripId_to_main_route.keys {
+            bus_route route <- tripId_to_main_route[trip];
+            if route != nil {
+                string route_key <- route.osm_id + " (" + route.route_name + ")";
+                route_usage[route_key] <- (route_usage contains_key route_key) ? 
+                    route_usage[route_key] + 1 : 1;
+            }
+        }
+        
+        return route_usage;
     }
 }
 
@@ -1006,6 +1276,11 @@ experiment combined_network_json type: gui {
             trip_to_departure_times <- map<string, list<int>>([]);
             trip_to_pairs <- map<string, list<pair<bus_stop,int>>>([]);
             
+            // Reset nouvelles variables Trip → Route
+            tripId_to_main_route <- map<string, bus_route>([]);
+            tripId_to_all_routes <- map<string, list<bus_route>>([]);
+            tripId_to_route_frequencies <- map<string, map<string, int>>([]);
+            
             // Recharger tout
             write "\n=== RECHARGEMENT COMPLET ===";
             
@@ -1029,13 +1304,15 @@ experiment combined_network_json type: gui {
             species bus_route aspect: default;
             species bus_stop aspect: default;
             
-            overlay position: {10, 10} size: {300 #px, 150 #px} background: #white transparency: 0.9 border: #black {
+            overlay position: {10, 10} size: {300 #px, 180 #px} background: #white transparency: 0.9 border: #black {
                 draw "=== MODÈLE COMBINÉ ===" at: {10#px, 20#px} color: #black font: font("Arial", 10, #bold);
                 draw "Routes: " + total_bus_routes at: {10#px, 40#px} color: #blue;
                 draw "Arrêts: " + total_bus_stops at: {10#px, 60#px} color: #green;
                 draw "Trips JSON: " + length(trip_to_pairs) at: {10#px, 80#px} color: #purple;
                 draw "Paires agents: " + get_total_agent_pairs() at: {10#px, 100#px} color: #orange;
-                draw "Voir console pour détails" at: {10#px, 120#px} color: #gray;
+                draw "Liaisons Trip→Route: " + get_total_trip_route_mappings() at: {10#px, 120#px} color: #red;
+                draw "Multi-routes: " + get_trips_with_multiple_routes() at: {10#px, 140#px} color: #darkred;
+                draw "Voir console pour détails" at: {10#px, 160#px} color: #gray;
             }
         }
     }
