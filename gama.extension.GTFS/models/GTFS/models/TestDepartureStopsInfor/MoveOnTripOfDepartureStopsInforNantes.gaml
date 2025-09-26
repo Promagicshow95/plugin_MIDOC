@@ -179,7 +179,7 @@ species bus_stop skills: [TransportStopSkill] {
             if (stop_order >= 0) {
                 draw string(stop_order + 1) color: #white font: font("Arial", 12, #bold) at: location;
             }
-            draw name color: #black font: font("Arial", 9, #bold) at: location + {0, 35};
+            //draw name color: #black font: font("Arial", 9, #bold) at: location + {0, 35};
         }
     }
 }

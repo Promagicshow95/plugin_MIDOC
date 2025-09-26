@@ -1,10 +1,10 @@
 /**
- * Name: ModeleReseauBusAvecJSON_Vehicules
- * Author: Combined - Network + JSON + Vehicle Simulation
- * Description: Chargement réseau bus + traitement JSON + simulation véhicules
+ * Name: ModeleReseauBusAvecJSON
+ * Author: Combined - Network + JSON Processing
+ * Description: Chargement réseau bus + traitement JSON trip_to_sequence
  */
 
-model ModeleReseauBusAvecJSON_Vehicules
+model ModeleReseauBusAvecJSON
 
 global {
     // CONFIGURATION FICHIERS
@@ -14,54 +14,48 @@ global {
     file data_file <- shape_file("../../includes/shapeFileHanoishp.shp");
     geometry shape <- envelope(data_file);
     
-    // VARIABLES RÉSEAU
+    // VARIABLES RÉSEAU (du modèle visualisation)
     int total_bus_routes <- 0;
     int total_bus_stops <- 0;
     int matched_stops <- 0;
     int unmatched_stops <- 0;
-    bool debug_mode <- false;
-    
-    // VARIABLES TEMPORELLES (adaptées du modèle Toulouse)
-    date starting_date <- date("2024-01-01T08:00:00");
-    float step <- 5 #s;
-    int simulation_start_time;
-    int current_seconds_mod <- 0;
-    int time_24h -> int(current_date - date([1970,1,1,0,0,0])) mod 86400;
+    bool debug_mode <- false; // Réduit la verbosité
     
     // STRUCTURES RÉSEAU
     map<string, bus_stop> stopId_to_agent;
     map<string, bus_route> osmId_to_route;
     
-    // STRUCTURES POUR NAVIGATION (adaptées du modèle Toulouse)
-    map<string, graph> route_graphs;  // osm_id -> graph
-    map<string, geometry> route_polylines;  // osm_id -> geometry  
-    map<string, list<float>> route_cumulative_distances;  // osm_id -> distances
-    
-    // VARIABLES JSON
+    // VARIABLES JSON (du modèle traitement)
     map<string, list<pair<string, int>>> trip_to_sequence;
     int total_stops_processed <- 0;
     int total_trips_processed <- 0;
     map<string, int> collision_check;
-    map<string, string> trip_to_route;
+    
+    // NOUVELLE STRUCTURE : TRIP -> ROUTE OSM DOMINANTE
+    map<string, string> trip_to_route; // trip_id -> osm_id dominant
+    
+    // ROUTE MISE EN ÉVIDENCE POUR TRIP 01_1_MD_14
+    string highlighted_route_osm_id <- "";
+    bus_route highlighted_route_agent <- nil;
 
     init {
-        write "=== MODÈLE COMBINÉ RÉSEAU + JSON + VÉHICULES ===";
+        write "=== MODÈLE COMBINÉ RÉSEAU + JSON ===";
         
-        // Calcul heure de démarrage simulation
-        simulation_start_time <- (starting_date.hour * 3600) + (starting_date.minute * 60) + starting_date.second;
-        write "⏰ Simulation démarre à: " + (simulation_start_time / 3600) + "h" + ((simulation_start_time mod 3600) / 60) + "m";
-        
-        // 1. CHARGEMENT RÉSEAU
+        // 1. CHARGEMENT RÉSEAU (shapefiles)
         do load_bus_network;
         do load_gtfs_stops;
         do build_basic_mappings;
         
-        // 2. PRÉ-CALCULS POUR NAVIGATION
-        do prepare_navigation_structures;
-        
-        // 3. TRAITEMENT JSON
+        // 2. TRAITEMENT JSON (trip_to_sequence)
         do process_json_trips;
+        
+        // 3. CALCUL ROUTES DOMINANTES POUR TRIPS
         do compute_trip_to_route_mappings;
+        
+        // 4. IDENTIFIER ROUTE POUR TRIP 01_1_MD_14
+        do highlight_trip_route;
+        
+        // 5. VÉRIFICATIONS DES STRUCTURES
         do verify_data_structures;
         
         write "\n🎯 INITIALISATION TERMINÉE";
@@ -71,13 +65,61 @@ global {
         write "  • Trips avec routes: " + length(trip_to_route.keys);
     }
     
-    // MISE À JOUR TEMPS CHAQUE CYCLE
-    reflex update_time_every_cycle {
-        current_seconds_mod <- time_24h;
+    // IDENTIFIER ET METTRE EN ÉVIDENCE LA ROUTE D'UN TRIP DISPONIBLE
+    action highlight_trip_route {
+        string target_trip_id <- "";
+        
+        // CHERCHER D'ABORD "01_1_MD_14", sinon prendre le premier trip disponible
+        if trip_to_route contains_key "01_1_MD_14" {
+            target_trip_id <- "01_1_MD_14";
+        } else if length(trip_to_route.keys) > 0 {
+            target_trip_id <- first(trip_to_route.keys);
+            write "⚠️ Trip '01_1_MD_14' non trouvé, utilisation du trip: " + target_trip_id;
+        } else {
+            write "❌ Aucun trip avec route trouvé dans les données";
+            return;
+        }
+        
+        write "\n🔍 RECHERCHE ROUTE POUR TRIP: " + target_trip_id;
+        
+        // Vérifier si le trip existe dans trip_to_route
+        if trip_to_route contains_key target_trip_id {
+            highlighted_route_osm_id <- trip_to_route[target_trip_id];
+            write "✅ Route OSM ID trouvée: " + highlighted_route_osm_id;
+            
+            // Utiliser osmId_to_route pour trouver l'agent route
+            highlighted_route_agent <- get_route_by_osm_id(highlighted_route_osm_id);
+            
+            if highlighted_route_agent != nil {
+                write "✅ Agent route trouvé:";
+                write "   • Nom: " + highlighted_route_agent.route_name;
+                write "   • Type: " + highlighted_route_agent.route_type;
+                write "   • Longueur: " + round(highlighted_route_agent.length_meters) + "m";
+                write "   • Cette route sera affichée en ROUGE";
+            } else {
+                write "❌ Agent route non trouvé pour OSM ID: " + highlighted_route_osm_id;
+                highlighted_route_osm_id <- "";
+            }
+        } else {
+            write "❌ Trip " + target_trip_id + " non trouvé dans trip_to_route";
+            
+            // Afficher quelques trips disponibles comme suggestion
+            write "💡 Trips disponibles (premiers 5):";
+            int count <- 0;
+            loop trip_id over: trip_to_route.keys {
+                if count < 5 {
+                    write "   • " + trip_id;
+                    count <- count + 1;
+                }
+            }
+        }
+        
+        write "=====================================";
     }
-    
+
     // ==================== SECTION RÉSEAU ====================
     
+    // CHARGEMENT RÉSEAU BUS
     action load_bus_network {
         write "\n1. CHARGEMENT RÉSEAU BUS";
         
@@ -102,6 +144,10 @@ global {
                 bus_routes_count <- bus_routes_count + length(shape_file_bus);
                 i <- i + 1;
                 
+                if debug_mode {
+                    write "Fichier " + i + " : " + length(shape_file_bus) + " routes";
+                }
+                
             } catch {
                 if i = 0 {
                     write "⚠️ Aucun fichier de routes trouvé";
@@ -113,11 +159,16 @@ global {
         total_bus_routes <- bus_routes_count;
         write "Routes chargées : " + bus_routes_count;
         
-        ask bus_route where (each.shape = nil) { do die; }
+        // Nettoyer les routes sans géométrie
+        ask bus_route where (each.shape = nil) {
+            do die;
+        }
+        
         total_bus_routes <- length(bus_route);
         write "Routes avec géométrie valide : " + total_bus_routes;
     }
     
+    // CHARGEMENT ARRÊTS GTFS
     action load_gtfs_stops {
         write "\n2. CHARGEMENT ARRÊTS GTFS";
         
@@ -136,6 +187,7 @@ global {
             
             total_bus_stops <- length(shape_file_stops);
             
+            // Nettoyer et valider les arrêts
             ask bus_stop {
                 is_matched <- (is_matched_str = "TRUE");
                 
@@ -146,6 +198,7 @@ global {
                     stop_name <- "Stop_" + string(int(self));
                 }
                 
+                // Compter les arrêts matchés/non-matchés
                 if is_matched {
                     matched_stops <- matched_stops + 1;
                 } else {
@@ -163,9 +216,11 @@ global {
         }
     }
     
+    // CONSTRUCTION MAPPINGS BASIQUES
     action build_basic_mappings {
         write "\n3. CONSTRUCTION MAPPINGS";
         
+        // Mapping stopId -> agent
         stopId_to_agent <- map<string, bus_stop>([]);
         ask bus_stop {
             if stopId != nil and stopId != "" {
@@ -173,6 +228,7 @@ global {
             }
         }
         
+        // Mapping osmId -> route
         osmId_to_route <- map<string, bus_route>([]);
         ask bus_route {
             if osm_id != nil and osm_id != "" {
@@ -185,55 +241,23 @@ global {
         write "  - osmId -> route : " + length(osmId_to_route);
     }
     
-    // ==================== PRÉPARATION NAVIGATION ====================
-    
-    action prepare_navigation_structures {
-        write "\n4. PRÉPARATION STRUCTURES NAVIGATION";
-        
-        route_graphs <- map<string, graph>([]);
-        route_polylines <- map<string, geometry>([]);
-        route_cumulative_distances <- map<string, list<float>>([]);
-        
-        int processed <- 0;
-        ask bus_route {
-            if osm_id != nil and osm_id != "" and shape != nil {
-                route_graphs[osm_id] <- as_edge_graph(self);
-                route_polylines[osm_id] <- shape;
-                
-                // Calcul distances cumulées inline
-                list<point> points <- shape.points;
-                list<float> cumul_distances <- [0.0];
-                float total_length <- 0.0;
-                
-                loop i from: 1 to: length(points) - 1 {
-                    float segment_dist <- points[i-1] distance_to points[i];
-                    total_length <- total_length + segment_dist;
-                    cumul_distances <- cumul_distances + [total_length];
-                }
-                
-                route_cumulative_distances[osm_id] <- cumul_distances;
-                processed <- processed + 1;
-            }
-        }
-        
-        write "Structures navigation créées pour " + processed + " routes";
-    }
-    
-
-    
     // ==================== SECTION JSON ====================
     
+    // TRAITEMENT JSON PRINCIPAL
     action process_json_trips {
-        write "\n5. TRAITEMENT DONNÉES JSON";
+        write "\n4. TRAITEMENT DONNÉES JSON";
         
         string json_filename <- stops_folder + "departure_stops_info_stopid.json";
         trip_to_sequence <- map<string, list<pair<string, int>>>([]);
         trip_to_route <- map<string, string>([]);
         collision_check <- map<string, int>([]);
         
+        write "→ Lecture du fichier: " + json_filename;
+        
         try {
             file json_f <- text_file(json_filename);
             string content <- string(json_f);
+            
             map<string, unknown> json_data <- from_json(content);
             
             if !(json_data contains_key "departure_stops_info") {
@@ -242,38 +266,62 @@ global {
             }
             
             list<map<string, unknown>> stops_list <- list<map<string, unknown>>(json_data["departure_stops_info"]);
+            write "→ JSON lu: " + length(stops_list) + " arrêts à traiter";
             
+            // TRAITER TOUS LES ARRÊTS
             loop stop_index from: 0 to: length(stops_list)-1 {
                 map<string, unknown> stop_data <- stops_list[stop_index];
+                string current_stop_id <- string(stop_data["stopId"]);
                 
-                if !(stop_data contains_key "departureStopsInfo") { continue; }
+                // Vérifier que departureStopsInfo existe
+                if !(stop_data contains_key "departureStopsInfo") {
+                    continue;
+                }
                 
                 map<string,unknown> subMap <- stop_data["departureStopsInfo"];
                 total_stops_processed <- total_stops_processed + 1;
                 
-                if length(subMap.keys) = 0 { continue; }
+                // Ignorer les arrêts sans trips
+                if length(subMap.keys) = 0 {
+                    continue;
+                }
                 
+                // Messages de progression (moins verbeux)
+                if stop_index mod 50 = 0 or stop_index = length(stops_list)-1 {
+                    write "→ Progrès: " + (stop_index+1) + "/" + length(stops_list) + " (" + current_stop_id + ")";
+                }
+                
+                // TRAITER TOUS LES TRIPS DE CET ARRÊT
                 loop trip_id over: subMap.keys {
+                    // Vérifier les collisions de trip_id
                     if collision_check contains_key trip_id {
                         collision_check[trip_id] <- collision_check[trip_id] + 1;
                     } else {
                         collision_check[trip_id] <- 1;
                     }
                     
+                    // Éviter de traiter plusieurs fois le même trip
                     if !(trip_to_sequence contains_key trip_id) {
                         do parse_trip_sequence(trip_id, subMap[trip_id]);
                     }
                 }
             }
             
+            do analyze_json_results;
+            do validate_all_trips;
+            
         } catch {
             write "❌ ERREUR: Impossible de lire le fichier JSON";
         }
     }
     
+    // PARSING SÉQUENCE TRIP (version simplifiée)
     action parse_trip_sequence(string trip_id, unknown raw_data) {
         list<list<string>> sequence <- list<list<string>>(raw_data);
-        if length(sequence) = 0 { return; }
+        
+        if length(sequence) = 0 {
+            return;
+        }
         
         list<pair<string, int>> sequence_parsed <- [];
         
@@ -285,45 +333,207 @@ global {
             }
         }
         
+        // Stocker seulement si la séquence parsée n'est pas vide
         if length(sequence_parsed) > 0 {
             trip_to_sequence[trip_id] <- sequence_parsed;
             total_trips_processed <- total_trips_processed + 1;
         }
     }
     
-    action compute_trip_to_route_mappings {
-        write "\n6. CALCUL ROUTES DOMINANTES DES TRIPS";
+    // ANALYSE RÉSULTATS JSON
+    action analyze_json_results {
+        write "\n=== RÉSULTATS TRAITEMENT JSON ===";
         
-        loop trip_id over: trip_to_sequence.keys {
-            string dominant_route <- compute_dominant_route_for_trip(trip_id);
-            if dominant_route != nil and dominant_route != "" {
-                trip_to_route[trip_id] <- dominant_route;
+        // Analyse des collisions
+        int unique_trips <- length(collision_check.keys where (collision_check[each] = 1));
+        int collision_trips <- length(collision_check.keys where (collision_check[each] > 1));
+        
+        write "→ Arrêts traités: " + total_stops_processed;
+        write "→ Trips uniques: " + length(trip_to_sequence.keys);
+        write "→ Collisions détectées: " + collision_trips;
+        
+        // Statistiques des séquences
+        if length(trip_to_sequence.keys) > 0 {
+            list<int> lengths <- trip_to_sequence.values collect length(each);
+            int total_stops_in_sequences <- sum(lengths);
+            int min_stops <- min(lengths);
+            int max_stops <- max(lengths);
+            
+            write "→ Total arrêts dans séquences: " + total_stops_in_sequences;
+            write "→ Longueur des trajets: " + min_stops + " à " + max_stops + " arrêts";
+            
+            // Plage temporelle
+            list<int> all_times <- [];
+            loop trip_sequence over: trip_to_sequence.values {
+                if length(trip_sequence) > 0 {
+                    add trip_sequence[0].value to: all_times;
+                    add trip_sequence[length(trip_sequence)-1].value to: all_times;
+                }
+            }
+            
+            if length(all_times) > 0 {
+                int min_time <- min(all_times);
+                int max_time <- max(all_times);
+                write "→ Plage horaire: " + convert_seconds_to_time(min_time) + " → " + convert_seconds_to_time(max_time);
             }
         }
         
-        write "→ Trips avec routes: " + length(trip_to_route.keys) + "/" + length(trip_to_sequence.keys);
+        write "=====================================";
     }
     
+    // ==================== VÉRIFICATION STRUCTURES ====================
+    
+    // VÉRIFICATION DES STRUCTURES CHARGÉES
+    action verify_data_structures {
+        write "\n=== VÉRIFICATION DES STRUCTURES ===";
+        
+        // 1. VÉRIFICATION TRIP_TO_SEQUENCE
+        write "\n1. VÉRIFICATION trip_to_sequence:";
+        write "→ Nombre total de trips: " + length(trip_to_sequence.keys);
+        
+        if length(trip_to_sequence.keys) > 0 {
+            write "→ Exemples de trips avec séquences:";
+            int count <- 0;
+            loop trip_id over: trip_to_sequence.keys {
+                if count < 3 {
+                    list<pair<string, int>> sequence <- trip_to_sequence[trip_id];
+                    write "   • " + trip_id + " (" + length(sequence) + " arrêts):";
+                    
+                    // Afficher les 3 premiers arrêts
+                    int stop_count <- 0;
+                    loop stop_time over: sequence {
+                        if stop_count < 3 {
+                            write "     - " + stop_time.key + " à " + string(stop_time.value);
+                            stop_count <- stop_count + 1;
+                        } else {
+                            break;
+                        }
+                    }
+                    if length(sequence) > 3 {
+                        write "     - ... (" + (length(sequence) - 3) + " arrêts supplémentaires)";
+                    }
+                    count <- count + 1;
+                }
+            }
+        }
+        
+        // 2. VÉRIFICATION TRIP_TO_ROUTE
+        write "\n2. VÉRIFICATION trip_to_route:";
+        write "→ Nombre de trips avec routes: " + length(trip_to_route.keys);
+        
+        // AFFICHER TOUS LES TRIP_TO_ROUTE DANS LA CONSOLE
+        write "\n=== CONTENU COMPLET TRIP_TO_ROUTE ===";
+        if length(trip_to_route.keys) > 0 {
+            loop trip_id over: trip_to_route.keys {
+                string route_id <- trip_to_route[trip_id];
+                bus_route route_agent <- get_route_by_osm_id(route_id);
+                
+                string route_info <- route_id;
+                if route_agent != nil {
+                    route_info <- route_id + " (" + route_agent.route_name + ", " + route_agent.route_type + ")";
+                }
+                
+                write "   • " + trip_id + " → " + route_info;
+            }
+        } else {
+            write "   • Aucun trip avec route trouvé";
+        }
+        write "=====================================";
+        
+        if length(trip_to_route.keys) > 0 {
+            write "\n→ Exemples de liaisons trip → route (premiers 5):";
+            int route_count <- 0;
+            loop trip_id over: trip_to_route.keys {
+                if route_count < 5 {
+                    string route_id <- trip_to_route[trip_id];
+                    bus_route route_agent <- get_route_by_osm_id(route_id);
+                    
+                    string route_info <- route_id;
+                    if route_agent != nil {
+                        route_info <- route_id + " (" + route_agent.route_name + ", " + route_agent.route_type + ")";
+                    }
+                    
+                    write "   • " + trip_id + " → " + route_info;
+                    route_count <- route_count + 1;
+                }
+            }
+        }
+        
+        write "=====================================";
+    }
+    
+    // ==================== SECTION LIAISON TRIP-ROUTE ====================
+    
+    // CALCUL ROUTE DOMINANTE POUR CHAQUE TRIP
+    action compute_trip_to_route_mappings {
+        write "\n=== CALCUL ROUTES DOMINANTES DES TRIPS ===";
+        
+        int trips_with_routes <- 0;
+        int trips_without_routes <- 0;
+        int progress_interval <- max(1, length(trip_to_sequence.keys) div 20);
+        
+        int processed_count <- 0;
+        loop trip_id over: trip_to_sequence.keys {
+            string dominant_route <- compute_dominant_route_for_trip(trip_id);
+            
+            if dominant_route != nil and dominant_route != "" {
+                trip_to_route[trip_id] <- dominant_route;
+                trips_with_routes <- trips_with_routes + 1;
+            } else {
+                trips_without_routes <- trips_without_routes + 1;
+                if debug_mode {
+                    write "⚠️ Aucune route dominante trouvée pour trip: " + trip_id;
+                }
+            }
+            
+            processed_count <- processed_count + 1;
+            if processed_count mod progress_interval = 0 or processed_count = length(trip_to_sequence.keys) {
+                write "→ Progrès routes: " + processed_count + "/" + length(trip_to_sequence.keys);
+            }
+        }
+        
+        float success_rate <- (trips_with_routes / length(trip_to_sequence.keys)) * 100;
+        
+        write "→ Trips avec route dominante: " + trips_with_routes + " (" + round(success_rate * 100)/100 + "%)";
+        write "→ Trips sans route dominante: " + trips_without_routes;
+        write "=====================================";
+    }
+    
+    // FONCTION PRINCIPALE : CALCUL ROUTE DOMINANTE D'UN TRIP
     string compute_dominant_route_for_trip(string trip_id) {
         list<pair<string, int>> sequence <- get_trip_sequence(trip_id);
-        if length(sequence) = 0 { return nil; }
         
+        if length(sequence) = 0 {
+            return nil;
+        }
+        
+        // Compteur de fréquence des routes
         map<string, int> route_frequency <- map<string, int>([]);
+        int valid_stops <- 0;
         
+        // Parcourir tous les arrêts du trip
         loop stop_time over: sequence {
             bus_stop stop_agent <- get_stop_for_trip(stop_time.key);
+            
             if stop_agent != nil and stop_agent.closest_route_id != nil and stop_agent.closest_route_id != "" {
                 string route_id <- stop_agent.closest_route_id;
+                
                 if route_frequency contains_key route_id {
                     route_frequency[route_id] <- route_frequency[route_id] + 1;
                 } else {
                     route_frequency[route_id] <- 1;
                 }
+                
+                valid_stops <- valid_stops + 1;
             }
         }
         
-        if length(route_frequency.keys) = 0 { return nil; }
+        // Si aucun arrêt n'a de route associée
+        if length(route_frequency.keys) = 0 {
+            return nil;
+        }
         
+        // Trouver la route avec la fréquence maximale
         string dominant_route <- "";
         int max_frequency <- 0;
         
@@ -335,74 +545,19 @@ global {
             }
         }
         
+        // Debug : afficher les statistiques pour certains trips
+        if debug_mode and length(route_frequency.keys) > 1 {
+            write "Trip " + trip_id + " routes candidates:";
+            loop route_id over: route_frequency.keys {
+                write "  - " + route_id + ": " + route_frequency[route_id] + "/" + valid_stops + " arrêts";
+            }
+            write "  → Dominante: " + dominant_route + " (" + max_frequency + "/" + valid_stops + ")";
+        }
+        
         return dominant_route;
     }
     
-    action verify_data_structures {
-        write "\n=== VÉRIFICATION STRUCTURES ===";
-        write "→ Trips: " + length(trip_to_sequence.keys);
-        write "→ Routes assignées: " + length(trip_to_route.keys);
-        write "→ Graphes navigation: " + length(route_graphs.keys);
-        write "=====================================";
-    }
-    
-    // ==================== APIS D'ACCÈS ====================
-    
-    bus_stop get_stop_for_trip(string stop_id) {
-        if stopId_to_agent contains_key stop_id {
-            return stopId_to_agent[stop_id];
-        }
-        return nil;
-    }
-    
-    list<pair<string, int>> get_trip_sequence(string trip_id) {
-        if trip_to_sequence contains_key trip_id {
-            return trip_to_sequence[trip_id];
-        }
-        return [];
-    }
-    
-    list<pair<bus_stop, int>> get_trip_stops_sequence(string trip_id) {
-        list<pair<bus_stop, int>> result <- [];
-        list<pair<string, int>> raw_sequence <- trip_to_sequence[trip_id];
-        
-        loop stop_time over: raw_sequence {
-            bus_stop stop_agent <- get_stop_for_trip(stop_time.key);
-            if stop_agent != nil {
-                add pair(stop_agent, stop_time.value) to: result;
-            }
-        }
-        return result;
-    }
-    
-    string get_trip_dominant_route(string trip_id) {
-        if trip_to_route contains_key trip_id {
-            return trip_to_route[trip_id];
-        }
-        return nil;
-    }
-    
-    bus_route get_route_by_osm_id(string osm_id) {
-        if osmId_to_route contains_key osm_id {
-            return osmId_to_route[osm_id];
-        }
-        return nil;
-    }
-    
-    // Fonction pour trouver le prochain trip après une heure donnée
-    int find_next_trip_index_after_time(list<string> trip_ids, int target_time) {
-        loop i from: 0 to: length(trip_ids) - 1 {
-            string trip_id <- trip_ids[i];
-            list<pair<string, int>> sequence <- get_trip_sequence(trip_id);
-            if length(sequence) > 0 {
-                int departure_time <- sequence[0].value;
-                if departure_time >= target_time {
-                    return i;
-                }
-            }
-        }
-        return length(trip_ids);
-    }
+    // ==================== UTILITAIRES ====================
     
     // Conversion secondes -> HH:MM:SS
     string convert_seconds_to_time(int seconds) {
@@ -416,10 +571,270 @@ global {
         
         return h_str + ":" + m_str + ":" + s_str;
     }
+    
+    // APIS D'ACCÈS RÉSEAU
+    bus_stop get_stop_agent(string stop_id) {
+        if stopId_to_agent contains_key stop_id {
+            return stopId_to_agent[stop_id];
+        }
+        return nil;
+    }
+    
+    bus_route get_route_by_osm_id(string osm_id) {
+        if osmId_to_route contains_key osm_id {
+            return osmId_to_route[osm_id];
+        }
+        return nil;
+    }
+    
+    list<bus_stop> get_matched_stops {
+        return list<bus_stop>(bus_stop where (each.is_matched));
+    }
+    
+    list<bus_stop> get_unmatched_stops {
+        return list<bus_stop>(bus_stop where (!each.is_matched));
+    }
+    
+    // APIS D'ACCÈS TRIPS AVEC LOOKUP AGENTS
+    
+    // Récupérer agent bus_stop pour un stopId (avec gestion d'erreur)
+    bus_stop get_stop_for_trip(string stop_id) {
+        if stopId_to_agent contains_key stop_id {
+            return stopId_to_agent[stop_id];
+        }
+        if debug_mode {
+            write "⚠️ StopId non trouvé: " + stop_id;
+        }
+        return nil;
+    }
+    
+    // Récupérer séquence brute d'un trip
+    list<pair<string, int>> get_trip_sequence(string trip_id) {
+        if trip_to_sequence contains_key trip_id {
+            return trip_to_sequence[trip_id];
+        }
+        return [];
+    }
+    
+    // Récupérer séquence d'agents pour un trip (avec lookup)
+    list<pair<bus_stop, int>> get_trip_stops_sequence(string trip_id) {
+        list<pair<bus_stop, int>> result <- [];
+        
+        if !(trip_to_sequence contains_key trip_id) {
+            if debug_mode {
+                write "⚠️ Trip non trouvé: " + trip_id;
+            }
+            return result;
+        }
+        
+        list<pair<string, int>> raw_sequence <- trip_to_sequence[trip_id];
+        int missing_stops <- 0;
+        
+        loop stop_time over: raw_sequence {
+            bus_stop stop_agent <- get_stop_for_trip(stop_time.key);
+            if stop_agent != nil {
+                add pair(stop_agent, stop_time.value) to: result;
+            } else {
+                missing_stops <- missing_stops + 1;
+            }
+        }
+        
+        if missing_stops > 0 and debug_mode {
+            write "⚠️ Trip " + trip_id + ": " + missing_stops + " arrêts manquants";
+        }
+        
+        return result;
+    }
+    
+    // Valider qu'un trip a tous ses arrêts disponibles
+    bool is_trip_valid(string trip_id) {
+        if !(trip_to_sequence contains_key trip_id) {
+            return false;
+        }
+        
+        list<pair<string, int>> sequence <- trip_to_sequence[trip_id];
+        loop stop_time over: sequence {
+            if !(stopId_to_agent contains_key stop_time.key) {
+                return false;
+            }
+        }
+        return true;
+    }
+    
+    // Obtenir premier arrêt (agent) d'un trip pour spawn véhicule
+    bus_stop get_trip_departure_stop(string trip_id) {
+        list<pair<string, int>> sequence <- get_trip_sequence(trip_id);
+        if length(sequence) > 0 {
+            return get_stop_for_trip(sequence[0].key);
+        }
+        return nil;
+    }
+    
+    // Obtenir dernier arrêt (agent) d'un trip
+    bus_stop get_trip_arrival_stop(string trip_id) {
+        list<pair<string, int>> sequence <- get_trip_sequence(trip_id);
+        if length(sequence) > 0 {
+            return get_stop_for_trip(sequence[length(sequence)-1].key);
+        }
+        return nil;
+    }
+    
+    // Obtenir prochain arrêt dans un trip à partir d'un index
+    bus_stop get_next_stop_in_trip(string trip_id, int current_index) {
+        list<pair<string, int>> sequence <- get_trip_sequence(trip_id);
+        if current_index + 1 < length(sequence) {
+            return get_stop_for_trip(sequence[current_index + 1].key);
+        }
+        return nil; // Fin du trip
+    }
+    
+    // APIS D'ACCÈS TRIPS-ROUTES
+    
+    // Obtenir la route OSM dominante d'un trip
+    string get_trip_dominant_route(string trip_id) {
+        if trip_to_route contains_key trip_id {
+            return trip_to_route[trip_id];
+        }
+        return nil;
+    }
+    
+    // Obtenir l'agent bus_route d'un trip
+    bus_route get_trip_route_agent(string trip_id) {
+        string osm_id <- get_trip_dominant_route(trip_id);
+        if osm_id != nil {
+            return get_route_by_osm_id(osm_id);
+        }
+        return nil;
+    }
+    
+    // Obtenir tous les trips qui utilisent une route donnée
+    list<string> get_trips_using_route(string osm_id) {
+        list<string> result <- [];
+        loop trip_id over: trip_to_route.keys {
+            if trip_to_route[trip_id] = osm_id {
+                add trip_id to: result;
+            }
+        }
+        return result;
+    }
+    
+    // Vérifier si un trip a une route assignée
+    bool trip_has_route(string trip_id) {
+        return trip_to_route contains_key trip_id and trip_to_route[trip_id] != nil and trip_to_route[trip_id] != "";
+    }
+    
+    // Obtenir tous les trips avec route assignée
+    list<string> get_trips_with_routes {
+        list<string> result <- [];
+        loop trip_id over: trip_to_sequence.keys {
+            if trip_has_route(trip_id) {
+                add trip_id to: result;
+            }
+        }
+        return result;
+    }
+    
+    // Statistiques des routes utilisées par les trips
+    map<string, int> get_route_usage_statistics {
+        map<string, int> usage <- map<string, int>([]);
+        
+        loop trip_id over: trip_to_route.keys {
+            string route_id <- trip_to_route[trip_id];
+            if route_id != nil and route_id != "" {
+                if usage contains_key route_id {
+                    usage[route_id] <- usage[route_id] + 1;
+                } else {
+                    usage[route_id] <- 1;
+                }
+            }
+        }
+        
+        return usage;
+    }
+    
+    // API COMBINÉE : Informations complètes d'un trip
+    map<string, unknown> get_trip_complete_info(string trip_id) {
+        map<string, unknown> info <- map<string, unknown>([]);
+        
+        info["trip_id"] <- trip_id;
+        info["sequence"] <- get_trip_sequence(trip_id);
+        info["departure_stop"] <- get_trip_departure_stop(trip_id);
+        info["arrival_stop"] <- get_trip_arrival_stop(trip_id);
+        info["dominant_route_id"] <- get_trip_dominant_route(trip_id);
+        info["route_agent"] <- get_trip_route_agent(trip_id);
+        info["is_valid"] <- is_trip_valid(trip_id);
+        info["has_route"] <- trip_has_route(trip_id);
+        
+        // Statistiques
+        list<pair<string, int>> sequence <- get_trip_sequence(trip_id);
+        if length(sequence) > 0 {
+            info["nb_stops"] <- length(sequence);
+            info["duration_seconds"] <- sequence[length(sequence)-1].value - sequence[0].value;
+            info["departure_time"] <- sequence[0].value;
+            info["arrival_time"] <- sequence[length(sequence)-1].value;
+        }
+        
+        return info;
+    }
+    
+    // UTILITAIRES POUR SIMULATION
+    
+    list<string> get_all_trip_ids {
+        return trip_to_sequence.keys;
+    }
+    
+    // Obtenir tous les trips valides (avec tous les arrêts disponibles)
+    list<string> get_valid_trip_ids {
+        list<string> valid_trips <- [];
+        loop trip_id over: trip_to_sequence.keys {
+            if is_trip_valid(trip_id) {
+                add trip_id to: valid_trips;
+            }
+        }
+        return valid_trips;
+    }
+    
+    // Statistiques de validation des trips
+    action validate_all_trips {
+        write "\n=== VALIDATION DES TRIPS ===";
+        
+        int valid_trips <- 0;
+        int invalid_trips <- 0;
+        int total_missing_stops <- 0;
+        
+        loop trip_id over: trip_to_sequence.keys {
+            bool is_valid <- true;
+            int missing_in_trip <- 0;
+            
+            list<pair<string, int>> sequence <- trip_to_sequence[trip_id];
+            loop stop_time over: sequence {
+                if !(stopId_to_agent contains_key stop_time.key) {
+                    is_valid <- false;
+                    missing_in_trip <- missing_in_trip + 1;
+                    total_missing_stops <- total_missing_stops + 1;
+                }
+            }
+            
+            if is_valid {
+                valid_trips <- valid_trips + 1;
+            } else {
+                invalid_trips <- invalid_trips + 1;
+                if debug_mode {
+                    write "Trip " + trip_id + ": " + missing_in_trip + " arrêts manquants";
+                }
+            }
+        }
+        
+        float valid_percentage <- (valid_trips / length(trip_to_sequence.keys)) * 100;
+        
+        write "→ Trips valides: " + valid_trips + " (" + round(valid_percentage * 100)/100 + "%)";
+        write "→ Trips invalides: " + invalid_trips;
+        write "→ StopIds manquants total: " + total_missing_stops;
+        write "=====================================";
+    }
 }
 
-// ==================== AGENTS ====================
-
+// AGENTS
 species bus_route {
     string route_name;
     string osm_id;
@@ -428,6 +843,33 @@ species bus_route {
     float length_meters;
     
     aspect default {
+        if shape != nil {
+            rgb route_color <- #lightgray;  // Couleur par défaut : gris clair
+            int route_width <- 1;
+            
+            // ROUTE MISE EN ÉVIDENCE POUR TRIP 01_1_MD_14
+            if osm_id = highlighted_route_osm_id and highlighted_route_osm_id != "" {
+                route_color <- #red;      // Rouge pour la route du trip 01_1_MD_14
+                route_width <- 8;         // Plus épais pour bien la voir
+            } else {
+                // Couleurs normales pour les autres routes selon leur type
+                if route_type = "bus" {
+                    route_color <- #blue;
+                    route_width <- 2;
+                } else if route_type = "tram" {
+                    route_color <- #orange;
+                    route_width <- 2;
+                } else if route_type = "subway" {
+                    route_color <- #purple;
+                    route_width <- 2;
+                }
+            }
+            
+            draw shape color: route_color width: route_width;
+        }
+    }
+    
+    aspect detailed {
         if shape != nil {
             rgb route_color <- #blue;
             if route_type = "bus" {
@@ -439,7 +881,7 @@ species bus_route {
             } else {
                 route_color <- #gray;
             }
-            draw shape color: route_color width: 2;
+            draw shape color: route_color width: 3;
         }
     }
 }
@@ -452,264 +894,92 @@ species bus_stop {
     bool is_matched <- false;
     string is_matched_str <- "FALSE";
     
-    // VARIABLES POUR LANCEMENT VÉHICULES (adaptées du modèle Toulouse)
-    list<string> my_trip_ids;  // trips partant de cet arrêt
-    map<string, int> trip_departure_times;  // trip_id -> heure départ
-    int current_trip_index <- 0;
-    
     aspect default {
         rgb stop_color <- is_matched ? #green : #red;
         draw circle(100.0) color: stop_color;
     }
     
-    // INITIALISATION DES TRIPS DE CET ARRÊT
-    reflex init_trips when: cycle = 1 {
-        my_trip_ids <- [];
-        trip_departure_times <- map<string, int>([]);
+    aspect detailed {
+        rgb stop_color <- is_matched ? #green : #red;
+        draw circle(120.0) color: stop_color;
         
-        // Identifier les trips qui partent de cet arrêt
-        loop trip_id over: trip_to_sequence.keys {
-            list<pair<string, int>> sequence <- trip_to_sequence[trip_id];
-            if length(sequence) > 0 and sequence[0].key = self.stopId {
-                add trip_id to: my_trip_ids;
-                trip_departure_times[trip_id] <- sequence[0].value;
-            }
+        if is_matched {
+            draw circle(160.0) border: #darkgreen width: 2;
         }
         
-        // Trier les trips par heure de départ
-        my_trip_ids <- my_trip_ids sort_by (trip_departure_times[each]);
+        if stop_name != nil and stop_name != "" {
+            draw stop_name at: location + {0, 200} color: #black size: 10;
+        }
         
-        // Saut à l'heure de simulation choisie
-        if length(my_trip_ids) > 0 {
-            current_trip_index <- world.find_next_trip_index_after_time(my_trip_ids, simulation_start_time);
-            if debug_mode and current_trip_index < length(my_trip_ids) {
-                write "🕐 Stop " + stopId + ": " + length(my_trip_ids) + " trips, premier index: " + current_trip_index;
-            }
+        if stopId != nil and stopId != "" {
+            draw stopId at: location + {0, -200} color: #gray size: 8;
+        }
+        
+        if is_matched and closest_route_dist > 0 {
+            draw string(int(closest_route_dist)) + "m" at: location + {0, 220} color: #blue size: 8;
         }
     }
     
-    // LANCEMENT DES VÉHICULES (logique adaptée du modèle Toulouse)
-    reflex launch_bus when: (current_trip_index < length(my_trip_ids)) {
-        string trip_id <- my_trip_ids[current_trip_index];
-        int departure_time <- trip_departure_times[trip_id];
-        
-        if (current_seconds_mod >= departure_time) {
-            // Vérifier que le trip a une route assignée
-            string route_osm_id <- world.get_trip_dominant_route(trip_id);
-            
-            if route_osm_id != nil and route_graphs contains_key route_osm_id {
-                list<pair<bus_stop, int>> trip_sequence <- world.get_trip_stops_sequence(trip_id);
-                
-                if length(trip_sequence) > 1 {
-                    create bus with: [
-                        trip_sequence:: trip_sequence,
-                        current_stop_index:: 0,
-                        trip_id:: trip_id,
-                        route_osm_id:: route_osm_id,
-                        location:: trip_sequence[0].key.location,
-                        target_location:: trip_sequence[1].key.location,
-                        local_network:: route_graphs[route_osm_id],
-                        speed:: 10.0 * step,  // Vitesse initiale compensée par step
-                        creation_time:: current_seconds_mod
-                    ];
-                    
-                    if debug_mode {
-                        string formatted_time <- world.convert_seconds_to_time(departure_time);
-                        write "🚌 Véhicule créé pour trip " + trip_id + " à " + formatted_time;
-                    }
-                }
-            }
-            
-            current_trip_index <- current_trip_index + 1;
-        }
+    aspect minimal {
+        rgb stop_color <- is_matched ? #green : #red;
+        draw circle(80.0) color: stop_color;
     }
 }
 
-species bus skills: [moving] {
-    // VARIABLES DE BASE
-    list<pair<bus_stop, int>> trip_sequence;  // Séquence arrêts avec horaires
-    int current_stop_index;
-    point target_location;
-    string trip_id;
-    string route_osm_id;
-    graph local_network;
-    float speed;
-    int creation_time;
-    int current_local_time;
-    bool waiting_at_stop <- true;
-    
-    // VARIABLES NAVIGATION PRÉCISE (adaptées du modèle Toulouse)
-    list<point> travel_points;
-    list<float> traveled_dist_list;
-    int travel_shape_idx <- 0;
-    point moving_target;
-    bool is_stopping -> moving_target = nil;
-    float close_dist <- 15.0 #m;
-    float min_dist_to_move <- 10.0 #m;
-    
-    // STATISTIQUES PONCTUALITÉ
-    list<int> arrival_time_diffs <- [];
-    
-    init {
-        // Initialisation navigation précise
-        if route_polylines contains_key route_osm_id {
-            geometry polyline <- route_polylines[route_osm_id];
-            if polyline != nil {
-                travel_points <- polyline.points;
-                if route_cumulative_distances contains_key route_osm_id {
-                    traveled_dist_list <- route_cumulative_distances[route_osm_id];
-                }
-            }
-        }
-        
-        // Démarrer au premier point
-        if length(travel_points) > 0 {
-            location <- travel_points[0];
-        }
-    }
-    
-    reflex update_time {
-        current_local_time <- int(current_date - date([1970,1,1,0,0,0])) mod 86400;
-    }
-    
-    // ATTENTE À L'ARRÊT
-    reflex wait_at_stop when: waiting_at_stop {
-        if current_stop_index < length(trip_sequence) {
-            int scheduled_time <- trip_sequence[current_stop_index].value;
-            if current_local_time >= scheduled_time {
-                do calculate_segment_speed;
-                waiting_at_stop <- false;
-            }
-        }
-    }
-    
-    // CALCUL VITESSE PAR SEGMENT
-    action calculate_segment_speed {
-        if current_stop_index >= length(trip_sequence) - 1 {
-            return;
-        }
-        
-        int current_time <- trip_sequence[current_stop_index].value;
-        int next_time <- trip_sequence[current_stop_index + 1].value;
-        int segment_time <- next_time - current_time;
-        
-        if segment_time <= 0 {
-            speed <- 10.0 * step;
-            return;
-        }
-        
-        // Distance euclidienne entre arrêts (approximation)
-        point current_pos <- trip_sequence[current_stop_index].key.location;
-        point next_pos <- trip_sequence[current_stop_index + 1].key.location;
-        float segment_distance <- (current_pos distance_to next_pos) * 1.3;  // Facteur détour
-        
-        float vitesse_reelle <- segment_distance / segment_time;
-        float vitesse_compensee <- vitesse_reelle * step;
-        
-        speed <- max(3.0 * step, min(vitesse_compensee, 25.0 * step));
-    }
-    
-    // MOUVEMENT PRÉCIS
-    reflex move when: not is_stopping {
-        do goto target: moving_target speed: speed;
-        if location distance_to moving_target < close_dist {
-            location <- moving_target;
-            moving_target <- nil;
-        }
-    }
-    
-    // SUIVI DE ROUTE
-    reflex follow_route when: is_stopping {
-        // Vérifier arrivée à l'arrêt suivant
-        if current_stop_index < length(trip_sequence) - 1 {
-            point next_stop_pos <- trip_sequence[current_stop_index + 1].key.location;
-            float dist_to_next_stop <- location distance_to next_stop_pos;
-            
-            if dist_to_next_stop <= close_dist {
-                do arrive_at_stop;
-                return;
-            }
-        } else {
-            // Terminus atteint
-            if debug_mode {
-                write "🏁 Trip " + trip_id + " terminé. Écarts: " + arrival_time_diffs;
-            }
-            do die;
-            return;
-        }
-        
-        // Vérifier heure de départ
-        int departure_time <- trip_sequence[current_stop_index].value;
-        if current_local_time < departure_time {
-            return;
-        }
-        
-        // Navigation le long de la route
-        if length(travel_points) > 0 and travel_shape_idx < length(travel_points) - 1 {
-            float target_move_dist <- min_dist_to_move * step;
-            
-            int finding_from <- travel_shape_idx;
-            loop i from: travel_shape_idx + 1 to: length(travel_points) - 1 {
-                travel_shape_idx <- i;
-                if length(traveled_dist_list) > i and length(traveled_dist_list) > finding_from {
-                    float moved_dist <- traveled_dist_list[i] - traveled_dist_list[finding_from];
-                    if moved_dist >= target_move_dist {
-                        break;
-                    }
-                }
-            }
-            
-            point next_target <- travel_points[travel_shape_idx];
-            if moving_target != next_target {
-                moving_target <- next_target;
-            }
-        }
-    }
-    
-    // ARRIVÉE À UN ARRÊT
-    action arrive_at_stop {
-        // Calcul écart horaire
-        int expected_time <- trip_sequence[current_stop_index + 1].value;
-        int actual_time <- current_local_time;
-        int time_diff <- expected_time - actual_time;
-        
-        arrival_time_diffs <- arrival_time_diffs + [time_diff];
-        
-        // Passer à l'arrêt suivant
-        current_stop_index <- current_stop_index + 1;
-        if current_stop_index < length(trip_sequence) {
-            target_location <- trip_sequence[current_stop_index].key.location;
-            waiting_at_stop <- true;
-        }
-    }
-    
-    aspect default {
-        rgb vehicle_color <- #red;
-        draw rectangle(80, 120) color: vehicle_color rotate: heading;
-    }
-}
-
-// ==================== EXPERIMENT ====================
-
-experiment bus_simulation type: gui {
+// EXPERIMENT
+experiment combined_network type: gui {
     parameter "Debug Mode" var: debug_mode category: "Configuration";
-    parameter "Heure début (h)" var: starting_date category: "Temporal" min: date("2024-01-01T06:00:00") max: date("2024-01-01T22:00:00");
+    
+    action reload_all {
+        ask world {
+            // Nettoyer les agents
+            ask bus_route { do die; }
+            ask bus_stop { do die; }
+            
+            // Réinitialiser les variables
+            total_bus_routes <- 0;
+            total_bus_stops <- 0;
+            matched_stops <- 0;
+            unmatched_stops <- 0;
+            total_stops_processed <- 0;
+            total_trips_processed <- 0;
+            highlighted_route_osm_id <- "";
+            highlighted_route_agent <- nil;
+            
+            // Réinitialiser les structures
+            stopId_to_agent <- map<string, bus_stop>([]);
+            osmId_to_route <- map<string, bus_route>([]);
+            trip_to_sequence <- map<string, list<pair<string, int>>>([]);
+            trip_to_route <- map<string, string>([]);
+            collision_check <- map<string, int>([]);
+            
+            // Recharger tout
+            do load_bus_network;
+            do load_gtfs_stops;
+            do build_basic_mappings;
+            do process_json_trips;
+            do compute_trip_to_route_mappings;
+            do highlight_trip_route;
+        }
+    }
+    
+    user_command "Recharger Tout" action: reload_all;
     
     output {
-        display "Simulation Transport" background: #white type: 2d {
+        display "Réseau Bus Combiné" background: #white type: 2d {
             species bus_route aspect: default;
             species bus_stop aspect: default;
-            species bus aspect: default;
         }
         
-        display "Monitoring" {
-            chart "Véhicules" type: series {
-                data "Nb véhicules" value: length(bus) color: #blue;
-            }
-        }
-        
-        monitor "Véhicules actifs" value: length(bus);
-        monitor "Heure simulation" value: convert_seconds_to_time(current_seconds_mod);
-        monitor "Trips traités" value: sum(bus_stop collect each.current_trip_index);
+        monitor "Routes OSM" value: total_bus_routes;
+        monitor "Arrêts GTFS" value: total_bus_stops;
+        monitor "Arrêts matchés" value: matched_stops;
+        monitor "Trips JSON" value: length(trip_to_sequence.keys);
+        monitor "Trips avec routes" value: length(trip_to_route.keys);
+        monitor "Route Trip 01_1_MD_14" value: highlighted_route_osm_id != "" ? highlighted_route_osm_id : "Non trouvée";
+        monitor "Nom Route Highlighted" value: highlighted_route_agent != nil ? highlighted_route_agent.route_name : "N/A";
+        monitor "Taux trip-route %" value: length(trip_to_sequence.keys) > 0 ? round((length(trip_to_route.keys) / length(trip_to_sequence.keys)) * 10000) / 100 : 0;
+        monitor "Arrêts JSON traités" value: total_stops_processed;
+        monitor "Moyenne arrêts/trip" value: length(trip_to_sequence.keys) > 0 ? round((sum(trip_to_sequence.values collect length(each)) / length(trip_to_sequence.keys)) * 100) / 100 : 0;
     }
 }
