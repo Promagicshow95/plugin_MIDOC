@@ -1,7 +1,7 @@
 /**
 * Name: TestJSON - Extension pour tous les arrêts
 * Based on the internal empty template. 
-* Author: benoitgaudou
+* Author: tiend
 * Tags: 
 */
 
