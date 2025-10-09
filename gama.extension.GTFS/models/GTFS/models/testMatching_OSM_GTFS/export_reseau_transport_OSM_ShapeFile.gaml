@@ -10,7 +10,7 @@ model Clean_OSM_To_Shapefile
 
 global {
     // --- FICHIERS ---
-    file data_file <- shape_file("../../includes/shapeFileHanoishp.shp");
+    file data_file <- shape_file("../../includes/shapeFileNantes.shp");
     geometry shape <- envelope(data_file);
     
     // --- OSM CONFIGURATION ---
@@ -40,7 +40,7 @@ global {
     int nb_without_osm_id <- 0;
     
     // --- PARAMÈTRES D'EXPORT ---
-    string export_folder <- "../../results/";
+    string export_folder <- "../../results1/";
 
     init {
         write "=== EXPORT OSM AVEC ID CANONIQUE UNIQUE ===";

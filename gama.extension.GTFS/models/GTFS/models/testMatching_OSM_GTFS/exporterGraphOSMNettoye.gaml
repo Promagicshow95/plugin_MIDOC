@@ -1,16 +1,16 @@
 /**
- * Name: Network_Bus_Complete
- * Description: Construction du graphe bus + Analyse connectivité + Export
+ * Name: Network_Bus_Complete_Fixed
+ * Description: Construction du graphe bus + Analyse connectivité + Export (CORRECTED)
  * Tags: shapefile, network, bus, graph, export, connectivity
- * Date: 2025-10-02
+ * Date: 2025-10-09
  */
 
 model Network_Bus_Complete
 
 global {
     // --- CONFIGURATION FICHIERS ---
-    string results_folder <- "../../results/";
-    file data_file <- shape_file("../../includes/shapeFileHanoishp.shp");
+    string results_folder <- "../../results1/";
+    file data_file <- shape_file("../../includes/shapeFileNantes.shp");
     geometry shape <- envelope(data_file);
     
     // --- CONFIGURATION GRAPHE ---
@@ -43,6 +43,12 @@ global {
     init {
         write "=== RESEAU BUS COMPLET ===";
         
+        // NETTOYER TOUS LES AGENTS EXISTANTS D'ABORD
+        ask edge_feature { do die; }
+        ask node_feature { do die; }
+        ask graph_issue { do die; }
+        ask bus_route { do die; }
+        
         if rebuild_from_osm {
             do load_bus_network_robust;
             do validate_world_envelope;
@@ -68,6 +74,18 @@ global {
         write "Degre moyen : " + (avg_degree with_precision 2);
         write "Tests routage : " + successful_routes + "/" + (successful_routes + failed_routes);
         write "Graphe cree : " + (road_graph != nil ? "OK" : "ERREUR");
+    }
+    
+    // NETTOYER LES AGENTS ET PREPARER L'EXPORT
+    action clean_existing_files {
+        write "Preparation export...";
+        
+        // Supprimer tous les agents qui pourraient verrouiller les fichiers
+        ask edge_feature { do die; }
+        ask node_feature { do die; }
+        
+        // GAMA écrasera automatiquement les fichiers existants lors du save
+        write "Les fichiers existants seront ecrases automatiquement";
     }
     
     // CONSTRUCTION DU GRAPHE
@@ -296,6 +314,13 @@ global {
     action export_graph_files {
         write "\n=== EXPORT GRAPHE ===";
         
+        // NETTOYER D'ABORD LES FICHIERS EXISTANTS
+        do clean_existing_files;
+        
+        // Supprimer les agents existants si présents
+        ask edge_feature { do die; }
+        ask node_feature { do die; }
+        
         // Créer agents EDGE
         loop eid from: 0 to: length(edges_list) - 1 {
             list<int> e <- edges_list[eid];
@@ -321,26 +346,36 @@ global {
             }
         }
         
+        write "Agents crees: " + length(edge_feature) + " edges, " + length(node_feature) + " nodes";
+        
         // Sauver shapefiles
-        save edge_feature to: results_folder + "graph_edges.shp" format: "shp" 
-            attributes: ["edge_id"::edge_id, "from_id"::from_id, "to_id"::to_id, 
-                        "length_m"::length_m, "nb_routes"::nb_routes];
+        try {
+            save edge_feature to: results_folder + "graph_edges.shp" format: "shp" 
+                attributes: ["edge_id"::edge_id, "from_id"::from_id, "to_id"::to_id, 
+                            "length_m"::length_m, "nb_routes"::nb_routes];
+            write "graph_edges.shp : " + length(edge_feature) + " aretes - OK";
+        } catch {
+            write "ERREUR: Impossible de sauver graph_edges.shp";
+        }
         
-        save node_feature to: results_folder + "graph_nodes.shp" format: "shp" 
-            attributes: ["node_id"::node_id, "degree"::degree];
+        try {
+            save node_feature to: results_folder + "graph_nodes.shp" format: "shp" 
+                attributes: ["node_id"::node_id, "degree"::degree];
+            write "graph_nodes.shp : " + length(node_feature) + " noeuds - OK";
+        } catch {
+            write "ERREUR: Impossible de sauver graph_nodes.shp";
+        }
         
-        write "graph_edges.shp : " + length(edge_feature) + " aretes";
-        write "graph_nodes.shp : " + length(node_feature) + " noeuds";
-        
-        // Nettoyer
-        ask edge_feature { do die; }
-        ask node_feature { do die; }
+        // NE PAS nettoyer les agents ici pour permettre la visualisation
+        // ask edge_feature { do die; }
+        // ask node_feature { do die; }
     }
     
     // RECHARGEMENT
     action load_graph_from_edges {
         write "\n=== RECHARGEMENT GRAPHE ===";
         
+        // Réinitialiser structures
         node_ids <- []; 
         G_NODES <- []; 
         G_ADJ <- []; 
@@ -348,50 +383,67 @@ global {
         EDGE_KEY_TO_ID <- [];
         node_counter <- 0;
         
-        file edges_shp <- shape_file(results_folder + "graph_edges.shp");
-        create edge_feature from: edges_shp with: [
-            edge_id :: int(read("edge_id")),
-            from_id :: int(read("from_id")),
-            to_id :: int(read("to_id")),
-            length_m :: float(read("length_m"))
-        ];
-        
-        loop e over: edge_feature {
-            list<point> pts <- e.shape.points;
-            point p1 <- pts[0];
-            point p2 <- pts[length(pts) - 1];
-            
-            int id1 <- get_or_create_node(p1);
-            int id2 <- get_or_create_node(p2);
-            
-            int a <- min(id1, id2);
-            int b <- max(id1, id2);
-            list<int> ekey <- [a, b];
-            
-            if not (ekey in EDGE_KEY_TO_ID.keys) {
-                int eid <- length(edges_list);
-                edges_list << ekey;
-                EDGE_KEY_TO_ID[ekey] <- eid;
-                EDGE_LENGTHS << (p1 distance_to p2);
-                
-                if not (b in G_ADJ[a]) { G_ADJ[a] << b; }
-                if not (a in G_ADJ[b]) { G_ADJ[b] << a; }
-            }
-        }
-        
-        write "Aretes rechargees : " + length(edges_list);
-        write "Noeuds recharges : " + length(G_NODES);
-        
-        // Recréer graphe
-        if length(edges_list) > 0 {
-            list<geometry> graph_geoms <- [];
-            loop e over: edges_list {
-                graph_geoms << line([G_NODES[e[0]], G_NODES[e[1]]]);
-            }
-            road_graph <- as_edge_graph(graph_geoms);
-        }
-        
+        // Supprimer agents existants
         ask edge_feature { do die; }
+        ask node_feature { do die; }
+        
+        try {
+            file edges_shp <- shape_file(results_folder + "graph_edges.shp");
+            
+            if edges_shp.exists {
+                create edge_feature from: edges_shp with: [
+                    edge_id :: int(read("edge_id")),
+                    from_id :: int(read("from_id")),
+                    to_id :: int(read("to_id")),
+                    length_m :: float(read("length_m"))
+                ];
+                
+                loop e over: edge_feature {
+                    list<point> pts <- e.shape.points;
+                    point p1 <- pts[0];
+                    point p2 <- pts[length(pts) - 1];
+                    
+                    int id1 <- get_or_create_node(p1);
+                    int id2 <- get_or_create_node(p2);
+                    
+                    int a <- min(id1, id2);
+                    int b <- max(id1, id2);
+                    list<int> ekey <- [a, b];
+                    
+                    if not (ekey in EDGE_KEY_TO_ID.keys) {
+                        int eid <- length(edges_list);
+                        edges_list << ekey;
+                        EDGE_KEY_TO_ID[ekey] <- eid;
+                        EDGE_LENGTHS << (p1 distance_to p2);
+                        
+                        if not (b in G_ADJ[a]) { G_ADJ[a] << b; }
+                        if not (a in G_ADJ[b]) { G_ADJ[b] << a; }
+                    }
+                }
+                
+                write "Aretes rechargees : " + length(edges_list);
+                write "Noeuds recharges : " + length(G_NODES);
+                
+                // Recréer graphe
+                if length(edges_list) > 0 {
+                    list<geometry> graph_geoms <- [];
+                    loop e over: edges_list {
+                        graph_geoms << line([G_NODES[e[0]], G_NODES[e[1]]]);
+                    }
+                    road_graph <- as_edge_graph(graph_geoms);
+                    write "Graphe recreé avec succes";
+                }
+                
+                // NE PAS supprimer les agents pour la visualisation
+                // ask edge_feature { do die; }
+                
+            } else {
+                write "ERREUR: Fichier graph_edges.shp introuvable";
+            }
+            
+        } catch {
+            write "ERREUR lors du rechargement du graphe";
+        }
     }
     
     // FONCTIONS UTILITAIRES

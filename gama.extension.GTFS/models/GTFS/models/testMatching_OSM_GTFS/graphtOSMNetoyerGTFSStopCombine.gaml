@@ -9,9 +9,9 @@ model GTFS_Graph_Matching_Complete
 
 global {
     // --- FICHIERS ---
-    string results_folder <- "../../results/";
-    gtfs_file gtfs_f <- gtfs_file("../../includes/hanoi_gtfs_pm");
-    file data_file <- shape_file("../../includes/shapeFileHanoishp.shp");
+    string results_folder <- "../../results1/";
+    gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
+    file data_file <- shape_file("../../includes/shapeFileNantes.shp");
     geometry shape <- envelope(data_file);
     
     // --- PARAMETRES MATCHING ---
@@ -301,8 +301,8 @@ global {
     action create_specific_bus_robust {
         write "\n7. CREATION VEHICULE (APPROCHE ROBUSTE)";
         
-        string target_stopId <- "01_1_S1";
-        string target_tripId <- "01_1_MD_1";
+        string target_stopId <- "ADBO2";
+        string target_tripId <- "44211738-CR_24_25-HA25P101-L-Ma-Me-J-29-1101000";
         
         // Trouver le stop de départ
         bus_stop starter <- first(bus_stop where (each.stopId = target_stopId and each.is_snapped));
@@ -546,45 +546,74 @@ species bus skills: [moving] {
     // Se déplacer en suivant le chemin précalculé
 reflex move when: (!is_dwelling and !at_terminus and current_idx < length(my_paths)) {
     path current_path <- my_paths[current_idx];
-    
+
     if current_path = nil {
-        // Pas de chemin : téléportation
-        location <- my_stops[current_idx + 1].location;
-        write "TELEPORTATION vers " + my_stops[current_idx + 1].stopName;
-        do arrive_at_stop;
+        at_terminus <- true;
+        write "ARRET: path manquant au segment " + current_idx + " (aucune téléportation).";
     } else {
-        // Suivre le chemin précalculé avec la vitesse dynamique
+        // 1) suivre le chemin
         do follow path: current_path speed: current_segment_speed return_path: false;
-        
-        // Vérifier si arrivé au stop
-        float dist_to_next <- location distance_to my_stops[current_idx + 1].location;
-        
-        // Si très proche ou si current_path devient nil (fin du chemin)
-        if dist_to_next <= 25.0 #m or current_path = nil {
-            location <- my_stops[current_idx + 1].location;
+
+        // 2) clamp (rayon 100m + fallback global)
+        float search_radius <- 100.0 #m;
+        list<edge_feature> nearby_edges <- edge_feature where (each.shape distance_to location <= search_radius);
+        if !empty(nearby_edges) {
+            edge_feature closest_edge <- nearby_edges with_min_of (each.shape distance_to location);
+            list<point> closest_points <- closest_edge.shape closest_points_with location;
+            if !empty(closest_points) { location <- first(closest_points); }
+        } else {
+            edge_feature closest_edge <- edge_feature with_min_of (each.shape distance_to location);
+            if closest_edge != nil {
+                list<point> closest_points <- closest_edge.shape closest_points_with location;
+                if !empty(closest_points) { location <- first(closest_points); }
+            }
+        }
+
+        // 3) arrivée si très proche du STOP (conservé)
+        float dist_to_stop <- location distance_to my_stops[current_idx + 1].location;
+        if dist_to_stop <= 2.0 #m {
             do arrive_at_stop;
+            return;
+        }
+
+        // ✅ 4) arrivée si très proche du VERTEX d’arrivée (fin réelle du path)
+        point next_node <- my_stops[current_idx + 1].nearest_node;
+        if next_node != nil {
+            float dist_to_node <- location distance_to next_node;
+            if dist_to_node <= 2.0 #m {
+                do arrive_at_stop;
+                return;
+            }
         }
     }
 }
+
     
     // Arriver à un stop
-    action arrive_at_stop {
-        current_idx <- current_idx + 1;
-        
-        write "ARRIVEE : " + my_stops[current_idx].stopName + 
-              " (" + current_idx + "/" + (length(my_stops) - 1) + ") a " + 
-              departure_times[current_idx];
-        
-        if current_idx < length(my_stops) - 1 {
-            // Commencer l'arrêt
-            is_dwelling <- true;
-            dwell_start <- cycle * step;
-        } else {
-            // Terminus
-            at_terminus <- true;
-            write "=== TERMINUS ATTEINT ===";
-        }
+   action arrive_at_stop {
+    current_idx <- current_idx + 1;
+
+    bus_stop dst <- my_stops[current_idx];
+
+    // Recolle la position sur l'arête du stop (ligne verte)
+    edge_feature e2 <- one_of(edge_feature where (each.edge_id = dst.snapped_edge_id));
+    if e2 != nil {
+        point on_edge <- first(e2.shape closest_points_with dst.location);
+        if on_edge != nil { location <- on_edge; }
     }
+
+    write "ARRIVEE : " + dst.stopName + 
+          " (" + current_idx + "/" + (length(my_stops) - 1) + ") a " + 
+          departure_times[current_idx];
+
+    if current_idx < length(my_stops) - 1 {
+        is_dwelling <- true;
+        dwell_start <- cycle * step;
+    } else {
+        at_terminus <- true;
+        write "=== TERMINUS ATTEINT ===";
+    }
+}
     
     aspect base {
         rgb color <- at_terminus ? #orange : (is_dwelling ? #yellow : #red);
