@@ -301,8 +301,8 @@ global {
     action create_specific_bus_robust {
         write "\n7. CREATION VEHICULE (APPROCHE ROBUSTE)";
         
-        string target_stopId <- "ADBO2";
-        string target_tripId <- "44211738-CR_24_25-HA25P101-L-Ma-Me-J-29-1101000";
+        string target_stopId <- "AUCP2";
+        string target_tripId <- "44727161-CR_24_25-HS25H1F6-Samedi-21";
         
         // Trouver le stop de départ
         bus_stop starter <- first(bus_stop where (each.stopId = target_stopId and each.is_snapped));
