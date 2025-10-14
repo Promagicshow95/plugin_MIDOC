@@ -7,22 +7,18 @@ global {
 
     date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
-    date starting_date <- date("2025-05-17T08:00:00");
+    date starting_date <- date("2025-06-10T08:00:00");
     float step <- 0.4 #s;
     int current_day <- 0;
     int time_24h -> int(current_date - date([1970,1,1,0,0,0])) mod 86400;
     int current_seconds_mod <- 0;
     
-    // === NOUVEAU: Logique de saut à l'heure choisie ===
     int simulation_start_time;
-
     map<int, graph> shape_graphs;
     map<int, geometry> shape_polylines;
-    // === NOUVEAU: Distances cumulées pré-calculées par shape ===
     map<int, list<float>> shape_cumulative_distances;
 
     init {
-        // === CALCUL HEURE DE DÉMARRAGE ===
         simulation_start_time <- (starting_date.hour * 3600) + (starting_date.minute * 60) + starting_date.second;
         write "⏰ Simulation démarre à: " + (simulation_start_time / 3600) + "h" + ((simulation_start_time mod 3600) / 60) + "m";
         
@@ -33,14 +29,12 @@ global {
             shape_graphs[s.shapeId] <- as_edge_graph(s);
             shape_polylines[s.shapeId] <- s.shape;
             
-            // === PRÉ-CALCUL DES DISTANCES CUMULÉES ===
             if (s.shape != nil) {
                 do calculate_cumulative_distances(s.shapeId, s.shape);
             }
         }
     }
     
-    // === ACTION: Calcul des distances cumulées le long de la polyline ===
     action calculate_cumulative_distances(int shape_id, geometry polyline) {
         list<point> points <- polyline.points;
         list<float> cumul_distances <- [0.0];
@@ -70,7 +64,6 @@ species bus_stop skills: [TransportStopSkill] {
 
     reflex init_order when: cycle = 1 {
         ordered_trip_ids <- keys(departureStopsInfo);
-        // === SAUT À L'HEURE CHOISIE ===
         if (ordered_trip_ids != nil) {
             current_trip_index <- find_next_trip_index_after_time(simulation_start_time);
             write "🕐 Stop " + self + ": Premier trip à l'index " + current_trip_index + 
@@ -78,7 +71,6 @@ species bus_stop skills: [TransportStopSkill] {
         }
     }
     
-    // === FONCTION POUR TROUVER TRIP APRÈS HEURE CIBLE ===
     int find_next_trip_index_after_time(int target_time) {
         if (ordered_trip_ids = nil or length(ordered_trip_ids) = 0) { 
             return 0; 
@@ -123,7 +115,7 @@ species bus_stop skills: [TransportStopSkill] {
                     shapeID:: shape_found,
                     route_type:: self.routeType,
                     local_network:: shape_graphs[shape_found],
-                    speed:: 10.0 * step, // Vitesse initiale COMPENSÉE par step
+                    speed:: 10.0 * step,
                     creation_time:: current_seconds_mod
                 ];
 
@@ -148,24 +140,21 @@ species bus skills: [moving] {
     list<int> arrival_time_diffs_neg <- [];
     bool waiting_at_stop <- true;
     
-    // === NOUVELLES VARIABLES POUR NAVIGATION PRÉCISE ===
-    list<point> travel_points;          // Points de la polyline
-    list<float> traveled_dist_list;     // Distances cumulées
-    int travel_shape_idx <- 0;          // Index actuel sur la polyline
-    point moving_target;                // Cible de mouvement courante
+    list<point> travel_points;
+    list<float> traveled_dist_list;
+    int travel_shape_idx <- 0;
+    point moving_target;
     bool is_stopping -> moving_target = nil;
-    float close_dist <- 5.0 #m;         // Distance pour considérer arrivé
-    float min_dist_to_move <- 5.0 #m;   // Distance minimum pour chaque mouvement
+    float close_dist <- 10.0 #m;  // ✅ AUGMENTÉ de 5m à 10m
+    float min_dist_to_move <- 5.0 #m;
 
     init {
-        // === INITIALISATION NAVIGATION PRÉCISE ===
         geometry polyline <- shape_polylines[shapeID];
         if (polyline != nil) {
             travel_points <- polyline.points;
             traveled_dist_list <- shape_cumulative_distances[shapeID];
         }
         
-        // Démarrer au premier point de la polyline
         if (length(travel_points) > 0) {
             location <- travel_points[0];
         }
@@ -175,63 +164,69 @@ species bus skills: [moving] {
         current_local_time <- int(current_date - date([1970,1,1,0,0,0])) mod 86400;
     }
 
+    // ✅ SÉCURITÉ 1: Timeout après 2 heures
+    reflex check_timeout {
+        if (current_local_time - creation_time > 7200) {
+            write "⚠️ Bus " + trip_id + " supprimé (timeout 2h)";
+            do die;
+        }
+    }
+
+    // ✅ SÉCURITÉ 2: Terminus forcé
+    reflex force_terminus when: current_stop_index >= length(departureStopsInfo) {
+        write "✅ Bus " + trip_id + " terminus atteint (index >= length)";
+        do die;
+    }
+
+    // ✅ SÉCURITÉ 3: Hors limites géographiques
+    reflex check_bounds {
+    float max_distance <- 20000.0; // 20km du centre
+    if (location distance_to shape.location > max_distance) {
+        write "⚠️ Bus " + trip_id + " trop loin du centre → supprimé";
+        do die;
+    	}
+	}
+
     reflex wait_at_stop when: waiting_at_stop {
         int stop_time <- departureStopsInfo[current_stop_index].value as int;
         if (current_local_time >= stop_time) {
-            // === CALCUL VITESSE PAR SEGMENT ===
             do calculate_segment_speed;
             waiting_at_stop <- false;
         }
     }
     
-    // === ACTION: Calcul de vitesse pour le segment actuel AVEC COMPENSATION STEP ===
     action calculate_segment_speed {
         if (current_stop_index >= length(departureStopsInfo) - 1) {
             return;
         }
         
-        // Temps disponible pour ce segment
         int current_time <- departureStopsInfo[current_stop_index].value as int;
         int next_time <- departureStopsInfo[current_stop_index + 1].value as int;
         int segment_time <- next_time - current_time;
         
         if (segment_time <= 0) {
-            speed <- 10.0 * step; // Vitesse par défaut COMPENSÉE
+            speed <- 10.0 * step;
             return;
         }
         
-        // === DISTANCE RÉELLE LE LONG DE LA POLYLINE ===
         point current_stop_location <- departureStopsInfo[current_stop_index].key.location;
         point next_stop_location <- departureStopsInfo[current_stop_index + 1].key.location;
         
-        // Trouver les indices sur la polyline les plus proches des arrêts
         int start_poly_idx <- find_closest_polyline_point(current_stop_location);
         int end_poly_idx <- find_closest_polyline_point(next_stop_location);
         
-        // Distance réelle le long de la polyline
         float segment_distance <- 0.0;
         if (end_poly_idx > start_poly_idx and length(traveled_dist_list) > end_poly_idx) {
             segment_distance <- traveled_dist_list[end_poly_idx] - traveled_dist_list[start_poly_idx];
         } else {
-            // Fallback: distance euclidienne * facteur
             segment_distance <- (current_stop_location distance_to next_stop_location) * 1.3;
         }
         
-        // Calcul vitesse requise pour ce segment (vitesse réelle)
         float vitesse_reelle <- segment_distance / segment_time;
-        
-        // === COMPENSATION STEP: Multiplier par step ===
         float vitesse_compensee <- vitesse_reelle * step;
-        
-        // Borner la vitesse compensée dans des limites réalistes
         speed <- max(2.0 * step, min(vitesse_compensee, 25.0 * step));
-        
-        write "Segment " + string(current_stop_index) + ": " + string(round(segment_distance)) + 
-              "m en " + segment_time + "s → vitesse réelle: " + string(round(vitesse_reelle * 3.6)) + 
-              " km/h → vitesse compensée: " + string(round(speed)) + " m/tick";
     }
     
-    // === ACTION: Trouver le point de polyline le plus proche d'une position ===
     int find_closest_polyline_point(point target_pos) {
         if (length(travel_points) = 0) {
             return 0;
@@ -251,7 +246,6 @@ species bus skills: [moving] {
         return closest_idx;
     }
 
-    // === NAVIGATION PRÉCISE LE LONG DE LA POLYLINE ===
     reflex move when: not is_stopping {
         do goto target: moving_target speed: speed;
         if (location distance_to moving_target < close_dist) {
@@ -263,34 +257,33 @@ species bus skills: [moving] {
     reflex follow_route when: is_stopping {
         int time_now <- current_local_time;
         
+        // ✅ AMÉLIORATION: Vérification prioritaire du terminus
+        if (current_stop_index >= length(departureStopsInfo) - 1) {
+            write "✅ Bus " + trip_id + " dernier arrêt atteint";
+            do die;
+            return;
+        }
+        
         // Vérifier si on a atteint l'arrêt suivant
         if (current_stop_index < length(departureStopsInfo) - 1) {
             point next_stop_pos <- departureStopsInfo[current_stop_index + 1].key.location;
             float dist_to_next_stop <- location distance_to next_stop_pos;
             
-            if (dist_to_next_stop <= close_dist) {
-                // === ARRIVÉE À L'ARRÊT ===
+            // ✅ AMÉLIORATION: Distance de tolérance augmentée
+            if (dist_to_next_stop <= close_dist * 1.5) {
                 do arrive_at_stop;
                 return;
             }
-        } else {
-            // Terminus atteint
-            do die;
+        }
+        
+        int departure_time <- departureStopsInfo[current_stop_index].value as int;
+        if (time_now < departure_time) {
             return;
         }
         
-        // Vérifier l'heure de départ
-        int departure_time <- departureStopsInfo[current_stop_index].value as int;
-        if (time_now < departure_time) {
-            return; // Attendre l'heure de départ
-        }
-        
-        // === NAVIGATION HOP-BY-HOP LE LONG DE LA POLYLINE ===
         if (length(travel_points) > 0 and travel_shape_idx < length(travel_points) - 1) {
-            // Calculer la distance à parcourir pour ce cycle
             float target_move_dist <- min_dist_to_move * step;
             
-            // Trouver le prochain point cible
             int finding_from <- travel_shape_idx;
             loop i from: travel_shape_idx + 1 to: length(travel_points) - 1 {
                 travel_shape_idx <- i;
@@ -309,9 +302,7 @@ species bus skills: [moving] {
         }
     }
     
-    // === ACTION: Arrivée à un arrêt ===
     action arrive_at_stop {
-        // Calcul écart temps
         int expected_arrival_time <- departureStopsInfo[current_stop_index + 1].value as int;
         int actual_time <- current_local_time;
         int time_diff <- expected_arrival_time - actual_time;
@@ -322,8 +313,15 @@ species bus skills: [moving] {
             arrival_time_diffs_pos << time_diff;
         }
         
-        // Passer à l'arrêt suivant
         current_stop_index <- current_stop_index + 1;
+        
+        // ✅ AMÉLIORATION: Vérification immédiate après incrémentation
+        if (current_stop_index >= length(departureStopsInfo)) {
+            write "✅ Bus " + trip_id + " tous arrêts complétés";
+            do die;
+            return;
+        }
+        
         if (current_stop_index < length(departureStopsInfo)) {
             target_location <- departureStopsInfo[current_stop_index].key.location;
             waiting_at_stop <- true;
@@ -331,23 +329,22 @@ species bus skills: [moving] {
     }
 
     aspect base {
-        // Couleurs différentes selon le type de route
         rgb vehicle_color;
         if (route_type = 0) {
-            vehicle_color <- #blue;        // Tram
+            vehicle_color <- #blue;
         } else if (route_type = 1) {
-            vehicle_color <- #red;         // Métro
+            vehicle_color <- #red;
         } else if (route_type = 2) {
-            vehicle_color <- #green;       // Train
+            vehicle_color <- #green;
         } else if (route_type = 3) {
-            vehicle_color <- #orange;      // Bus
+            vehicle_color <- #orange;
         } else if (route_type = 6) {
-            vehicle_color <- #purple;      // Téléo
+            vehicle_color <- #purple;
         } else {
-            vehicle_color <- #gray;        // Autres
+            vehicle_color <- #gray;
         }
         
-        draw rectangle(120, 180) color: vehicle_color rotate: heading;
+        draw rectangle(90, 120) color: vehicle_color rotate: heading;
     }
 }
 

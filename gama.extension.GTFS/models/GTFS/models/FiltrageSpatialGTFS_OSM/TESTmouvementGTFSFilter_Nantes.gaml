@@ -1,14 +1,14 @@
 model TESTmouvementGTFSFilter
 
 global {
-    gtfs_file gtfs_f <- gtfs_file("../../includes/NantesFilter_gtfs");
-    shape_file boundary_shp <- shape_file("../../includes/shapeFileNantesFilter.shp");
+    gtfs_file gtfs_f <- gtfs_file("../../includes/NantesFilter_TEST_gtfs");
+    shape_file boundary_shp <- shape_file("../../includes/nantesFilter_TEST.shp");
     geometry shape <- envelope(boundary_shp);
 
     date min_date_gtfs <- starting_date_gtfs(gtfs_f);
     date max_date_gtfs <- ending_date_gtfs(gtfs_f);
     date starting_date <- date("2025-05-17T08:00:00");
-    float step <- 0.4 #s;
+    float step <- 0.1 #s;
     int current_day <- 0;
     int time_24h -> int(current_date - date([1970,1,1,0,0,0])) mod 86400;
     int current_seconds_mod <- 0;
@@ -65,7 +65,7 @@ species bus_stop skills: [TransportStopSkill] {
     int current_trip_index <- 0;
 
     aspect base {
-        draw circle(50) color: #blue;
+        draw circle(30) color: #blue;
     }
 
     reflex init_order when: cycle = 1 {
@@ -347,7 +347,7 @@ species bus skills: [moving] {
             vehicle_color <- #gray;        // Autres
         }
         
-        draw rectangle(120, 180) color: vehicle_color rotate: heading;
+        draw rectangle(30, 40) color: vehicle_color rotate: heading;
     }
 }
 
