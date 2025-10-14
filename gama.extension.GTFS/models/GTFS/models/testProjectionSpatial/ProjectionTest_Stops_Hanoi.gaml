@@ -319,21 +319,30 @@ global {
     
     // Action pour diagnostic détaillé
     action show_detailed_comparison {
-        write "\n=== COMPARAISON DÉTAILLÉE ===";
-        
-        loop stop_id over: map_gtfs_projected.keys {
-            if map_gama contains_key stop_id {
-                list gtfs_data <- map_gtfs_projected[stop_id];
-                list gama_data <- map_gama[stop_id];
-                
-                write "Stop: " + stop_id;
-                write "  GTFS proj: " + gtfs_data[1];
-                write "  GAMA pos:  " + gama_data[1];
-                write "  Distance:  " + (gtfs_data[1] distance_to gama_data[1]) + "m";
-                write "";
-            }
+    write "\n=== COMPARAISON DÉTAILLÉE ===";
+    
+    loop shape_id over: map_gtfs_projected.keys {
+        if map_gama contains_key shape_id {
+            list gtfs_data <- map_gtfs_projected[shape_id];
+            list gama_data <- map_gama[shape_id];
+            
+            // ✅ CORRECTION : Cast explicite en point
+            point gtfs_point <- point(gtfs_data[0]);
+            point gama_point <- point(gama_data[0]);
+            int gtfs_count <- int(gtfs_data[1]);
+            int gama_count <- int(gama_data[1]);
+            
+            // ✅ CORRECTION : Calcul de distance avec types explicites
+            float distance <- gtfs_point distance_to gama_point;
+            
+            write "Shape: " + shape_id;
+            write "  GTFS proj: " + string(gtfs_point) + " (" + string(gtfs_count) + " points)";
+            write "  GAMA pos:  " + string(gama_point) + " (" + string(gama_count) + " points)";
+            write "  Distance:  " + string(distance) + "m";
+            write "";
         }
     }
+}
 }
 
 // Species avec TransportStopSkill (comme votre modèle de référence)

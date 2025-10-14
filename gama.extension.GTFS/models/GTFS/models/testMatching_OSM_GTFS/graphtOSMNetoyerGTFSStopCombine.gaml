@@ -12,6 +12,7 @@ global {
     string results_folder <- "../../results1/";
     gtfs_file gtfs_f <- gtfs_file("../../includes/nantes_gtfs");
     file data_file <- shape_file("../../includes/shapeFileNantes.shp");
+    date starting_date <- date("2025-05-13T05:00:00");
     geometry shape <- envelope(data_file);
     
     // --- PARAMETRES MATCHING ---
@@ -301,8 +302,8 @@ global {
     action create_specific_bus_robust {
         write "\n7. CREATION VEHICULE (APPROCHE ROBUSTE)";
         
-        string target_stopId <- "AUCP2";
-        string target_tripId <- "44727161-CR_24_25-HS25H1F6-Samedi-21";
+        string target_stopId <- "XJAN1";
+        string target_tripId <- "44958927-CR_24_25-HT25P201-L-Ma-Me-J-11";
         
         // Trouver le stop de départ
         bus_stop starter <- first(bus_stop where (each.stopId = target_stopId and each.is_snapped));
@@ -491,135 +492,192 @@ species edge_feature {
 species bus skills: [moving] {
     string my_trip_id;
     list<bus_stop> my_stops;
-    list<path> my_paths;              // Chemins précalculés
-    list<float> my_distances;         // Distances de chaque segment
-    list<float> my_durations;         // Durées prévues de chaque segment
-    list<string> departure_times;     // Temps de départ à chaque stop
+    list<path> my_paths;
+    list<float> my_distances;
+    list<float> my_durations;
+    list<string> departure_times;
     
     int current_idx <- 0;
     graph gref;
     bool at_terminus <- false;
-    bool is_dwelling <- false;        // En arrêt au stop
-    bool has_started <- false;        // NOUVEAU : flag pour éviter boucle
+    bool is_dwelling <- false;
+    bool has_started <- false;
     float dwell_start <- 0.0;
     
     float current_segment_speed <- 7.0 #m/#s;
     
-    // Commencer le trajet (UNE SEULE FOIS)
+    // ✅ NOUVEAU : Compteurs de sécurité
+    int cycles_stuck <- 0;
+    int max_cycles_per_segment <- 500; // Timeout ~100s à step=0.2
+    float last_distance_to_target <- 999999.0;
+    
     reflex start_trip when: (!has_started) {
         has_started <- true;
         write "=== DEBUT TRIP " + my_trip_id + " ===";
         write "Depart : " + my_stops[0].stopName + " a " + departure_times[0];
         
-        // Démarrer l'arrêt au premier stop
         is_dwelling <- true;
         dwell_start <- cycle * step;
     }
     
-    // Partir du stop après le dwell time
     reflex leave_stop when: (is_dwelling and (cycle * step - dwell_start) >= dwell_time) {
         is_dwelling <- false;
+        cycles_stuck <- 0; // ✅ Reset compteur
+        last_distance_to_target <- 999999.0;
         
         if current_idx < length(my_paths) {
-            // Calculer la vitesse pour ce segment
             if my_durations[current_idx] > dwell_time {
                 float travel_duration <- my_durations[current_idx] - dwell_time;
                 current_segment_speed <- my_distances[current_idx] / travel_duration;
                 
-                // NOUVEAU : Limiter à la vitesse maximum
-                float max_speed_ms <- max_speed / 3.6;  // Convertir km/h en m/s
+                float max_speed_ms <- max_speed / 3.6;
                 if current_segment_speed > max_speed_ms {
                     current_segment_speed <- max_speed_ms;
-                    write "Vitesse limitee a " + max_speed + " km/h";
                 }
                 
                 write "Depart vers " + my_stops[current_idx + 1].stopName + 
                       " (dist: " + (my_distances[current_idx] with_precision 0) + " m, " +
-                      "duree GTFS: " + (my_durations[current_idx] with_precision 0) + " s, " +
                       "vitesse: " + ((current_segment_speed * 3.6) with_precision 1) + " km/h)";
             } else {
-                current_segment_speed <- 10.0 #m/#s;  // Vitesse par défaut si durée trop courte
+                current_segment_speed <- 10.0 #m/#s;
             }
         }
     }
     
-    // Se déplacer en suivant le chemin précalculé
-reflex move when: (!is_dwelling and !at_terminus and current_idx < length(my_paths)) {
-    path current_path <- my_paths[current_idx];
-
-    if current_path = nil {
-        at_terminus <- true;
-        write "ARRET: path manquant au segment " + current_idx + " (aucune téléportation).";
-    } else {
-        // 1) suivre le chemin
-        do follow path: current_path speed: current_segment_speed return_path: false;
-
-        // 2) clamp (rayon 100m + fallback global)
-        float search_radius <- 100.0 #m;
-        list<edge_feature> nearby_edges <- edge_feature where (each.shape distance_to location <= search_radius);
-        if !empty(nearby_edges) {
-            edge_feature closest_edge <- nearby_edges with_min_of (each.shape distance_to location);
-            list<point> closest_points <- closest_edge.shape closest_points_with location;
-            if !empty(closest_points) { location <- first(closest_points); }
-        } else {
-            edge_feature closest_edge <- edge_feature with_min_of (each.shape distance_to location);
-            if closest_edge != nil {
-                list<point> closest_points <- closest_edge.shape closest_points_with location;
-                if !empty(closest_points) { location <- first(closest_points); }
-            }
-        }
-
-        // 3) arrivée si très proche du STOP (conservé)
-        float dist_to_stop <- location distance_to my_stops[current_idx + 1].location;
-        if dist_to_stop <= 2.0 #m {
+    reflex move when: (!is_dwelling and !at_terminus and current_idx < length(my_paths)) {
+        path current_path <- my_paths[current_idx];
+        bus_stop target_stop <- my_stops[current_idx + 1];
+        
+        // ✅ SÉCURITÉ 1 : Vérifier path valide
+        if current_path = nil {
+            write "⚠️ Path manquant, forçage arrêt suivant";
             do arrive_at_stop;
             return;
         }
-
-        // ✅ 4) arrivée si très proche du VERTEX d’arrivée (fin réelle du path)
-        point next_node <- my_stops[current_idx + 1].nearest_node;
+        
+        // ✅ SÉCURITÉ 2 : Vérifier distance avant mouvement
+        float dist_before <- location distance_to target_stop.location;
+        
+        // ✅ CONDITION D'ARRIVÉE AUGMENTÉE (15m au lieu de 2m)
+        if dist_before <= 15.0 #m {
+            write "✅ Arrivée proche détectée (" + (dist_before with_precision 1) + "m)";
+            do arrive_at_stop;
+            return;
+        }
+        
+        // ✅ SÉCURITÉ 3 : Détecter si bloqué
+        if abs(dist_before - last_distance_to_target) < 1.0 {
+            cycles_stuck <- cycles_stuck + 1;
+        } else {
+            cycles_stuck <- 0; // Progresse normalement
+        }
+        last_distance_to_target <- dist_before;
+        
+        // ✅ SÉCURITÉ 4 : Timeout - forcer passage au stop suivant
+        if cycles_stuck > max_cycles_per_segment {
+            write "⚠️ TIMEOUT: Bus bloqué " + cycles_stuck + " cycles, forçage arrêt";
+            do arrive_at_stop;
+            return;
+        }
+        
+        // 1) Suivre le chemin
+        do follow path: current_path speed: current_segment_speed return_path: false;
+        
+        // 2) Clamp CONDITIONNEL (seulement si trop loin des arêtes)
+        float dist_to_network <- 999999.0;
+        edge_feature closest_edge <- edge_feature with_min_of (each.shape distance_to location);
+        if closest_edge != nil {
+            dist_to_network <- closest_edge.shape distance_to location;
+        }
+        
+        // ✅ Clamp seulement si > 50m du réseau (évite les recollages excessifs)
+        if dist_to_network > 50.0 #m {
+            if closest_edge != nil {
+                list<point> closest_points <- closest_edge.shape closest_points_with location;
+                if !empty(closest_points) {
+                    location <- first(closest_points);
+                    write "🔧 Clamp: bus trop loin du réseau (" + (dist_to_network with_precision 0) + "m)";
+                }
+            }
+        }
+        
+        // 3) Vérifier arrivée après mouvement
+        float dist_after <- location distance_to target_stop.location;
+        
+        // ✅ CONDITION D'ARRIVÉE POST-MOUVEMENT (20m)
+        if dist_after <= 20.0 #m {
+            write "✅ Arrivée post-mouvement (" + (dist_after with_precision 1) + "m)";
+            do arrive_at_stop;
+            return;
+        }
+        
+        // ✅ Vérifier aussi vertex d'arrivée (25m)
+        point next_node <- target_stop.nearest_node;
         if next_node != nil {
             float dist_to_node <- location distance_to next_node;
-            if dist_to_node <= 2.0 #m {
+            if dist_to_node <= 25.0 #m {
+                write "✅ Arrivée au vertex (" + (dist_to_node with_precision 1) + "m)";
                 do arrive_at_stop;
                 return;
             }
         }
     }
-}
-
     
-    // Arriver à un stop
-   action arrive_at_stop {
-    current_idx <- current_idx + 1;
-
-    bus_stop dst <- my_stops[current_idx];
-
-    // Recolle la position sur l'arête du stop (ligne verte)
-    edge_feature e2 <- one_of(edge_feature where (each.edge_id = dst.snapped_edge_id));
-    if e2 != nil {
-        point on_edge <- first(e2.shape closest_points_with dst.location);
-        if on_edge != nil { location <- on_edge; }
+    action arrive_at_stop {
+        current_idx <- current_idx + 1;
+        cycles_stuck <- 0; // ✅ Reset
+        
+        if current_idx >= length(my_stops) {
+            at_terminus <- true;
+            write "=== TERMINUS ATTEINT ===";
+            return;
+        }
+        
+        bus_stop dst <- my_stops[current_idx];
+        
+        // ✅ Téléportation au stop pour garantir la position
+        location <- dst.location;
+        
+        // Optionnel : recoller sur l'arête du stop
+        edge_feature e2 <- one_of(edge_feature where (each.edge_id = dst.snapped_edge_id));
+        if e2 != nil {
+            point on_edge <- first(e2.shape closest_points_with dst.location);
+            if on_edge != nil {
+                location <- on_edge;
+            }
+        }
+        
+        write "🚏 ARRIVEE : " + dst.stopName + 
+              " (" + current_idx + "/" + (length(my_stops) - 1) + ")";
+        
+        if current_idx < length(my_stops) - 1 {
+            is_dwelling <- true;
+            dwell_start <- cycle * step;
+        } else {
+            at_terminus <- true;
+            write "=== TERMINUS ATTEINT ===";
+        }
     }
-
-    write "ARRIVEE : " + dst.stopName + 
-          " (" + current_idx + "/" + (length(my_stops) - 1) + ") a " + 
-          departure_times[current_idx];
-
-    if current_idx < length(my_stops) - 1 {
-        is_dwelling <- true;
-        dwell_start <- cycle * step;
-    } else {
-        at_terminus <- true;
-        write "=== TERMINUS ATTEINT ===";
-    }
-}
     
     aspect base {
         rgb color <- at_terminus ? #orange : (is_dwelling ? #yellow : #red);
         draw circle(150) color: color border: #black;
-        if !is_dwelling {
+        
+        if !is_dwelling and !at_terminus {
             draw triangle(200) color: #blue rotate: heading + 90;
+            
+            // ✅ Afficher distance au prochain stop
+            if current_idx < length(my_stops) - 1 {
+                bus_stop next <- my_stops[current_idx + 1];
+                float dist <- location distance_to next.location;
+                draw string(int(dist)) + "m" color: #white font: font("Arial", 10, #bold) 
+                     at: location + {0, -50};
+            }
+            
+            // ✅ Afficher warning si bloqué
+            if cycles_stuck > 50 {
+                draw "STUCK!" color: #red font: font("Arial", 12, #bold) at: location + {0, -70};
+            }
         }
     }
 }
