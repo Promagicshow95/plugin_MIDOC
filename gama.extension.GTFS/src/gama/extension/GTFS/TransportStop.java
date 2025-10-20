@@ -20,7 +20,7 @@ public class TransportStop {
     private int routeType = -1;
     private int tripNumber = 0; 
     private IMap<String, IList<GamaPair<String, String>>> departureTripsInfo;
-    private IMap<String, Integer> tripShapeMap;
+    private IMap<String, String> tripShapeMap;
     private IMap<String, IList<Double>> departureShapeDistances;
 
     @SuppressWarnings("unchecked")
@@ -32,7 +32,7 @@ public class TransportStop {
         // Conversion pour la simulation GAMA (en CRS interne)
         this.location = SpatialUtils.toGamaCRS(scope, stopLat, stopLon);
         this.departureTripsInfo = null;
-        this.tripShapeMap = GamaMapFactory.create(Types.STRING, Types.INT);
+        this.tripShapeMap = GamaMapFactory.create(Types.STRING, Types.STRING);
         this.departureShapeDistances = GamaMapFactory.create(Types.STRING, Types.LIST);
         //System.out.println("[TEST] Coordonnées projetées pour " + stopName + ": " + location);
     }
@@ -65,13 +65,9 @@ public class TransportStop {
         }
     }
 
-    public IMap<String, Integer> getTripShapeMap() {
-        return tripShapeMap;
-    }
+    public IMap<String, String> getTripShapeMap() { return tripShapeMap; }
 
-    public void addTripShapePair(String tripId, int shapeId) {
-        this.tripShapeMap.put(tripId, shapeId);
-    }
+    public void addTripShapePair(String tripId, String shapeId) { this.tripShapeMap.put(tripId, shapeId); }
     
     public IMap<String, IList<Double>> getDepartureShapeDistances() {
         return departureShapeDistances;

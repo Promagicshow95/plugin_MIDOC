@@ -12,19 +12,19 @@ public class TransportTrip {
     private String routeId; 
     private String serviceId; 
     private String tripId;
-    private int shapeId;
+    private String shapeId;
     private int routeType = -1;
     private IList<String> stopIdsInOrder; 
     private IList<IMap<String, Object>> stopDetails; 
 
     // Constructor
-    public TransportTrip(String routeId, String serviceId, String tripId, int directionId, int shapeId) {
+    public TransportTrip(String routeId, String serviceId, String tripId, int directionId, String shapeId) {
         this.routeId = routeId;
         this.serviceId = serviceId;
         this.tripId = tripId;
         this.shapeId = shapeId;
-        this.stopIdsInOrder = GamaListFactory.create(); // Initialize list
-        this.stopDetails = GamaListFactory.create();    // Initialize stop details
+        this.stopIdsInOrder = GamaListFactory.create();
+        this.stopDetails = GamaListFactory.create();
     }
     
     public int getRouteType() {  
@@ -97,13 +97,9 @@ public class TransportTrip {
     }
 
 
-    public int getShapeId() {
-        return shapeId;
-    }
+    public String getShapeId() { return shapeId; }
 
-    public void setShapeId(int shapeId) {
-        this.shapeId = shapeId;
-    }
+    public void setShapeId(String shapeId) { this.shapeId = shapeId; }
     
     /**
      * Returns a list of TransportStop objects corresponding to the stop IDs in this trip.

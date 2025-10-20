@@ -9,13 +9,13 @@ import gama.core.util.IList;
 import GamaGTFSUtils.SpatialUtils;
 
 public class TransportShape {
-    private final int shapeId;
+	private final String shapeId;
     private String routeId;
     private String tripId;
     private final IList<GamaPoint> points; 
     private int routeType = -1;
 
-    public TransportShape(int shapeId, String routeId) {  
+    public TransportShape(String shapeId, String routeId) {
         this.shapeId = shapeId;
         this.routeId = routeId;
         this.points = GamaListFactory.create();
@@ -38,9 +38,9 @@ public class TransportShape {
         return SpatialCreation.line(scope, shapePoints);
     }
 
-    public int getShapeId() {
-        return shapeId;
-    }
+    public String getShapeId() { 
+    	return shapeId; 
+    	}
 
     public IList<GamaPoint> getPoints() {
         return points;
