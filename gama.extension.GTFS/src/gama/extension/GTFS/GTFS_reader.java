@@ -162,9 +162,9 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         }
         Set<String> requiredFilesSet = new HashSet<>(Set.of(REQUIRED_FILES));
         System.out.println("Required GTFS files: " + requiredFilesSet);
-        //System.out.println("➡️ Vérification du dossier GTFS : " + getName(null));
+        System.out.println("➡️ Vérification du dossier GTFS : " + getName(null));
         File[] files = folder.listFiles();
-        //System.out.println("Liste des fichiers trouvés : " + Arrays.toString(files));
+        System.out.println("Liste des fichiers trouvés : " + Arrays.toString(files));
         if (files != null) {
             for (File file : files) {
                 String fileName = file.getName();
@@ -195,7 +195,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     if (file.isFile() && file.getName().endsWith(".txt")) {
                     	// 1. Détecte le séparateur
                     	char separator = detectSeparator(file);
-                    	//System.out.println("Séparateur détecté pour " + file.getName() + " : " + separator);
+                    	System.out.println("Séparateur détecté pour " + file.getName() + " : " + separator);
                     	// 2. Mémorise le séparateur pour ce fichier
                     	fileSeparators.put(file.getName(), separator);
                     	// 3. Utilise OpenCSV avec le séparateur détecté
@@ -614,7 +614,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     headerMap.put(col, i);
                 }
             }
-            //System.out.println("Headers trouvés dans " + file.getName() + " : " + headerMap.keySet());
+            System.out.println("Headers trouvés dans " + file.getName() + " : " + headerMap.keySet());
             String[] line;
             while ((line = reader.readNext()) != null) {
                 // Complète les champs manquants (à droite)
@@ -638,7 +638,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 content.add(line); // Ajoute le tableau de champs
             }
         }
-        //System.out.println("⇒ Fichier '" + file.getName() + "' : " + content.size() + " lignes lues.");
+        System.out.println("⇒ Fichier '" + file.getName() + "' : " + content.size() + " lignes lues.");
         return content;
     }
 

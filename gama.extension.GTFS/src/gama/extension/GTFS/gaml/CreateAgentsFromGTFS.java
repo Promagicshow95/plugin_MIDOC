@@ -88,9 +88,7 @@ public class CreateAgentsFromGTFS implements ICreateDelegate {
         }
         
         System.out.println("[DEBUG] Checking trip inits before creating agents...");
-        for (Map<String, Object> init : inits) {
-            System.out.println("[DEBUG] tripId in inits: " + init.get("tripId"));
-        }
+        
         List<? extends IAgent> createdAgents = agentCreator.createAgents(scope, population, inits, statement, sequence);
         IList<IAgent> agentList = GamaListFactory.create(Types.AGENT);
         agentList.addAll(createdAgents); 
