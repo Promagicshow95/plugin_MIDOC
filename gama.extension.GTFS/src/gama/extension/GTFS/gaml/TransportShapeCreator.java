@@ -38,9 +38,6 @@ public class TransportShapeCreator implements GTFSAgentCreator {
 	        }
 
 	        int routeType = shape.getRouteType();
-	        String routeId = shape.getRouteId(); // Vérifier routeId ici
-
-	        System.out.println("[DEBUG] Adding to inits: ShapeId=" + shape.getShapeId() + " RouteId=" + routeId);
 
 	        final Map<String, Object> map = polyline.getAttributes(true);
 	        polyline.setAttribute(IKeyword.SHAPE, polyline); 

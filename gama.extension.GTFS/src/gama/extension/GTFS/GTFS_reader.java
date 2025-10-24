@@ -72,6 +72,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     private IMap<String, Integer> shapeRouteTypeMap;
     private Map<String, Character> fileSeparators = new HashMap<>();
     
+    private boolean shapesTxtPresent = false;
+    public boolean isShapesTxtPresent() { return shapesTxtPresent; }
+    private IMap<String, Integer> routeTypeMapGlobal;
+    private IScope initScope;
+    
     /**
      * Constructor for reading GTFS files.
      *
@@ -84,6 +89,8 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             examples = { @example (value = "GTFS_reader gtfs <- GTFS_reader(scope, \"path_to_gtfs_directory\");")})
     public GTFS_reader(final IScope scope, final String pathName) throws GamaRuntimeException {
         super(scope, pathName);
+        this.initScope = scope;
+        
         
         // Debug: Print the GTFS path in the GAMA console
         if (scope != null && scope.getGui() != null) {
@@ -106,6 +113,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
 
     public GTFS_reader(final String pathName) throws GamaRuntimeException {
         super(null, pathName);  // Pass 'null' for IScope as it is not needed here
+        this.initScope = null;
         checkValidity(null);  // Pass 'null' if IScope is not necessary for this check
         loadGtfsFiles(null);
         createTransportObjects(null);
@@ -126,8 +134,89 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
      * @return List of transport shapes
      */   
     public List<TransportShape> getShapes() {
+        // Si déjà présents, renvoyer
+        if (!shapesMap.isEmpty()) return new ArrayList<>(shapesMap.values());
+        // Si shapes.txt absent → construire maintenant (lazy)
+        if (!shapesTxtPresent) {
+            if (initScope == null) {
+                System.err.println("[ERROR] buildFakeShapesLazily requires a non-null scope (initScope=null). "
+                    + "Call getShapes(scope) from GAML context instead.");
+                return new ArrayList<>(shapesMap.values());
+            }
+            buildFakeShapesLazily(initScope, routeTypeMapGlobal);
+        }
         return new ArrayList<>(shapesMap.values());
     }
+    
+    public List<TransportShape> getShapes(final IScope scopeForLazy) {
+        if (!shapesMap.isEmpty()) return new ArrayList<>(shapesMap.values());
+        if (!shapesTxtPresent) {
+            buildFakeShapesLazily(scopeForLazy, routeTypeMapGlobal);
+        }
+        return new ArrayList<>(shapesMap.values());
+    }
+    
+    
+    @SuppressWarnings("unchecked")
+    private void buildFakeShapesLazily(final IScope scope, final IMap<String, Integer> routeTypeMap) {
+        System.out.println("[LAZY] Building fake shapes now (requested by create transport_shape)...");
+        for (TransportTrip trip : tripsMap.values()) {
+            String tripId = trip.getTripId();
+            String fakeShapeId = trip.getShapeId();
+            if (fakeShapeId == null || fakeShapeId.isEmpty()) {
+                fakeShapeId = "fake_" + tripId;
+                trip.setShapeId(fakeShapeId);
+            }
+            if (shapesMap.containsKey(fakeShapeId)) continue;
+
+            List<GamaPoint> pts = new ArrayList<>();
+            List<String> orderedStops = trip.getStopsInOrder();
+            if (orderedStops == null || orderedStops.isEmpty()) {
+                List<String[]> stopTimesData = gtfsData.get("stop_times.txt");
+                IMap<String, Integer> stopTimesHeader = headerMaps.get("stop_times.txt");
+                Integer tripIdIdx = findColumnIndex(stopTimesHeader, "trip_id");
+                Integer stopIdIdx = findColumnIndex(stopTimesHeader, "stop_id");
+                Integer seqIdx    = findColumnIndex(stopTimesHeader, "stop_sequence");
+                if (stopTimesData != null && tripIdIdx != null && stopIdIdx != null && seqIdx != null) {
+                    List<String[]> lines = new ArrayList<>();
+                    for (String[] st : stopTimesData) {
+                        if (st != null && st.length > Math.max(tripIdIdx, Math.max(stopIdIdx, seqIdx))) {
+                            if (tripId.equals(st[tripIdIdx].trim().replace("\"","").replace("'",""))) {
+                                lines.add(st);
+                            }
+                        }
+                    }
+                    lines.sort((a,b) -> Integer.compare(
+                        Integer.parseInt(a[seqIdx].trim()),
+                        Integer.parseInt(b[seqIdx].trim())
+                    ));
+                    for (String[] st : lines) {
+                        String stopId = st[stopIdIdx].trim().replace("\"","").replace("'","");
+                        TransportStop stop = stopsMap.get(stopId);
+                        if (stop != null) pts.add(new GamaPoint(stop.getStopLat(), stop.getStopLon()));
+                    }
+                }
+            } else {
+                for (String stopId : orderedStops) {
+                    TransportStop st = stopsMap.get(stopId);
+                    if (st != null) pts.add(new GamaPoint(st.getStopLat(), st.getStopLon()));
+                }
+            }
+
+            if (pts.size() > 1) {
+                String routeId = trip.getRouteId();
+                TransportShape fake = new TransportShape(fakeShapeId, routeId);
+                for (GamaPoint p : pts) { fake.addPoint(p.getX(), p.getY(), scope); }
+                if (routeTypeMap != null && routeTypeMap.containsKey(routeId)) {
+                    fake.setRouteType(routeTypeMap.get(routeId));
+                }
+                fake.setTripId(tripId);
+                shapesMap.put(fakeShapeId, fake);
+            }
+        }
+        System.out.println("[LAZY] Fake shapes built: " + shapesMap.size());
+    }
+
     
     /**
      * Method to retrieve the list of trips (TransportTrip) from tripsMap.
@@ -164,7 +253,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
         System.out.println("Required GTFS files: " + requiredFilesSet);
         System.out.println("➡️ Vérification du dossier GTFS : " + getName(null));
         File[] files = folder.listFiles();
-        System.out.println("Liste des fichiers trouvés : " + Arrays.toString(files));
+        //System.out.println("Liste des fichiers trouvés : " + Arrays.toString(files));
         if (files != null) {
             for (File file : files) {
                 String fileName = file.getName();
@@ -195,7 +284,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     if (file.isFile() && file.getName().endsWith(".txt")) {
                     	// 1. Détecte le séparateur
                     	char separator = detectSeparator(file);
-                    	System.out.println("Séparateur détecté pour " + file.getName() + " : " + separator);
+                    	//System.out.println("Séparateur détecté pour " + file.getName() + " : " + separator);
                     	// 2. Mémorise le séparateur pour ce fichier
                     	fileSeparators.put(file.getName(), separator);
                     	// 3. Utilise OpenCSV avec le séparateur détecté
@@ -377,6 +466,31 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
     	        }
     	    }
     	}
+    
+    private void createTripsWithoutShapes(IScope scope, IMap<String, Integer> routeTypeMap) {
+        List<String[]> tripsData = gtfsData.get("trips.txt");
+        IMap<String, Integer> tripsHeader = headerMaps.get("trips.txt");
+        Integer routeIdIndex = findColumnIndex(tripsHeader, "route_id");
+        Integer tripIdIndex  = findColumnIndex(tripsHeader,  "trip_id");
+        if (tripsData == null || routeIdIndex == null || tripIdIndex == null) return;
+
+        for (String[] fields : tripsData) {
+            if (fields == null) continue;
+            try {
+                String routeId = fields[routeIdIndex].trim().replace("\"","").replace("'","");
+                String tripId  = fields[tripIdIndex ].trim().replace("\"","").replace("'","");
+                String fakeShapeId = "fake_" + tripId;
+
+                TransportTrip trip = tripsMap.get(tripId);
+                if (trip == null) {
+                    trip = new TransportTrip(routeId, "", tripId, 0, fakeShapeId); // shapeId placeholder
+                    if (routeTypeMap.containsKey(routeId)) trip.setRouteType(routeTypeMap.get(routeId));
+                    tripsMap.put(tripId, trip);
+                }
+            } catch (Exception ignore) {}
+        }
+    }
+
 
 
     @SuppressWarnings("unchecked")
@@ -416,6 +530,8 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 }
             }
         }
+        
+        this.routeTypeMapGlobal = routeTypeMap;
 
         // 2. Collecte des stop_ids utilisés (commun)
         Set<String> usedStopIds = new HashSet<>();
@@ -476,9 +592,11 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             createTransportObjectsWithShapes(scope, routeTypeMap, shapeRouteMap, shapeRouteTypeMapLocal);
             // Fusionne dans la map globale si besoin
             shapeRouteTypeMap.putAll(shapeRouteTypeMapLocal);
+            this.shapesTxtPresent = true;
         } else {
-            System.out.println("[INFO] shapes.txt NOT found. Using fake shapes fallback.");
-            createTransportObjectsWithFakeShapes(scope, routeTypeMap);
+        	 System.out.println("[INFO] shapes.txt NOT found. Deferring fake shapes creation until transport_shape agents are created.");
+        	 this.shapesTxtPresent = false;
+        	 createTripsWithoutShapes(scope, routeTypeMap);
         }
 
         // 6. Affecte le routeType à tous les trips qui n'ont pas été remplis (commune)
@@ -511,7 +629,6 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
             }
             List<String> orderedStops = trip.getStopsInOrder();
             if (orderedStops == null || orderedStops.isEmpty()) {
-                System.out.println("[DEBUG] Trip " + trip.getTripId() + " a stopsInOrder vide");
                 continue;
             }
 
@@ -614,7 +731,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                     headerMap.put(col, i);
                 }
             }
-            System.out.println("Headers trouvés dans " + file.getName() + " : " + headerMap.keySet());
+            //System.out.println("Headers trouvés dans " + file.getName() + " : " + headerMap.keySet());
             String[] line;
             while ((line = reader.readNext()) != null) {
                 // Complète les champs manquants (à droite)
@@ -638,7 +755,7 @@ public class GTFS_reader extends GamaFile<IList<String>, String> {
                 content.add(line); // Ajoute le tableau de champs
             }
         }
-        System.out.println("⇒ Fichier '" + file.getName() + "' : " + content.size() + " lignes lues.");
+        //System.out.println("⇒ Fichier '" + file.getName() + "' : " + content.size() + " lignes lues.");
         return content;
     }
 

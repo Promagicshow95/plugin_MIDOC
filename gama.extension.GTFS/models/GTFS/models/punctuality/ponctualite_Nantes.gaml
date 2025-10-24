@@ -16,10 +16,10 @@ global {
     // === NOUVEAU: Logique de saut à l'heure choisie ===
     int simulation_start_time;
 
-    map<int, graph> shape_graphs;
-    map<int, geometry> shape_polylines;
+    map<string, graph> shape_graphs;
+    map<string, geometry> shape_polylines;
     // === NOUVEAU: Distances cumulées pré-calculées par shape ===
-    map<int, list<float>> shape_cumulative_distances;
+    map<string, list<float>> shape_cumulative_distances;
 
     init {
         // === CALCUL HEURE DE DÉMARRAGE ===
@@ -41,7 +41,7 @@ global {
     }
     
     // === ACTION: Calcul des distances cumulées le long de la polyline ===
-    action calculate_cumulative_distances(int shape_id, geometry polyline) {
+    action calculate_cumulative_distances(string shape_id, geometry polyline) {
         list<point> points <- polyline.points;
         list<float> cumul_distances <- [0.0];
         float total_length <- 0.0;
@@ -112,8 +112,8 @@ species bus_stop skills: [TransportStopSkill] {
         string departure_time <- trip_info[0].value;
 
         if (current_seconds_mod >= int(departure_time)) {
-            int shape_found <- tripShapeMap[trip_id] as int;
-            if (shape_found != 0) {
+            string shape_found <- tripShapeMap[trip_id];
+            if (shape_found != nil and shape_found != "") {
                 create bus with: [
                     departureStopsInfo:: trip_info,
                     current_stop_index:: 0,
@@ -139,7 +139,7 @@ species bus skills: [moving] {
     int current_stop_index;
     point target_location;
     string trip_id;
-    int shapeID;
+    string shapeID;
     int route_type;
     float speed;
     int creation_time;

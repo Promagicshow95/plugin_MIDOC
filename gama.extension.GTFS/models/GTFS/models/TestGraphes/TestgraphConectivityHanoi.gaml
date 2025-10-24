@@ -17,7 +17,7 @@ global {
     
     // Données d'analyse
     map<point, int> extremite_count <- [];
-    map<int, list<string>> shape_to_trips <- []; // shapeId -> liste des trip_ids
+    map<string, list<string>> shape_to_trips <- []; // shapeId -> liste des trip_ids
     
     // Géométrie de base
     shape_file boundary_shp <- shape_file("../../includes/shapeFileHanoishp.shp");
@@ -48,7 +48,7 @@ global {
         ask transport_shape {
          
             if (shapeId != nil) {
-                shape_to_trips[shapeId] <- ["trip_placeholder_" + string(shapeId)];
+                shape_to_trips[shapeId] <- ["trip_placeholder_" + shapeId];
             }
         }
         
@@ -191,7 +191,7 @@ species transport_shape skills: [TransportShapeSkill] {
         // Afficher l'ID et le nombre de trips
         if (shape != nil) {
             point centroid <- shape.location;
-            string label <- string(shapeId);
+            string label <- shapeId;
             if (nb_trips > 0) {
                 label <- label + "\n(" + string(nb_trips) + " trips)";
             }
