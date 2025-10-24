@@ -606,7 +606,7 @@ experiment MoveOnTripOfDepartureStopsInfor type: gui virtual: true{
 experiment testDepartureStopsInforToulouse type: gui parent: MoveOnTripOfDepartureStopsInfor {
 	parameter "GTFS file path" var: gtfs_f_path <- "../../includes/tisseo_gtfs_v2";	
 	parameter "Boundary shapefile" var: boundary_shp_path <- "../../includes/shapeFileToulouse.shp";
-	parameter "Starting date" var: starting_date <- date("2025-06-10T16:00:00");
+	parameter "Starting date" var: starting_date <- date("2025-06-09T16:00:00");
 	
 	parameter "Selected Trip ID" var: selected_trip_id <- "2076784";
 	parameter "Selected bus stop" var: selected_bus_stop <- 2474; 
