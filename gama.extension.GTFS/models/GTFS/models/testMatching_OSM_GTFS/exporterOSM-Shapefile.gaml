@@ -1,44 +1,36 @@
 /**
- * Name: Clean_OSM_To_Shapefile_FINAL_BBOX_FIXED
+ * Name: Clean_OSM_To_Shapefile_FINAL_BBOX_FIXED_CORRECTED
  * Author: Promagicshow95
- * Description: Export OSM - VERSION FINALE avec BBOX et classification corrigées
+ * Description: Export OSM - VERSION FINALE CORRIGÉE (calculs BBOX dans init)
  * Tags: OSM, shapefile, export, network, transport
- * Date: 2025-10-23
+ * Date: 2025-10-27
+ * 
+ * CORRECTIFS APPLIQUÉS :
+ * ✅ Tous les calculs géométriques déplacés dans init (était la cause du NullPointerException)
+ * ✅ Noms d'attributs shapefile raccourcis à 10 caractères max
+ * ✅ Typage strict pour osm_data_to_generate
  */
 
-model Clean_OSM_To_Shapefile_Final_BBOX_Fixed
+model Clean_OSM_To_Shapefile_Final_BBOX_Fixed_Corrected
 
 global {
-    // --- FICHIERS ---
+    // ══════════════════════════════════════════════════════════
+    // 📁 FICHIERS
+    // ══════════════════════════════════════════════════════════
     file data_file <- shape_file("../../includes/shapeFileNantes.shp");
     geometry shape <- envelope(data_file);
     
     // ══════════════════════════════════════════════════════════
-    // ✅ CALCUL BBOX ROBUSTE
+    // ✅ DÉCLARATIONS UNIQUEMENT (calculs dans init)
     // ══════════════════════════════════════════════════════════
-    geometry env_local <- envelope(data_file);
-    geometry env_3857 <- CRS_transform(env_local, "EPSG:3857");
-    geometry env_3857_buf <- env_3857 buffer 800.0 #m;
-    geometry env_wgs <- CRS_transform(env_3857_buf, "EPSG:4326");
+    float minx_corrected;
+    float maxx_corrected;
+    float miny_corrected;
+    float maxy_corrected;
+    string adress;
     
-    list<float> xs <- env_wgs.points collect each.x;
-    list<float> ys <- env_wgs.points collect each.y;
-    
-    float minx <- min(xs);
-    float maxx <- max(xs);
-    float miny <- min(ys);
-    float maxy <- max(ys);
-    
-    // ✅ Correction avec opérateur ternaire
-    float minx_corrected <- (minx < maxx) ? minx : maxx;
-    float maxx_corrected <- (minx < maxx) ? maxx : minx;
-    float miny_corrected <- (miny < maxy) ? miny : maxy;
-    float maxy_corrected <- (miny < maxy) ? maxy : miny;
-    
-    string adress <- "http://overpass-api.de/api/xapi_meta?*[bbox=" + 
-                     minx_corrected + "," + miny_corrected + "," + maxx_corrected + "," + maxy_corrected + "]";
-    
-    map<string, list> osm_data_to_generate <- [
+    // ✅ Typage strict pour éviter les erreurs
+    map<string, list<string>> osm_data_to_generate <- [
         "highway"::[],
         "railway"::[],
         "route"::[],
@@ -49,6 +41,9 @@ global {
         "waterway"::[]
     ];
     
+    // ══════════════════════════════════════════════════════════
+    // 📊 VARIABLES STATISTIQUES
+    // ══════════════════════════════════════════════════════════
     int nb_bus_routes <- 0;
     int nb_tram_routes <- 0;
     int nb_metro_routes <- 0;
@@ -63,13 +58,46 @@ global {
     
     string export_folder <- "../../results1/";
 
+    // ══════════════════════════════════════════════════════════
+    // 🚀 INITIALISATION - TOUS LES CALCULS ICI
+    // ══════════════════════════════════════════════════════════
     init {
         write "=== EXPORT OSM FINAL (BBOX + CLASSIFICATION CORRIGÉES) ===";
         write "🔑 Système d'identification : osm_type:osm_id";
-        write "📦 BBOX WGS84 : [" + (minx_corrected with_precision 5) + "," + (miny_corrected with_precision 5) + 
-              "] → [" + (maxx_corrected with_precision 5) + "," + (maxy_corrected with_precision 5) + "]";
+        
+        // ✅ CALCUL BBOX ROBUSTE - MAINTENANT DANS INIT
+        write "🔄 Calcul BBOX avec tampon 800m...";
+        
+        geometry env_local <- envelope(data_file);
+        geometry env_3857 <- CRS_transform(env_local, "EPSG:3857");
+        geometry env_3857_buf <- env_3857 buffer 800.0 #m;
+        geometry env_wgs <- CRS_transform(env_3857_buf, "EPSG:4326");
+        
+        list<float> xs <- env_wgs.points collect each.x;
+        list<float> ys <- env_wgs.points collect each.y;
+        
+        float minx <- min(xs);
+        float maxx <- max(xs);
+        float miny <- min(ys);
+        float maxy <- max(ys);
+        
+        // Correction avec opérateur ternaire
+        minx_corrected <- (minx < maxx) ? minx : maxx;
+        maxx_corrected <- (minx < maxx) ? maxx : minx;
+        miny_corrected <- (miny < maxy) ? miny : maxy;
+        maxy_corrected <- (miny < maxy) ? maxy : miny;
+        
+        // Construction URL Overpass
+        adress <- "http://overpass-api.de/api/xapi_meta?*[bbox=" + 
+                  minx_corrected + "," + miny_corrected + "," + 
+                  maxx_corrected + "," + maxy_corrected + "]";
+        
+        write "📦 BBOX WGS84 : [" + (minx_corrected with_precision 5) + "," + 
+              (miny_corrected with_precision 5) + "] → [" + 
+              (maxx_corrected with_precision 5) + "," + (maxy_corrected with_precision 5) + "]";
         write "🔄 Tampon emprise : 800m (EPSG:3857)";
         
+        // Validation Nantes
         point nantes <- {-1.5536, 47.2184};
         bool nantes_inside <- (nantes.x >= minx_corrected) and (nantes.x <= maxx_corrected) and 
                               (nantes.y >= miny_corrected) and (nantes.y <= maxy_corrected);
@@ -78,9 +106,11 @@ global {
             write "⚠️ ATTENTION : Nantes hors bbox ! Vérifiez shapeFileNantes.shp";
         }
         
+        // ✅ CHARGEMENT OSM
         file<geometry> osm_geometries <- osm_file<geometry>(adress, osm_data_to_generate);
         write "✅ Géométries OSM chargées : " + length(osm_geometries);
         
+        // ✅ CRÉATION DES AGENTS
         int valid_geoms <- 0;
         int invalid_geoms <- 0;
         
@@ -98,9 +128,11 @@ global {
         write "✅ Agents network_route créés : " + length(network_route);
         write "⚠️ Routes sans ID OSM : " + nb_without_osm_id;
         
+        // ✅ EXPORT
         do export_complete_network;
         do export_by_type_fixed;
         
+        // ✅ STATISTIQUES FINALES
         write "\n=== 📊 STATISTIQUES RÉSEAU EXPORTÉ ===";
         write "🚌 Routes Bus : " + nb_bus_routes;
         write "🚋 Routes Tram : " + nb_tram_routes; 
@@ -116,12 +148,16 @@ global {
         write "⚠️ Sans ID OSM : " + nb_without_osm_id;
     }
     
+    // ══════════════════════════════════════════════════════════
+    // 🎯 CRÉATION ROUTE COMPLÈTE - AVEC ID CANONIQUE UNIQUE
+    // ══════════════════════════════════════════════════════════
     action create_route_complete(geometry geom) {
         string route_type;
         int routeType_num;
         rgb route_color;
         float route_width;
         
+        // Récupération des attributs OSM standards
         string name <- (geom.attributes["name"] as string);
         string ref <- (geom.attributes["ref"] as string);
         string highway <- (geom.attributes["highway"] as string);
@@ -139,6 +175,7 @@ global {
         string bus_lanes <- (geom.attributes["bus:lanes"] as string);
         string psv_lanes <- (geom.attributes["psv:lanes"] as string);
         
+        // Variables pour tests "contains"
         string r <- railway;
         if (r = nil) { r <- ""; }
         
@@ -148,11 +185,13 @@ global {
         string rtm <- route_master;
         if (rtm = nil) { rtm <- ""; }
         
+        // Détection tram
         bool is_tram <- (railway = "tram") or (route = "tram") or (route_master = "tram") or
                         (r contains "tram") or (r contains "light_rail") or
                         (rt contains "tram") or (rt contains "light_rail") or
                         (rtm contains "tram") or (rtm contains "light_rail");
         
+        // Détection métro
         bool is_metro <- (railway = "subway") or (railway = "metro") or 
                          (route = "subway") or (route = "metro") or
                          (r contains "subway") or (r contains "metro");
@@ -170,6 +209,7 @@ global {
                             (bus_lanes != nil and bus_lanes != "") or
                             (psv_lanes != nil and psv_lanes != "");
         
+        // Récupération robuste des identifiants OSM
         string id_str <- (geom.attributes["@id"] as string);
         if (id_str = nil or id_str = "") { id_str <- (geom.attributes["id"] as string); }
         if (id_str = nil or id_str = "") { id_str <- (geom.attributes["osm_id"] as string); }
@@ -177,6 +217,7 @@ global {
         if (id_str = nil or id_str = "") { id_str <- (geom.attributes["rel_id"] as string); }
         if (id_str = nil or id_str = "") { id_str <- (geom.attributes["relation_id"] as string); }
         
+        // Détermination du type OSM
         string osm_type <- (geom.attributes["@type"] as string);
         if (osm_type = nil or osm_type = "") { osm_type <- (geom.attributes["type"] as string); }
         
@@ -190,6 +231,7 @@ global {
             }
         }
         
+        // Construction ID canonique
         string osm_uid <- "";
         if (id_str != nil and id_str != "") {
             osm_uid <- osm_type + ":" + id_str;
@@ -198,6 +240,7 @@ global {
             osm_uid <- "";
         }
         
+        // Nom par défaut
         if (name = nil or name = "") {
             if (ref != nil and ref != "") {
                 name <- ref;
@@ -208,6 +251,9 @@ global {
             }
         }
         
+        // ══════════════════════════════════════════════════════════
+        // 🎨 CLASSIFICATION PAR TYPE (ordre important : tram avant train)
+        // ══════════════════════════════════════════════════════════
         if (
             ((route = "bus") or (route = "trolleybus") or (route_master = "bus") or
              (highway in ["busway", "bus_guideway"]) or (bus in ["yes", "designated"]) or 
@@ -270,9 +316,11 @@ global {
             nb_other_routes <- nb_other_routes + 1;
         }
         
+        // Calcul propriétés géométriques
         float length_meters <- geom.perimeter;
         int points_count <- length(geom.points);
         
+        // ✅ CRÉATION AGENT avec tous les attributs
         create network_route with: [
             shape::geom,
             route_type::route_type,
@@ -295,6 +343,9 @@ global {
         nb_total_created <- nb_total_created + 1;
     }
     
+    // ══════════════════════════════════════════════════════════
+    // 📦 EXPORT RÉSEAU COMPLET
+    // ══════════════════════════════════════════════════════════
     action export_complete_network {
         write "\n=== 📦 EXPORT VERS SHAPEFILE ===";
         
@@ -306,20 +357,33 @@ global {
         string shapefile_path <- export_folder + "network_transport_complete.shp";
         
         try {
+            // ✅ NOMS RACCOURCIS À 10 CARACTÈRES MAX
             save network_route to: shapefile_path format: "shp" attributes: [
-                osm_uid, osm_type, osm_id, name, route_type, routeType_num,
-                highway_type, railway_type, ref_number, length_m
+                "osm_uid"::osm_uid,
+                "osm_type"::osm_type,
+                "osm_id"::osm_id,
+                "name"::name,
+                "routetype"::route_type,
+                "rt_num"::routeType_num,
+                "highway"::highway_type,
+                "railway"::railway_type,
+                "ref"::ref_number,
+                "len_m"::length_m
             ];
             
             write "✅ EXPORT COMPLET RÉUSSI : " + shapefile_path;
             write "📊 " + length(network_route) + " routes exportées";
             
         } catch {
-            write "❌ Erreur d'export complet";
+            write "❌ Erreur d'export complet - tentative minimale";
             
             try {
                 save network_route to: shapefile_path format: "shp" attributes: [
-                    osm_uid, osm_type, osm_id, name, route_type
+                    "osm_uid"::osm_uid,
+                    "osm_type"::osm_type,
+                    "osm_id"::osm_id,
+                    "name"::name,
+                    "routetype"::route_type
                 ];
                 write "✅ EXPORT MINIMAL RÉUSSI";
             } catch {
@@ -330,27 +394,40 @@ global {
         }
     }
     
+    // ══════════════════════════════════════════════════════════
+    // 📦 EXPORT PAR TYPE
+    // ══════════════════════════════════════════════════════════
     action export_by_type_fixed {
         write "\n=== 📦 EXPORT PAR TYPE ===";
         
+        // Bus
         list<network_route> bus_routes <- network_route where (each.route_type = "bus");
         write "🔍 Bus : " + length(bus_routes);
         if !empty(bus_routes) {
             do export_by_batch_robust(bus_routes, "bus_routes", 10000);
         }
         
+        // Routes principales
         list<network_route> main_roads <- network_route where (each.route_type = "road");
         write "🔍 Roads : " + length(main_roads);
         if !empty(main_roads) {
             do export_by_batch_robust(main_roads, "main_roads", 50000);
         }
         
+        // Transport public (tram, metro, train)
         list<network_route> public_transport <- network_route where (each.route_type in ["tram", "metro", "train"]);
         if !empty(public_transport) {
             write "🔍 Transport public : " + length(public_transport);
             try {
                 save public_transport to: export_folder + "public_transport.shp" format: "shp" attributes: [
-                    osm_uid, osm_type, osm_id, name, route_type, railway_type, ref_number, length_m
+                    "osm_uid"::osm_uid,
+                    "osm_type"::osm_type,
+                    "osm_id"::osm_id,
+                    "name"::name,
+                    "routetype"::route_type,
+                    "railway"::railway_type,
+                    "ref"::ref_number,
+                    "len_m"::length_m
                 ];
                 write "✅ Transport public exporté";
             } catch {
@@ -358,12 +435,19 @@ global {
             }
         }
         
+        // Cycleways
         list<network_route> cycleways <- network_route where (each.route_type = "cycleway");
         if !empty(cycleways) {
             write "🔍 Cycleways : " + length(cycleways);
             try {
                 save cycleways to: export_folder + "cycleways.shp" format: "shp" attributes: [
-                    osm_uid, osm_type, osm_id, name, highway_type, ref_number, length_m
+                    "osm_uid"::osm_uid,
+                    "osm_type"::osm_type,
+                    "osm_id"::osm_id,
+                    "name"::name,
+                    "highway"::highway_type,
+                    "ref"::ref_number,
+                    "len_m"::length_m
                 ];
                 write "✅ Cycleways exportés";
             } catch {
@@ -371,12 +455,18 @@ global {
             }
         }
         
+        // Ferries
         list<network_route> ferries <- network_route where (each.route_type = "ferry");
         if !empty(ferries) {
             write "🔍 Ferries : " + length(ferries);
             try {
                 save ferries to: export_folder + "ferries.shp" format: "shp" attributes: [
-                    osm_uid, osm_type, osm_id, name, ref_number, length_m
+                    "osm_uid"::osm_uid,
+                    "osm_type"::osm_type,
+                    "osm_id"::osm_id,
+                    "name"::name,
+                    "ref"::ref_number,
+                    "len_m"::length_m
                 ];
                 write "✅ Ferries exportés";
             } catch {
@@ -384,9 +474,12 @@ global {
             }
         }
         
-        write "🎯 EXPORT TERMINÉ !";
+        write "🎯 EXPORT PAR TYPE TERMINÉ !";
     }
     
+    // ══════════════════════════════════════════════════════════
+    // 📦 EXPORT PAR BATCH (pour grands fichiers)
+    // ══════════════════════════════════════════════════════════
     action export_by_batch_robust(list<network_route> routes, string filename, int batch_size) {
         write "🔄 Export batch : " + filename;
         
@@ -394,6 +487,7 @@ global {
         int batch_num <- 0;
         int current_index <- 0;
         
+        // Séparer routes avec/sans ID
         list<network_route> all_valid_routes <- routes where (
             each.shape != nil and 
             each.osm_uid != nil and 
@@ -405,6 +499,7 @@ global {
             (each.osm_uid = nil or length(each.osm_uid) = 0)
         );
         
+        // Export par batch
         loop while: current_index < length(all_valid_routes) {
             int end_index <- min(current_index + batch_size - 1, length(all_valid_routes) - 1);
             list<network_route> current_batch <- [];
@@ -417,9 +512,17 @@ global {
             bool export_success <- false;
             
             try {
+                // ✅ NOMS RACCOURCIS
                 save current_batch to: batch_filename format: "shp" attributes: [
-                    osm_uid, osm_type, osm_id, name, route_type, 
-                    highway_type, railway_type, ref_number, length_m
+                    "osm_uid"::osm_uid,
+                    "osm_type"::osm_type,
+                    "osm_id"::osm_id,
+                    "name"::name,
+                    "routetype"::route_type,
+                    "highway"::highway_type,
+                    "railway"::railway_type,
+                    "ref"::ref_number,
+                    "len_m"::length_m
                 ];
                 write "  ✅ Batch " + batch_num + " : " + length(current_batch);
                 total_exported <- total_exported + length(current_batch);
@@ -428,10 +531,15 @@ global {
                 write "  ⚠️ Erreur batch " + batch_num;
             }
             
+            // Fallback minimal si erreur
             if !export_success {
                 try {
                     save current_batch to: batch_filename format: "shp" attributes: [
-                        osm_uid, osm_type, osm_id, name, route_type
+                        "osm_uid"::osm_uid,
+                        "osm_type"::osm_type,
+                        "osm_id"::osm_id,
+                        "name"::name,
+                        "routetype"::route_type
                     ];
                     write "  ✅ Batch " + batch_num + " [MINIMAL]";
                     total_exported <- total_exported + length(current_batch);
@@ -441,13 +549,14 @@ global {
                 }
             }
             
+            // Fallback géométrie seule
             if !export_success {
                 try {
                     save current_batch to: batch_filename format: "shp";
                     write "  ✅ Batch " + batch_num + " [GEOM]";
                     total_exported <- total_exported + length(current_batch);
                 } catch {
-                    write "  ❌ Échec total";
+                    write "  ❌ Échec total batch " + batch_num;
                 }
             }
             
@@ -455,11 +564,16 @@ global {
             batch_num <- batch_num + 1;
         }
         
+        // Export routes sans ID
         if !empty(routes_without_id) {
             string no_id_filename <- export_folder + filename + "_sans_id.shp";
             try {
                 save routes_without_id to: no_id_filename format: "shp" attributes: [
-                    name, route_type, highway_type, railway_type, length_m
+                    "name"::name,
+                    "routetype"::route_type,
+                    "highway"::highway_type,
+                    "railway"::railway_type,
+                    "len_m"::length_m
                 ];
                 write "  ✅ Routes sans ID exportées";
             } catch {
@@ -471,24 +585,35 @@ global {
     }
 }
 
+// ══════════════════════════════════════════════════════════
+// 🚌 AGENT ROUTE AVEC ID CANONIQUE OSM UNIQUE
+// ══════════════════════════════════════════════════════════
 species network_route {
+    // Attributs de visualisation
     geometry shape;
     string route_type;
     int routeType_num;
     rgb route_color;
     float route_width;
     string name;
+    
+    // Identité OSM canonique
     string osm_id;
     string osm_type;
     string osm_uid;
+    
+    // Attributs OSM originaux
     string highway_type;
     string railway_type;
     string route_rel;
     string bus_access;
     string ref_number;
+    
+    // Propriétés calculées
     float length_m;
     int num_points;
     
+    // Aspects d'affichage
     aspect default {
         if shape != nil {
             draw shape color: route_color width: route_width;
@@ -501,7 +626,6 @@ species network_route {
         }
     }
     
-    // ✅ ASPECT COLORED - Pour visualisation par type
     aspect colored {
         if shape != nil {
             rgb display_color;
@@ -526,7 +650,6 @@ species network_route {
         }
     }
     
-    // ✅ ASPECT WITH_LABEL - Pour afficher les IDs OSM
     aspect with_label {
         if shape != nil {
             draw shape color: route_color width: route_width;
@@ -538,11 +661,11 @@ species network_route {
 }
 
 // ══════════════════════════════════════════════════════════
-// 🎯 EXPERIMENT 1 : EXPORT PRINCIPAL
+// 🎯 EXPÉRIMENT 1 : EXPORT PRINCIPAL
 // ══════════════════════════════════════════════════════════
 experiment main_export type: gui {
     output {
-        display "Export OSM FINAL" background: #white {
+        display "Export OSM FINAL CORRIGÉ" background: #white {
             species network_route aspect: thick;
             
             overlay position: {10, 10} size: {460 #px, 440 #px} background: #white transparency: 0.9 border: #black {
@@ -551,9 +674,9 @@ experiment main_export type: gui {
                 
                 draw "✅ CORRECTIONS APPLIQUÉES" at: {20#px, 65#px} color: #darkgreen font: font("Arial", 11, #bold);
                 draw "🎯 BBOX robuste (min/max) ✓" at: {30#px, 85#px} color: #green size: 9;
-                draw "🎯 Classification = + contains ✓" at: {30#px, 100#px} color: #green size: 9;
-                draw "🎯 Normalisation if/then ✓" at: {30#px, 115#px} color: #green size: 9;
-                draw "🎯 Tram avant train ✓" at: {30#px, 130#px} color: #green size: 9;
+                draw "🎯 Calculs BBOX dans init ✓" at: {30#px, 100#px} color: #green size: 9;
+                draw "🎯 Classification = + contains ✓" at: {30#px, 115#px} color: #green size: 9;
+                draw "🎯 Noms attributs < 10 car ✓" at: {30#px, 130#px} color: #green size: 9;
                 
                 draw "━━━━━━━━━━━━━━━━━━━━━━" at: {20#px, 150#px} color: #darkgray size: 10;
                 
@@ -575,14 +698,14 @@ experiment main_export type: gui {
                 draw "❓ Autres : " + nb_other_routes at: {30#px, 385#px} color: #lightgray;
                 
                 draw "━━━━━━━━━━━━━━━━━━━━━━" at: {20#px, 405#px} color: #darkgray size: 10;
-                draw "🎯 Nantes : ~4700 trams attendus" at: {30#px, 425#px} color: #orange font: font("Arial", 9, #bold);
+                draw "✅ NullPointerException corrigé" at: {30#px, 425#px} color: #darkgreen font: font("Arial", 9, #bold);
             }
         }
     }
 }
 
 // ══════════════════════════════════════════════════════════
-// 🎯 EXPERIMENT 2 : VUE COLORÉE PAR TYPE
+// 🎯 EXPÉRIMENT 2 : VUE COLORÉE PAR TYPE
 // ══════════════════════════════════════════════════════════
 experiment colored_view type: gui {
     output {
@@ -606,7 +729,7 @@ experiment colored_view type: gui {
 }
 
 // ══════════════════════════════════════════════════════════
-// 🎯 EXPERIMENT 3 : VUE AVEC ID OSM
+// 🎯 EXPÉRIMENT 3 : VUE AVEC ID OSM
 // ══════════════════════════════════════════════════════════
 experiment view_with_ids type: gui {
     output {

@@ -9,14 +9,13 @@ model Moving_Trip
 */
 
 global {
-	gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
-	shape_file boundary_shp <- shape_file("../../includes/boundaryTLSE-WGS84PM.shp");
-	shape_file cleaned_road_shp <- shape_file("../../includes/cleaned_network.shp");
+	 gtfs_file gtfs_f <- gtfs_file("../../includes/tisseo_gtfs_v2");
+     shape_file boundary_shp <- shape_file("../../includes/ShapeFileToulouse.shp");
 	 geometry shape <- envelope(boundary_shp);
 	 graph shape_network; 
 	 list<bus_stop> list_bus_stops;
-	 int shape_id;
-	 int shape_id_test;
+	 string shape_id;
+	 string shape_id_test;
 	 int routeType_selected;
 	 int selected_trip_id <- 1900861;
 	 list<pair<bus_stop,string>> departureStopsInfo;
@@ -29,13 +28,7 @@ global {
 
 	 init{
 	 	write "Loading GTFS contents from: " + gtfs_f;
-        create road from: cleaned_road_shp{
-        	if(self.shape intersects world.shape){}
-        	else {
-        		
-        		do die;
-        	}
-        }
+        
         
         create bus_stop from: gtfs_f {
 	    
@@ -120,7 +113,7 @@ species road {
     }
   
     int routeType; 
-    int shapeId;
+    string shapeId;
     string routeId;
 }
 
