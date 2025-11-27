@@ -1,9 +1,8 @@
 /**
- * Name: Clean_OSM_To_Shapefile
+ * Name: export_reseau_transport_OSM_ShapeFile
  * Author: Promagicshow95
- * Description: Export OSM vers shapefile - VERSION ID CANONIQUE UNIQUE
+ * Description: Export OSM vers shapefile - VERSION ID CANONIQUE UNIQUE (CORRIGÉE)
  * Tags: OSM, shapefile, export, network, transport
- * Date: 2025-09-29
  */
 
 model Clean_OSM_To_Shapefile
@@ -12,6 +11,10 @@ global {
     // --- FICHIERS ---
     file data_file <- shape_file("../../includes/shapeFileNantes.shp");
     geometry shape <- envelope(data_file);
+    
+    // 🆕 Fichier GTFS pour les arrêts
+    string gtfs_folder <- "../../includes/nantes_gtfs";
+    gtfs_file gtfs_f <- gtfs_file(gtfs_folder);
     
     // --- OSM CONFIGURATION ---
     point top_left <- CRS_transform({0,0}, "EPSG:4326").location;
@@ -39,11 +42,14 @@ global {
     int nb_total_created <- 0;
     int nb_without_osm_id <- 0;
     
+    // 🆕 Statistique arrêts GTFS
+    int nb_bus_stops <- 0;
+    
     // --- PARAMÈTRES D'EXPORT ---
     string export_folder <- "../../results1/";
 
     init {
-        write "=== EXPORT OSM AVEC ID CANONIQUE UNIQUE ===";
+        write "=== EXPORT OSM AVEC ID CANONIQUE UNIQUE (CORRIGÉ) ===";
         write "🔑 Système d'identification : osm_type:osm_id";
         
         // Chargement OSM COMPLET
@@ -68,28 +74,27 @@ global {
         write "✅ Agents network_route créés : " + length(network_route);
         write "⚠️ Routes sans ID OSM : " + nb_without_osm_id;
         
-        // Debug : vérifier quelques agents
-        if length(network_route) > 0 {
-            write "\n🔍 === ÉCHANTILLON D'AGENTS CRÉÉS ===";
+        // 🆕 CHARGEMENT DES ARRÊTS GTFS
+        write "\n=== 🚏 CHARGEMENT ARRÊTS GTFS ===";
+        try {
+            create bus_stop from: gtfs_f;
             
-            network_route first_route <- first(network_route);
-            write "📍 Agent 1 : " + first_route.name;
-            write "   └─ Type transport : " + first_route.route_type;
-            write "   └─ OSM UID : " + first_route.osm_uid;
-            write "   └─ OSM Type : " + first_route.osm_type;
-            write "   └─ OSM ID : " + first_route.osm_id;
-            write "   └─ Highway : " + first_route.highway_type;
-            write "   └─ Railway : " + first_route.railway_type;
-            
-            if length(network_route) > 1 {
-                network_route second_route <- network_route[1];
-                write "\n📍 Agent 2 : " + second_route.name;
-                write "   └─ Type transport : " + second_route.route_type;
-                write "   └─ OSM UID : " + second_route.osm_uid;
-                write "   └─ OSM Type : " + second_route.osm_type;
-                write "   └─ OSM ID : " + second_route.osm_id;
+            // Filtrer uniquement les arrêts de bus (routeType = 3)
+            list<bus_stop> non_bus_stops <- bus_stop where (each.routeType != 3);
+            ask non_bus_stops {
+                do die;
             }
+            
+            nb_bus_stops <- length(bus_stop);
+            write "✅ Arrêts bus chargés : " + nb_bus_stops;
+            
+        } catch {
+            write "❌ Erreur chargement GTFS : " + gtfs_folder;
+            nb_bus_stops <- 0;
         }
+        
+        // 🆕 VALIDATION AVANT EXPORT
+        do validate_export;
         
         // ✅ EXPORT IMMÉDIAT VERS SHAPEFILE
         do export_complete_network;
@@ -110,6 +115,7 @@ global {
         write "🛤️ TOTAL EXPORTÉ : " + nb_total_created;
         write "🔑 Avec ID OSM unique : " + (nb_total_created - nb_without_osm_id);
         write "⚠️ Sans ID OSM : " + nb_without_osm_id;
+        write "🚏 Arrêts bus GTFS : " + nb_bus_stops;
     }
     
     // 🎯 CRÉATION ROUTE COMPLÈTE - AVEC ID CANONIQUE UNIQUE
@@ -136,7 +142,6 @@ global {
         // ══════════════════════════════════════════════════════════
         // 🔎 RÉCUPÉRATION ROBUSTE DES IDENTIFIANTS OSM
         // ══════════════════════════════════════════════════════════
-        // Stratégie : chercher dans plusieurs attributs possibles
         string id_str <- (geom.attributes["@id"] as string);
         if (id_str = nil or id_str = "") { 
             id_str <- (geom.attributes["id"] as string); 
@@ -162,30 +167,25 @@ global {
             osm_type <- (geom.attributes["type"] as string); 
         }
         
-        // Heuristique si le type n'est pas explicite :
-        // - Si tag "route" présent → probablement une relation
-        // - Si tag "highway" ou "railway" → probablement un way
-        // - Par défaut → way (le plus fréquent)
         if (osm_type = nil or osm_type = "") {
             if (route != nil and route != "") {
                 osm_type <- "relation";
             } else if (highway != nil or railway != nil) {
                 osm_type <- "way";
             } else {
-                osm_type <- "way";  // défaut
+                osm_type <- "way";
             }
         }
         
         // ══════════════════════════════════════════════════════════
         // 🔑 CONSTRUCTION DE L'ID CANONIQUE UNIQUE
         // ══════════════════════════════════════════════════════════
-        // Format : "type:id" (ex: "way:123456", "relation:789012")
         string osm_uid <- "";
         if (id_str != nil and id_str != "") {
             osm_uid <- osm_type + ":" + id_str;
         } else {
             nb_without_osm_id <- nb_without_osm_id + 1;
-            osm_uid <- "";  // Pas d'ID aléatoire !
+            osm_uid <- "";
         }
         
         // ══════════════════════════════════════════════════════════
@@ -238,7 +238,7 @@ global {
             route_width <- 2.0;
             nb_metro_routes <- nb_metro_routes + 1;
         }
-        // 🚂 TRAIN (exclure les voies abandonnées)
+        // 🚂 TRAIN
         else if (
             railway != nil and railway != "" and
             !(railway in ["abandoned", "platform", "disused", "construction", "proposed", "razed", "dismantled"])
@@ -284,7 +284,7 @@ global {
         int points_count <- length(geom.points);
 
         // ══════════════════════════════════════════════════════════
-        // ✅ CRÉATION DE L'AGENT AVEC ID CANONIQUE UNIQUE
+        // ✅ CRÉATION DE L'AGENT AVEC TOUS LES TAGS OSM
         // ══════════════════════════════════════════════════════════
         create network_route with: [
             shape::geom,
@@ -294,16 +294,17 @@ global {
             route_width::route_width,
             name::name,
             
-            // 🔑 IDENTITÉ OSM CANONIQUE (TRIPLE INFORMATION)
-            osm_id::id_str,         // ID brut : "123456"
-            osm_type::osm_type,     // Type OSM : "way" / "relation" / "node"
-            osm_uid::osm_uid,       // ID CANONIQUE : "way:123456"
+            // 🔑 IDENTITÉ OSM CANONIQUE
+            osm_id::id_str,
+            osm_type::osm_type,
+            osm_uid::osm_uid,
             
-            // 📋 Attributs OSM originaux
+            // 📋 Attributs OSM originaux (CORRIGÉ : tous inclus)
             highway_type::highway,
             railway_type::railway,
             route_rel::route,
             bus_access::bus,
+            psv_access::psv,      // 🆕 AJOUTÉ
             ref_number::ref,
             
             // 📐 Propriétés calculées
@@ -314,66 +315,138 @@ global {
         nb_total_created <- nb_total_created + 1;
     }
     
-    // ══════════════════════════════════════════════════════════
-    // 🎯 EXPORT COMPLET VERS SHAPEFILE - AVEC ID CANONIQUE
-    // ══════════════════════════════════════════════════════════
-    action export_complete_network {
-        write "\n=== 📦 EXPORT VERS SHAPEFILE ===";
+    // 🆕 VALIDATION EXPORT - Diagnostic avant export
+    action validate_export {
+        write "\n=== 🔍 VALIDATION EXPORT ===";
         
-        if empty(network_route) {
-            write "❌ ERREUR : Aucun agent créé à exporter !";
-            return;
-        }
+        list<network_route> bus_with_route_tag <- network_route where (
+            each.route_type = "bus" and each.route_rel != nil
+        );
+        list<network_route> bus_with_bus_tag <- network_route where (
+            each.route_type = "bus" and each.bus_access != nil
+        );
+        list<network_route> bus_with_psv_tag <- network_route where (
+            each.route_type = "bus" and each.psv_access != nil
+        );
         
-        string shapefile_path <- export_folder + "network_transport_complete.shp";
+        write "🚌 Bus avec tag 'route' : " + length(bus_with_route_tag);
+        write "🚌 Bus avec tag 'bus' : " + length(bus_with_bus_tag);
+        write "🚌 Bus avec tag 'psv' : " + length(bus_with_psv_tag);
         
-        // ✅ EXPORT AVEC TOUS LES ATTRIBUTS ID
-        try {
-            save network_route to: shapefile_path format: "shp" attributes: [
-                "osm_uid"::osm_uid,          // 🔑 ID canonique (clé primaire)
-                "osm_type"::osm_type,        // 🏷️ Type OSM
-                "osm_id"::osm_id,            // 🔢 ID brut
-                "name"::name,                // 📛 Nom
-                "route_type"::route_type,    // 🚌 Type transport
-                "routeType"::routeType_num,  // #️⃣ Code numérique type
-                "highway"::highway_type,     // 🛣️ Type highway
-                "railway"::railway_type,     // 🚂 Type railway
-                "ref"::ref_number,           // 🔖 Référence
-                "length_m"::length_m         // 📏 Longueur
-            ];
-            
-            write "✅ EXPORT COMPLET RÉUSSI : " + shapefile_path;
-            write "📊 " + length(network_route) + " routes exportées avec ID canonique";
-            
-        } catch {
-            write "❌ Erreur d'export complet - Tentative avec attributs minimaux...";
-            
-            try {
-                save network_route to: shapefile_path format: "shp" attributes: [
-                    "osm_uid"::osm_uid,
-                    "osm_type"::osm_type,
-                    "osm_id"::osm_id,
-                    "name"::name,
-                    "type"::route_type
-                ];
-                write "✅ EXPORT MINIMAL RÉUSSI : " + shapefile_path;
-            } catch {
-                write "❌ Échec attributs - Export géométrie seule...";
-                save network_route to: shapefile_path format: "shp";
-                write "✅ EXPORT GÉOMÉTRIE SEULE : " + shapefile_path;
-            }
+        if length(network_route where (each.route_type = "bus")) > 0 {
+            network_route sample_bus <- first(network_route where (each.route_type = "bus"));
+            write "\n📋 Exemple bus :";
+            write "  - route_rel : " + sample_bus.route_rel;
+            write "  - bus_access : " + sample_bus.bus_access;
+            write "  - psv_access : " + sample_bus.psv_access;
+            write "  - highway_type : " + sample_bus.highway_type;
         }
     }
     
     // ══════════════════════════════════════════════════════════
-    // 🆕 EXPORT PAR TYPE DE TRANSPORT - AVEC ID CANONIQUE
+    // 🎯 EXPORT COMPLET PAR TYPE GÉOMÉTRIQUE (SOLUTION)
+    // ══════════════════════════════════════════════════════════
+    action export_complete_network {
+        write "\n═══════════════════════════════════════════════════════════";
+        write "📦 EXPORT PAR TYPE GÉOMÉTRIQUE";
+        write "═══════════════════════════════════════════════════════════";
+
+        if empty(network_route) {
+            write "❌ ERREUR : Aucun agent créé à exporter !";
+            return;
+        }
+
+        // Séparation par type géométrique (utilisant perimeter et area)
+        list<network_route> lines <- network_route where (
+            each.shape != nil and each.shape.perimeter > 0 and each.shape.area = 0
+        );
+        list<network_route> points <- network_route where (
+            each.shape != nil and each.shape.perimeter = 0 and each.shape.area = 0
+        );
+        list<network_route> polygons <- network_route where (
+            each.shape != nil and each.shape.area > 0
+        );
+
+        write "\n🔍 ANALYSE DES GÉOMÉTRIES :";
+        write "   📏 LineStrings : " + length(lines);
+        write "   📍 Points : " + length(points);
+        write "   🔷 Polygons : " + length(polygons);
+
+        // EXPORT LINESTRINGS
+        if !empty(lines) {
+            write "\n━━━ 📏 EXPORT LINESTRINGS ━━━";
+            string lines_path <- export_folder + "network_lines_complete.shp";
+
+            try {
+                save lines to: lines_path format: "shp" attributes: [
+                    "osm_uid"::osm_uid,
+                    "osm_type"::osm_type,
+                    "osm_id"::osm_id,
+                    "name"::name,
+                    "route_type"::route_type,
+                    "routeType"::routeType_num,
+                    "highway"::highway_type,
+                    "railway"::railway_type,
+                    "route_rel"::route_rel,
+                    "bus"::bus_access,
+                    "psv"::psv_access,
+                    "ref"::ref_number,
+                    "length_m"::length_m
+                ];
+                write "✅ LineStrings exportées : " + length(lines);
+            } catch {
+                write "❌ Erreur export LineStrings";
+            }
+        }
+
+        // EXPORT POINTS
+        if !empty(points) {
+            write "\n━━━ 📍 EXPORT POINTS ━━━";
+            string points_path <- export_folder + "network_points_complete.shp";
+
+            try {
+                save points to: points_path format: "shp" attributes: [
+                    "osm_uid"::osm_uid,
+                    "osm_type"::osm_type,
+                    "osm_id"::osm_id,
+                    "name"::name,
+                    "route_type"::route_type
+                ];
+                write "✅ Points exportés : " + length(points);
+            } catch {
+                write "❌ Erreur export Points";
+            }
+        }
+
+        // EXPORT POLYGONS
+        if !empty(polygons) {
+            write "\n━━━ 🔷 EXPORT POLYGONS ━━━";
+            string polygons_path <- export_folder + "network_polygons_complete.shp";
+
+            try {
+                save polygons to: polygons_path format: "shp" attributes: [
+                    "osm_uid"::osm_uid,
+                    "osm_type"::osm_type,
+                    "osm_id"::osm_id,
+                    "name"::name,
+                    "route_type"::route_type
+                ];
+                write "✅ Polygons exportés : " + length(polygons);
+            } catch {
+                write "❌ Erreur export Polygons";
+            }
+        }
+
+        write "\n✅ EXPORT PAR TYPE GÉOMÉTRIQUE TERMINÉ";
+    }
+    
+    // ══════════════════════════════════════════════════════════
+    // 🆕 EXPORT PAR TYPE DE TRANSPORT (CORRIGÉ)
     // ══════════════════════════════════════════════════════════
     action export_by_type_fixed {
         write "\n=== 📦 EXPORT PAR TYPE DE TRANSPORT ===";
         
-        // ────────────────────────────────────────────────────────
-        // 🚌 EXPORT BUS (par batch pour gros volumes)
-        // ────────────────────────────────────────────────────────
+        // 🚌 EXPORT BUS (par batch)
         list<network_route> bus_routes <- network_route where (each.route_type = "bus");
         write "🔍 Bus routes trouvées : " + length(bus_routes);
         
@@ -381,9 +454,7 @@ global {
             do export_by_batch_robust(bus_routes, "bus_routes", 10000);
         }
         
-        // ────────────────────────────────────────────────────────
-        // 🛣️ EXPORT ROUTES PRINCIPALES (par batch pour gros volumes)
-        // ────────────────────────────────────────────────────────
+        // 🛣️ EXPORT ROUTES PRINCIPALES (par batch)
         list<network_route> main_roads <- network_route where (each.route_type = "road");
         write "🔍 Main roads trouvées : " + length(main_roads);
         
@@ -391,9 +462,7 @@ global {
             do export_by_batch_robust(main_roads, "main_roads", 50000);
         }
         
-        // ────────────────────────────────────────────────────────
-        // 🚋🚇🚂 EXPORT TRANSPORT PUBLIC (tram + métro + train)
-        // ────────────────────────────────────────────────────────
+        // 🚋🚇🚂 EXPORT TRANSPORT PUBLIC
         list<network_route> public_transport <- network_route where (each.route_type in ["tram", "metro", "train"]);
         if !empty(public_transport) {
             write "🔍 Transport public trouvé : " + length(public_transport);
@@ -410,24 +479,11 @@ global {
                 ];
                 write "✅ Transport public exporté : " + length(public_transport) + " → public_transport.shp";
             } catch {
-                write "❌ Erreur export transport public - tentative export minimal";
-                try {
-                    save public_transport to: export_folder + "public_transport.shp" format: "shp" attributes: [
-                        "osm_uid"::osm_uid,
-                        "osm_id"::osm_id,
-                        "name"::name,
-                        "type"::route_type
-                    ];
-                    write "✅ Transport public (minimal) exporté";
-                } catch {
-                    write "❌ Erreur totale export transport public";
-                }
+                write "❌ Erreur export transport public";
             }
         }
         
-        // ────────────────────────────────────────────────────────
         // 🚴 EXPORT PISTES CYCLABLES
-        // ────────────────────────────────────────────────────────
         list<network_route> cycleways <- network_route where (each.route_type = "cycleway");
         if !empty(cycleways) {
             write "🔍 Pistes cyclables trouvées : " + length(cycleways);
@@ -443,17 +499,7 @@ global {
                 ];
                 write "✅ Pistes cyclables exportées : " + length(cycleways) + " → cycleways.shp";
             } catch {
-                write "❌ Erreur export cycleways - tentative export minimal";
-                try {
-                    save cycleways to: export_folder + "cycleways.shp" format: "shp" attributes: [
-                        "osm_uid"::osm_uid,
-                        "osm_id"::osm_id,
-                        "name"::name
-                    ];
-                    write "✅ Pistes cyclables (minimal) exportées";
-                } catch {
-                    write "❌ Erreur totale export cycleways";
-                }
+                write "❌ Erreur export cycleways";
             }
         }
         
@@ -461,7 +507,7 @@ global {
     }
     
     // ══════════════════════════════════════════════════════════
-    // 🆕 EXPORT PAR BATCH POUR GROS VOLUMES - AVEC ID CANONIQUE
+    // 🆕 EXPORT PAR BATCH (CORRIGÉ - avec tous les tags OSM)
     // ══════════════════════════════════════════════════════════
     action export_by_batch_robust(list<network_route> routes, string filename, int batch_size) {
         write "🔄 Export robuste par batch : " + filename + " (" + length(routes) + " objets)";
@@ -470,7 +516,6 @@ global {
         int batch_num <- 0;
         int current_index <- 0;
         
-        // Pré-filtrer les routes valides (shape + osm_uid non vide)
         list<network_route> all_valid_routes <- routes where (
             each.shape != nil and 
             each.osm_uid != nil and 
@@ -478,7 +523,6 @@ global {
         );
         write "🔍 Routes avec ID OSM valide : " + length(all_valid_routes) + "/" + length(routes);
         
-        // Si des routes sans ID existent, les exporter séparément
         list<network_route> routes_without_id <- routes where (
             each.shape != nil and 
             (each.osm_uid = nil or length(each.osm_uid) = 0)
@@ -487,32 +531,32 @@ global {
             write "⚠️ Routes sans ID OSM : " + length(routes_without_id) + " (seront exportées séparément)";
         }
         
-        // ────────────────────────────────────────────────────────
         // EXPORT PAR BATCH DES ROUTES AVEC ID
-        // ────────────────────────────────────────────────────────
         loop while: current_index < length(all_valid_routes) {
             int end_index <- min(current_index + batch_size - 1, length(all_valid_routes) - 1);
             list<network_route> current_batch <- [];
             
-            // Créer le batch actuel
             loop i from: current_index to: end_index {
                 current_batch <+ all_valid_routes[i];
             }
             
-            // Export du batch
             string batch_filename <- export_folder + filename + "_part" + batch_num + ".shp";
             bool export_success <- false;
             
-            // Tentative 1 : Export avec tous les attributs
+            // ✅ CORRIGÉ : Export avec TOUS les attributs OSM nécessaires
             try {
                 save current_batch to: batch_filename format: "shp" attributes: [
                     "osm_uid"::osm_uid, 
                     "osm_type"::osm_type, 
                     "osm_id"::osm_id,
                     "name"::name, 
-                    "route_type"::route_type, 
+                    "route_type"::route_type,
+                    "routeType"::routeType_num,
                     "highway"::highway_type,
                     "railway"::railway_type,
+                    "route"::route_rel,
+                    "bus"::bus_access,
+                    "psv"::psv_access,
                     "ref"::ref_number,
                     "length_m"::length_m
                 ];
@@ -525,7 +569,6 @@ global {
                 write "  ⚠️ Erreur attributs complets, tentative attributs essentiels...";
             }
             
-            // Tentative 2 : Export avec attributs minimaux
             if !export_success {
                 try {
                     save current_batch to: batch_filename format: "shp" attributes: [
@@ -545,7 +588,6 @@ global {
                 }
             }
             
-            // Tentative 3 : Export géométrie seule
             if !export_success {
                 try {
                     save current_batch to: batch_filename format: "shp";
@@ -561,17 +603,19 @@ global {
             batch_num <- batch_num + 1;
         }
         
-        // ────────────────────────────────────────────────────────
-        // EXPORT DES ROUTES SANS ID (si elles existent)
-        // ────────────────────────────────────────────────────────
+        // ✅ CORRIGÉ : EXPORT DES ROUTES SANS ID avec route_type
         if !empty(routes_without_id) {
             string no_id_filename <- export_folder + filename + "_sans_id.shp";
             try {
                 save routes_without_id to: no_id_filename format: "shp" attributes: [
                     "name"::name,
                     "route_type"::route_type,
+                    "routeType"::routeType_num,
                     "highway"::highway_type,
                     "railway"::railway_type,
+                    "route"::route_rel,
+                    "bus"::bus_access,
+                    "ref"::ref_number,
                     "length_m"::length_m
                 ];
                 write "  ✅ Routes sans ID exportées : " + length(routes_without_id) + " objets";
@@ -590,44 +634,35 @@ global {
 }
 
 // ══════════════════════════════════════════════════════════
-// 🚌 AGENT ROUTE AVEC ID CANONIQUE OSM UNIQUE
+// 🚌 AGENT ROUTE AVEC TOUS LES TAGS OSM (CORRIGÉ)
 // ══════════════════════════════════════════════════════════
 species network_route {
-    // ──────────────────────────────────────────────────────
     // 🎨 ATTRIBUTS DE VISUALISATION
-    // ──────────────────────────────────────────────────────
     geometry shape;
-    string route_type;        // "bus", "tram", "metro", etc.
-    int routeType_num;        // Code numérique GTFS
-    rgb route_color;          // Couleur d'affichage
-    float route_width;        // Épaisseur ligne
-    string name;              // Nom de la route
+    string route_type;
+    int routeType_num;
+    rgb route_color;
+    float route_width;
+    string name;
     
-    // ──────────────────────────────────────────────────────
-    // 🔑 IDENTITÉ OSM CANONIQUE (TRIPLE INFORMATION)
-    // ──────────────────────────────────────────────────────
-    string osm_id;     // ID brut : "123456"
-    string osm_type;   // Type OSM : "way" / "relation" / "node"
-    string osm_uid;    // 🌟 ID CANONIQUE : "way:123456" (CLÉ PRIMAIRE)
+    // 🔑 IDENTITÉ OSM CANONIQUE
+    string osm_id;
+    string osm_type;
+    string osm_uid;
     
-    // ──────────────────────────────────────────────────────
-    // 📋 ATTRIBUTS OSM ORIGINAUX
-    // ──────────────────────────────────────────────────────
-    string highway_type;   // Type de highway OSM
-    string railway_type;   // Type de railway OSM
-    string route_rel;      // Type de relation route
-    string bus_access;     // Accès bus
-    string ref_number;     // Référence/Numéro de ligne
+    // 📋 ATTRIBUTS OSM ORIGINAUX (CORRIGÉ)
+    string highway_type;
+    string railway_type;
+    string route_rel;
+    string bus_access;
+    string psv_access;
+    string ref_number;
     
-    // ──────────────────────────────────────────────────────
     // 📐 PROPRIÉTÉS CALCULÉES
-    // ──────────────────────────────────────────────────────
-    float length_m;    // Longueur en mètres
-    int num_points;    // Nombre de points de la géométrie
+    float length_m;
+    int num_points;
     
-    // ──────────────────────────────────────────────────────
     // 🎨 ASPECTS D'AFFICHAGE
-    // ──────────────────────────────────────────────────────
     aspect default {
         if shape != nil {
             draw shape color: route_color width: route_width;
@@ -673,15 +708,34 @@ species network_route {
 }
 
 // ══════════════════════════════════════════════════════════
-// 🎯 EXPÉRIMENT PRINCIPAL - EXPORT COMPLET
+// 🚏 AGENT ARRÊT DE BUS (GTFS)
+// ══════════════════════════════════════════════════════════
+species bus_stop skills: [TransportStopSkill] {
+    aspect base {
+        if (routeType = 3) {
+            draw circle(50) color: #red border: #darkred;
+        }
+    }
+    
+    aspect with_name {
+        if (routeType = 3) {
+            draw circle(50) color: #red border: #darkred;
+            draw stopName color: #black size: 8 at: location + {0, 60};
+        }
+    }
+}
+
+// ══════════════════════════════════════════════════════════
+// 🎯 EXPÉRIMENT PRINCIPAL
 // ══════════════════════════════════════════════════════════
 experiment main_export type: gui {
     output {
         display "Export OSM avec ID Canonique" background: #white {
             species network_route aspect: thick;
+            species bus_stop aspect: base;
             
-            overlay position: {10, 10} size: {400 #px, 380 #px} background: #white transparency: 0.9 border: #black {
-                draw "🔑 EXPORT OSM ID CANONIQUE" at: {20#px, 25#px} color: #black font: font("Arial", 14, #bold);
+            overlay position: {10, 10} size: {400 #px, 420 #px} background: #white transparency: 0.9 border: #black {
+                draw "🔑 EXPORT OSM ID CANONIQUE (CORRIGÉ)" at: {20#px, 25#px} color: #black font: font("Arial", 14, #bold);
                 
                 draw "━━━━━━━━━━━━━━━━━━━━━━" at: {20#px, 45#px} color: #darkgray size: 10;
                 
@@ -689,69 +743,55 @@ experiment main_export type: gui {
                 draw "Total : " + length(network_route) + " agents" at: {30#px, 85#px} color: #black;
                 draw "Avec ID OSM : " + (nb_total_created - nb_without_osm_id) at: {30#px, 100#px} color: #darkgreen;
                 draw "Sans ID OSM : " + nb_without_osm_id at: {30#px, 115#px} color: #darkred;
+                draw "🚏 Arrêts bus : " + nb_bus_stops at: {30#px, 130#px} color: #red;
                 
-                draw "━━━━━━━━━━━━━━━━━━━━━━" at: {20#px, 135#px} color: #darkgray size: 10;
+                draw "━━━━━━━━━━━━━━━━━━━━━━" at: {20#px, 150#px} color: #darkgray size: 10;
                 
-                draw "📊 RÉPARTITION PAR TYPE" at: {20#px, 155#px} color: #darkblue font: font("Arial", 11, #bold);
-                draw "🚌 Bus : " + nb_bus_routes at: {30#px, 175#px} color: #blue;
-                draw "🚋 Tram : " + nb_tram_routes at: {30#px, 190#px} color: #orange;
-                draw "🚇 Métro : " + nb_metro_routes at: {30#px, 205#px} color: #red;
-                draw "🚂 Train : " + nb_train_routes at: {30#px, 220#px} color: #green;
-                draw "🚴 Cycleway : " + nb_cycleway_routes at: {30#px, 235#px} color: #purple;
-                draw "🛣️ Roads : " + nb_road_routes at: {30#px, 250#px} color: #gray;
-                draw "❓ Autres : " + nb_other_routes at: {30#px, 265#px} color: #lightgray;
+                draw "📊 RÉPARTITION PAR TYPE" at: {20#px, 170#px} color: #darkblue font: font("Arial", 11, #bold);
+                draw "🚌 Bus : " + nb_bus_routes at: {30#px, 190#px} color: #blue;
+                draw "🚋 Tram : " + nb_tram_routes at: {30#px, 205#px} color: #orange;
+                draw "🚇 Métro : " + nb_metro_routes at: {30#px, 220#px} color: #red;
+                draw "🚂 Train : " + nb_train_routes at: {30#px, 235#px} color: #green;
+                draw "🚴 Cycleway : " + nb_cycleway_routes at: {30#px, 250#px} color: #purple;
+                draw "🛣️ Roads : " + nb_road_routes at: {30#px, 265#px} color: #gray;
+                draw "❓ Autres : " + nb_other_routes at: {30#px, 280#px} color: #lightgray;
                 
-                draw "━━━━━━━━━━━━━━━━━━━━━━" at: {20#px, 285#px} color: #darkgray size: 10;
+                draw "━━━━━━━━━━━━━━━━━━━━━━" at: {20#px, 300#px} color: #darkgray size: 10;
                 
-                draw "📁 EXPORT TERMINÉ" at: {20#px, 305#px} color: #darkgreen font: font("Arial", 11, #bold);
-                draw "✅ Shapefiles avec ID canonique" at: {30#px, 325#px} color: #green;
-                draw "✅ Dossier : ../../results/" at: {30#px, 340#px} color: #green size: 8;
-                draw "✅ Format ID : type:id" at: {30#px, 355#px} color: #green size: 8;
+                draw "📁 EXPORT TERMINÉ" at: {20#px, 320#px} color: #darkgreen font: font("Arial", 11, #bold);
+                draw "✅ Shapefiles avec tags OSM" at: {30#px, 340#px} color: #green;
+                draw "✅ Tags: route, bus, psv" at: {30#px, 355#px} color: #green size: 8;
+                draw "✅ Format ID : type:id" at: {30#px, 370#px} color: #green size: 8;
+                
+                draw "━━━━━━━━━━━━━━━━━━━━━━" at: {20#px, 390#px} color: #darkgray size: 10;
+                draw "● Rouge = Arrêts GTFS" at: {30#px, 410#px} color: #red size: 9;
             }
         }
+        
+        monitor "Routes OSM" value: length(network_route);
+        monitor "Arrêts bus GTFS" value: nb_bus_stops;
+        monitor "Routes bus" value: nb_bus_routes;
     }
 }
 
-// ══════════════════════════════════════════════════════════
-// 🎯 EXPÉRIMENT AVEC COULEURS PAR TYPE
-// ══════════════════════════════════════════════════════════
 experiment colored_view type: gui {
     output {
         display "Réseau Coloré par Type" background: #white {
             species network_route aspect: colored;
-            
-            overlay position: {10, 10} size: {280 #px, 220 #px} background: #white transparency: 0.9 border: #black {
-                draw "🎨 LÉGENDE COULEURS" at: {15#px, 25#px} color: #black font: font("Arial", 13, #bold);
-                draw "━━━━━━━━━━━━━━━━━━" at: {15#px, 45#px} color: #darkgray size: 9;
-                draw "🚌 Bleu = Bus" at: {20#px, 65#px} color: #blue font: font("Arial", 11);
-                draw "🚋 Orange = Tram" at: {20#px, 85#px} color: #orange font: font("Arial", 11);
-                draw "🚇 Rouge = Métro" at: {20#px, 105#px} color: #red font: font("Arial", 11);
-                draw "🚂 Vert = Train" at: {20#px, 125#px} color: #green font: font("Arial", 11);
-                draw "🚴 Violet = Cycleway" at: {20#px, 145#px} color: #purple font: font("Arial", 11);
-                draw "🛣️ Gris = Routes" at: {20#px, 165#px} color: #gray font: font("Arial", 11);
-                draw "❓ Noir = Autres" at: {20#px, 185#px} color: #black font: font("Arial", 11);
-                draw "━━━━━━━━━━━━━━━━━━" at: {15#px, 200#px} color: #darkgray size: 9;
-            }
+            species bus_stop aspect: base;
         }
+        
+        monitor "Arrêts bus" value: nb_bus_stops;
     }
 }
 
-// ══════════════════════════════════════════════════════════
-// 🎯 EXPÉRIMENT AVEC AFFICHAGE DES ID
-// ══════════════════════════════════════════════════════════
 experiment view_with_ids type: gui {
     output {
         display "Réseau avec ID OSM" background: #white {
             species network_route aspect: with_label;
-            
-            overlay position: {10, 10} size: {300 #px, 140 #px} background: #white transparency: 0.9 border: #black {
-                draw "🔍 AFFICHAGE ID OSM" at: {15#px, 25#px} color: #black font: font("Arial", 13, #bold);
-                draw "━━━━━━━━━━━━━━━━━━━━━" at: {15#px, 45#px} color: #darkgray size: 9;
-                draw "Format : type:id" at: {20#px, 65#px} color: #darkblue font: font("Arial", 10);
-                draw "Exemple : way:123456" at: {20#px, 85#px} color: #darkgreen font: font("Arial", 10);
-                draw "Total agents : " + length(network_route) at: {20#px, 105#px} color: #black font: font("Arial", 10, #bold);
-                draw "Avec ID : " + (nb_total_created - nb_without_osm_id) at: {20#px, 120#px} color: #darkgreen font: font("Arial", 9);
-            }
+            species bus_stop aspect: base;
         }
+        
+        monitor "Arrêts bus" value: nb_bus_stops;
     }
 }

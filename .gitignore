@@ -16,3 +16,31 @@ gama.extension.GTFS/bin/gaml/additions/GTFS/GamlAdditions.class
 
 # Ignorer tout le répertoire /gaml/ si non nécessaire
 /gaml/
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part0.dbf
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part0.shp
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part0.shx
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part1.dbf
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part1.shp
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part1.shx
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part2.dbf
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part2.shp
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part2.shx
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part3.dbf
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part3.qix
+gama.extension.GTFS/models/GTFS/results1/main_roads_part0.shp
+gama.extension.GTFS/models/GTFS/results1/main_roads_part0.shx
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part3.shp
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part0.shp
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part0.shx
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part1.dbf
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part1.shp
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part1.shx
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part2.dbf
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part2.shp
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part2.shx
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part3.dbf
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part3.qix
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part3.shp
+gama.extension.GTFS/models/GTFS/results1/main_roads_part0.shp
+gama.extension.GTFS/models/GTFS/results1/main_roads_part0.shx
+gama.extension.GTFS/models/GTFS/results1/bus_routes_part0.dbf
